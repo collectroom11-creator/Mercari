@@ -251,13 +251,15 @@ async def main():
 
     results = await m.search("", **kwargs)
 
-    # 디버그: 브랜드별 결과 분포 확인
-    from collections import Counter
-    brand_counter = Counter()
-    for item in results.items:
-        item_brand = getattr(item, "brand_name", None) or getattr(getattr(item, "brand", None), "name", "알수없음")
-        brand_counter[item_brand] += 1
-    print(f"브랜드별 분포: {dict(brand_counter)}")
+    # 디버그: item 객체의 실제 속성 구조 확인 (딱 첫 번째 아이템만 출력)
+    if results.items:
+        sample = results.items[0]
+        print(f"item 타입: {type(sample)}")
+        print(f"item 속성 목록: {[a for a in dir(sample) if not a.startswith('_')]}")
+        try:
+            print(f"item 전체 내용: {vars(sample)}")
+        except TypeError:
+            print(f"item repr: {repr(sample)}")
 
     is_first_run = not SEEN_FILE.exists()
     seen = load_seen()
