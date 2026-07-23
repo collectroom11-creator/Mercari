@@ -1,7 +1,6 @@
 """
 메루카리(mercari.jp) 브랜드/카테고리/가격 조건에 맞는 신규 매물을
 디스코드 웹훅으로 알려주는 스크립트.
-
 - 카테고리/브랜드 ID는 하드코딩하지 않는다. GitHub Actions 워크플로우가
   이 스크립트를 실행하기 전에 mercapi 공식 유틸(utils/fetch_facets.py)을
   실제로 실행해서 최신 카테고리/브랜드 ID 목록을 ./facets/ 폴더에 생성해두고,
@@ -10,14 +9,17 @@
   항상 그 시점의 최신 값을 직접 생성해서 쓰는 방식이 더 안정적이다.)
 - 이미 알림을 보낸 상품 ID는 data/seen.json 에 저장해두고,
   다음 실행에서 새 ID만 다시 알림.
+- 디스코드 알림은 embed 10개씩 묶어서 한 번의 webhook 요청으로 보낸다
+  (레이트리밋 회피 목적). 배치 사이에는 0.5초 딜레이를 둔다.
+  전송에 성공한 배치의 아이템만 seen에 기록하고, 실패한 배치는
+  다음 실행에서 자동으로 재시도된다.
 """
-
 import asyncio
 import json
 import os
 import sys
+import time
 from pathlib import Path
-
 import httpx
 from mercapi import Mercapi
 from mercapi.requests import SearchRequestData
@@ -25,10 +27,6 @@ from mercapi.requests import SearchRequestData
 # ----------------------------------------------------------------------
 # 설정
 # ----------------------------------------------------------------------
-
-# 찾고 싶은 브랜드 이름들. 매칭이 잘 안 되는 브랜드가 있으면
-# 실행 로그에 경고가 뜨니, 그때 별칭을 추가하면 된다.
-# key: 사람이 알아보기 쉬운 이름, value: facets 파일에서 매칭을 시도할 후보 문자열들
 TARGET_BRANDS = {
     "NUMBER (N)INE": ["NUMBER (N)INE", "ナンバーナイン"],
     "COMME des GARCONS": ["COMME des GARCONS", "COMME des GARÇONS", "コムデギャルソン"],
@@ -50,29 +48,20 @@ TARGET_BRANDS = {
     "HYSTERIC GLAMOUR": ["HYSTERIC GLAMOUR", "ヒステリックグラマー"],
     "NIL ADMIRARI": ["NIL ADMIRARI", "ニルアドミラリ"],
 }
-
-# 카테고리: 패션 > 남성 패션. facets 파일에서 이름으로 검색해서 찾는다.
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
-
 PRICE_MAX = 10000  # 엔
+CHUNK_SIZE = 10  # 디스코드 embed는 메시지 하나에 최대 10개까지
 
-# GitHub Actions 워크플로우가 실행 전에 utils/fetch_facets.py로 생성해두는 폴더
 FACETS_DIR = Path(__file__).parent / "facets"
-
 DATA_DIR = Path(__file__).parent / "data"
 SEEN_FILE = DATA_DIR / "seen.json"
-MAX_SEEN_KEEP = 3000  # 파일이 무한정 커지지 않도록 최근 N개만 유지
-
+MAX_SEEN_KEEP = 3000
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
-
 
 # ----------------------------------------------------------------------
 # facets(카테고리/브랜드 ID) 조회
 # ----------------------------------------------------------------------
-
 def _flatten(node, out):
-    """facets json은 트리/리스트 구조가 섞여 있을 수 있어 재귀적으로 평탄화.
-    id와 name을 동시에 가진 dict만 후보로 수집한다."""
     if isinstance(node, dict):
         if "id" in node and "name" in node:
             out.append(node)
@@ -84,15 +73,9 @@ def _flatten(node, out):
 
 
 def load_facets():
-    """./facets 폴더 아래 모든 *.json 파일을 읽어 (id, name) 후보를 모아 반환.
-    카테고리 파일인지 브랜드 파일인지 구분하지 않고 전부 하나의 풀로 모은다 —
-    카테고리 이름과 브랜드 이름은 서로 겹치지 않으므로, 이름으로 찾을 때는
-    이렇게 합쳐도 결과가 달라지지 않고, 파일명을 정확히 몰라도 되는 장점이 있다.
-    """
     entries = []
     if not FACETS_DIR.exists():
         return entries
-
     json_files = list(FACETS_DIR.rglob("*.json"))
     for path in json_files:
         try:
@@ -101,7 +84,6 @@ def load_facets():
             print(f"경고: {path} 파싱 실패: {e}", file=sys.stderr)
             continue
         _flatten(data, entries)
-
     print(f"facets 파일 {len(json_files)}개에서 항목 {len(entries)}개 로드")
     return entries
 
@@ -126,7 +108,6 @@ def resolve_brand_ids(entries):
                     break
             if found:
                 break
-        # 정확히 일치하는 게 없으면 부분 일치로 한 번 더 시도
         if not found:
             for cand in candidates:
                 for b in entries:
@@ -135,19 +116,16 @@ def resolve_brand_ids(entries):
                         break
                 if found:
                     break
-
         if found:
             resolved[display_name] = found["id"]
         else:
             missing.append(display_name)
-
     return resolved, missing
 
 
 # ----------------------------------------------------------------------
-# 검색 + 알림
+# seen 기록
 # ----------------------------------------------------------------------
-
 def load_seen():
     if SEEN_FILE.exists():
         try:
@@ -163,25 +141,21 @@ def save_seen(seen_ids):
     SEEN_FILE.write_text(json.dumps(trimmed, ensure_ascii=False), encoding="utf-8")
 
 
-def send_discord_notification(client: httpx.Client, item):
-    if not DISCORD_WEBHOOK_URL:
-        print("경고: DISCORD_WEBHOOK_URL 환경변수가 없어 알림을 건너뜁니다.", file=sys.stderr)
-        return
-
+# ----------------------------------------------------------------------
+# 디스코드 알림 (배치 전송)
+# ----------------------------------------------------------------------
+def _build_embed(item):
     price = getattr(item, "price", None)
     name = getattr(item, "name", "(제목 없음)")
     item_id = getattr(item, "id_", None) or getattr(item, "id", None)
     mercari_url = f"https://jp.mercari.com/item/{item_id}"
     url = f"https://kenzpost.com/mercari/bid.s/{mercari_url}"  # 켄즈포스트 구매대행 링크
-
-    # mercapi 버전에 따라 사진 관련 속성 이름이 다를 수 있어 여러 후보를 순서대로 확인
     image_url = None
     for attr in ("thumbnails", "photos", "photo_urls", "images"):
         value = getattr(item, attr, None)
         if value:
             image_url = value[0] if isinstance(value, (list, tuple)) else value
             break
-
     embed = {
         "title": name[:250],
         "url": url,
@@ -189,16 +163,43 @@ def send_discord_notification(client: httpx.Client, item):
         "color": 0x2ECC71,
     }
     if image_url:
-        embed["image"] = {"url": image_url}  # 큰 이미지로 표시
-    else:
-        print(f"경고: {item_id} 상품의 이미지 URL을 찾지 못했습니다.", file=sys.stderr)
+        embed["thumbnail"] = {"url": image_url}
+    return embed
 
-    payload = {"embeds": [embed]}
-    resp = client.post(DISCORD_WEBHOOK_URL, json=payload, timeout=15)
-    if resp.status_code >= 300:
+
+def send_discord_batch(client: httpx.Client, items, max_retries: int = 5) -> bool:
+    """여러 아이템을 embed 여러 개로 묶어 한 번의 webhook 요청으로 전송.
+    성공하면 True, 재시도 소진 시 False를 반환한다."""
+    if not DISCORD_WEBHOOK_URL:
+        print("경고: DISCORD_WEBHOOK_URL 환경변수가 없어 알림을 건너뜁니다.", file=sys.stderr)
+        return False
+
+    embeds = [_build_embed(item) for item in items]
+    payload = {"embeds": embeds}
+
+    for attempt in range(max_retries):
+        resp = client.post(DISCORD_WEBHOOK_URL, json=payload, timeout=15)
+        if resp.status_code < 300:
+            return True
+        if resp.status_code == 429:
+            try:
+                retry_after = resp.json().get("retry_after", 1.0)
+            except Exception:
+                retry_after = 1.0
+            wait = float(retry_after) + 0.3
+            print(f"디스코드 레이트리밋, {wait:.1f}초 대기 후 재시도 ({attempt + 1}/{max_retries})", file=sys.stderr)
+            time.sleep(wait)
+            continue
         print(f"디스코드 전송 실패({resp.status_code}): {resp.text}", file=sys.stderr)
+        return False
+
+    print("디스코드 전송 실패: 재시도 소진", file=sys.stderr)
+    return False
 
 
+# ----------------------------------------------------------------------
+# 메인
+# ----------------------------------------------------------------------
 async def main():
     facets = load_facets()
     if not facets:
@@ -228,7 +229,6 @@ async def main():
     brand_ids = list(brand_id_map.values())
 
     m = Mercapi()
-    # Status enum 멤버 이름이 라이브러리 버전에 따라 다를 수 있어 안전하게 조회
     status_filter = []
     status_enum = getattr(SearchRequestData, "Status", None)
     if status_enum is not None:
@@ -244,7 +244,6 @@ async def main():
         price_max=PRICE_MAX,
         status=status_filter,
     )
-    # "새로 올라온 순"으로 정렬할 수 있으면 사용, 없으면 기본 정렬로 조회
     sort_by = getattr(SearchRequestData.SortBy, "SORT_CREATED_TIME", None)
     if sort_by is not None:
         kwargs["sort_by"] = sort_by
@@ -257,20 +256,33 @@ async def main():
     new_items = []
     for item in results.items:
         item_id = getattr(item, "id_", None) or getattr(item, "id", None)
+        # 주의: 여기서는 seen에 바로 넣지 않는다. 전송 성공 여부를 확인한 뒤에
+        # 넣어야, 실패한 항목이 다음 실행에서 다시 시도된다.
         if item_id and item_id not in seen:
             new_items.append(item)
-            seen.add(item_id)
 
     print(f"검색 결과 {len(results.items)}건 중 신규 {len(new_items)}건")
 
     if is_first_run:
-        # 첫 실행에서는 기존 매물 전체가 알림으로 쏟아지지 않도록
-        # seen 목록만 채워두고 알림은 보내지 않는다.
+        for item in new_items:
+            item_id = getattr(item, "id_", None) or getattr(item, "id", None)
+            if item_id:
+                seen.add(item_id)
         print("첫 실행이므로 알림 없이 현재 매물을 기준점으로만 저장합니다.")
     elif new_items:
         with httpx.Client() as sync_client:
-            for item in new_items:
-                send_discord_notification(sync_client, item)
+            success_count = 0
+            for i in range(0, len(new_items), CHUNK_SIZE):
+                chunk = new_items[i:i + CHUNK_SIZE]
+                ok = send_discord_batch(sync_client, chunk)
+                if ok:
+                    for item in chunk:
+                        item_id = getattr(item, "id_", None) or getattr(item, "id", None)
+                        if item_id:
+                            seen.add(item_id)
+                    success_count += len(chunk)
+                time.sleep(0.5)  # 배치 사이 최소 간격
+            print(f"전송 성공 {success_count}건 / 시도 {len(new_items)}건 (배치 단위 전송)")
 
     save_seen(seen)
 
