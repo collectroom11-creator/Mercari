@@ -2,8 +2,7 @@ name: Mercari brand alert
 
 on:
   schedule:
-    # 15분마다 실행 (GitHub Actions의 cron은 지연될 수 있음)
-    - cron: "*/15 * * * *"
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch: {}  # Actions 탭에서 수동 실행도 가능
 
 # seen.json 커밋을 위해 쓰기 권한 필요
