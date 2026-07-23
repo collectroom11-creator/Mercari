@@ -171,7 +171,8 @@ def send_discord_notification(client: httpx.Client, item):
     price = getattr(item, "price", None)
     name = getattr(item, "name", "(제목 없음)")
     item_id = getattr(item, "id_", None) or getattr(item, "id", None)
-    url = f"https://jp.mercari.com/item/{item_id}"
+    mercari_url = f"https://jp.mercari.com/item/{item_id}"
+    url = f"https://kenzpost.com/mercari/bid.s/{mercari_url}"  # 켄즈포스트 구매대행 링크
 
     # mercapi 버전에 따라 사진 관련 속성 이름이 다를 수 있어 여러 후보를 순서대로 확인
     image_url = None
