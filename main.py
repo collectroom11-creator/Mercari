@@ -251,15 +251,25 @@ async def main():
 
     results = await m.search("", **kwargs)
 
-    # 디버그: item 객체의 실제 속성 구조 확인 (딱 첫 번째 아이템만 출력)
-    if results.items:
-        sample = results.items[0]
-        print(f"item 타입: {type(sample)}")
-        print(f"item 속성 목록: {[a for a in dir(sample) if not a.startswith('_')]}")
-        try:
-            print(f"item 전체 내용: {vars(sample)}")
-        except TypeError:
-            print(f"item repr: {repr(sample)}")
+    # 디버그: 상품명(name)에 어떤 브랜드 키워드가 들어있는지 세어보기
+    # (검색 결과 item에는 brand 필드가 없어서, name 텍스트로 대신 확인한다)
+    from collections import Counter
+    name_brand_counter = Counter()
+    unmatched_names = []
+    for item in results.items:
+        item_name = (getattr(item, "name", "") or "").lower()
+        matched = False
+        for display_name, candidates in TARGET_BRANDS.items():
+            if any(cand.lower() in item_name for cand in candidates):
+                name_brand_counter[display_name] += 1
+                matched = True
+                break
+        if not matched:
+            unmatched_names.append(getattr(item, "name", ""))
+    print(f"상품명 기준 브랜드별 분포: {dict(name_brand_counter)}")
+    print(f"브랜드명이 상품명에 안 보이는 항목 수: {len(unmatched_names)}")
+    if unmatched_names:
+        print(f"불일치 예시 (최대 5개): {unmatched_names[:5]}")
 
     is_first_run = not SEEN_FILE.exists()
     seen = load_seen()
