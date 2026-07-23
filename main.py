@@ -251,6 +251,14 @@ async def main():
 
     results = await m.search("", **kwargs)
 
+    # 디버그: 브랜드별 결과 분포 확인
+    from collections import Counter
+    brand_counter = Counter()
+    for item in results.items:
+        item_brand = getattr(item, "brand_name", None) or getattr(getattr(item, "brand", None), "name", "알수없음")
+        brand_counter[item_brand] += 1
+    print(f"브랜드별 분포: {dict(brand_counter)}")
+
     is_first_run = not SEEN_FILE.exists()
     seen = load_seen()
     new_items = []
