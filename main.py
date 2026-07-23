@@ -227,11 +227,21 @@ async def main():
     brand_ids = list(brand_id_map.values())
 
     m = Mercapi()
+    # Status enum 멤버 이름이 라이브러리 버전에 따라 다를 수 있어 안전하게 조회
+    status_filter = []
+    status_enum = getattr(SearchRequestData, "Status", None)
+    if status_enum is not None:
+        for candidate in ("ON_SALE", "STATUS_ON_SALE", "SELLING"):
+            member = getattr(status_enum, candidate, None)
+            if member is not None:
+                status_filter = [member]
+                break
+
     kwargs = dict(
         categories=[category_id] if category_id else [],
         brands=brand_ids,
         price_max=PRICE_MAX,
-        status=[SearchRequestData.Status.ON_SALE] if hasattr(SearchRequestData, "Status") else [],
+        status=status_filter,
     )
     # "새로 올라온 순"으로 정렬할 수 있으면 사용, 없으면 기본 정렬로 조회
     sort_by = getattr(SearchRequestData.SortBy, "SORT_CREATED_TIME", None)
