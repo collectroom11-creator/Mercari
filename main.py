@@ -27,7 +27,8 @@ from mercapi.requests import SearchRequestData
 # ----------------------------------------------------------------------
 # 설정
 # ----------------------------------------------------------------------
-# DIESEL은 매물이 너무 많이 쏟아져서 제외함
+# DIESEL, HYSTERIC GLAMOUR는 매물이 너무 많이 쏟아져서 제외함
+# PRADA는 빼고 PRADA SPORT(PRADA LINEA ROSSA)로 대체함
 TARGET_BRANDS = {
     "NUMBER (N)INE": ["NUMBER (N)INE", "ナンバーナイン"],
     "COMME des GARCONS": ["COMME des GARCONS", "COMME des GARÇONS", "コムデギャルソン"],
@@ -37,7 +38,7 @@ TARGET_BRANDS = {
         "COMME des GARÇONS HOMME PLUS",
         "コムデギャルソン オムプリュス",
     ],
-    "PRADA": ["PRADA", "プラダ"],
+    "PRADA SPORT": ["PRADA SPORT", "プラダスポーツ", "PRADA LINEA ROSSA", "プラダ リネアロッサ"],
     "Maison Margiela": ["Maison Margiela", "メゾンマルジェラ", "Martin Margiela", "マルタンマルジェラ"],
     "HELMUT LANG": ["HELMUT LANG", "ヘルムートラング"],
     "D&G": ["D&G", "ディーアンドジー", "Dolce & Gabbana", "ドルチェ&ガッバーナ"],
@@ -45,7 +46,6 @@ TARGET_BRANDS = {
     "Junya Watanabe": ["Junya Watanabe", "ジュンヤワタナベ"],
     "junhashimoto": ["junhashimoto", "ジュンハシモト"],
     "ARMANI EXCHANGE": ["ARMANI EXCHANGE", "A|X ARMANI EXCHANGE", "アルマーニ エクスチェンジ"],
-    "HYSTERIC GLAMOUR": ["HYSTERIC GLAMOUR", "ヒステリックグラマー"],
     "NIL ADMIRARI": ["NIL ADMIRARI", "ニルアドミラリ"],
 }
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
