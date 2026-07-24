@@ -38,7 +38,6 @@ TARGET_BRANDS = {
         "COMME des GARÇONS HOMME PLUS",
         "コムデギャルソン オムプリュス",
     ],
-    "PRADA": ["PRADA", "プラダ"],
     "PRADA SPORT": ["PRADA SPORT", "プラダスポーツ", "PRADA LINEA ROSSA", "プラダ リネアロッサ"],
     "Maison Margiela": [
         "Maison Margiela",
