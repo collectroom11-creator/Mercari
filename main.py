@@ -30,27 +30,17 @@ from mercapi.requests import SearchRequestData
 # DIESEL, HYSTERIC GLAMOUR는 매물이 너무 많이 쏟아져서 제외함
 # PRADA는 빼고 PRADA SPORT(PRADA LINEA ROSSA)로 대체함
 TARGET_BRANDS = {
-    "NUMBER (N)INE": ["NUMBER (N)INE", "ナンバーナイン"],
-    "COMME des GARCONS": ["COMME des GARCONS", "COMME des GARÇONS", "コムデギャルソン"],
-    "COMME des GARCONS HOMME": ["COMME des GARCONS HOMME", "COMME des GARÇONS HOMME", "コムデギャルソン オム"],
-    "COMME des GARCONS HOMME PLUS": [
-        "COMME des GARCONS HOMME PLUS",
-        "COMME des GARÇONS HOMME PLUS",
-        "コムデギャルソン オムプリュス",
-    ],
-    "PRADA SPORT": ["PRADA SPORT", "プラダスポーツ", "PRADA LINEA ROSSA", "プラダ リネアロッサ"],
-    "Maison Margiela": [
-        "Maison Margiela",
-        "メゾンマルジェラ",
-        "Martin Margiela",
-        "マルタンマルジェラ",
-        "メゾン マルタン マルジェラ",
-    ],
-    "HELMUT LANG": ["HELMUT LANG", "ヘルムートラング"],
-    "D&G": ["D&G", "ディーアンドジー", "Dolce & Gabbana", "ドルチェ&ガッバーナ", "ドルチェアンドガッバーナ"],
-    "Raf Simons": ["Raf Simons", "ラフシモンズ"],
-    "Junya Watanabe": ["Junya Watanabe", "ジュンヤワタナベ"],
-    "NIL ADMIRARI": ["NIL ADMIRARI", "ニルアドミラリ"],
+    "NUMBER (N)INE": ["NUMBER (N)INE"],
+    "COMME des GARCONS": ["COMME des GARCONS"],
+    "COMME des GARCONS HOMME": ["COMME des GARCONS HOMME"],
+    "COMME des GARCONS HOMME PLUS": ["COMME des GARCONS HOMME PLUS"],
+    "PRADA SPORT": ["PRADA SPORT"],
+    "Maison Margiela": ["Maison Margiela"],
+    "Helmut Lang": ["Helmut Lang"],
+    "D&G": ["D&G"],
+    "Raf Simons": ["Raf Simons"],
+    "Junya Watanabe": ["Junya Watanabe"],
+    "NIL ADMIRARI": ["NIL ADMIRARI"],
 }
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
 PRICE_MAX = 10000  # 엔
