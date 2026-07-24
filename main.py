@@ -144,6 +144,16 @@ def save_seen(seen_ids):
 # ----------------------------------------------------------------------
 # 디스코드 알림 (배치 전송)
 # ----------------------------------------------------------------------
+def _match_brand_display_name(item_name: str) -> str:
+    """상품명 텍스트에서 TARGET_BRANDS 중 어느 브랜드에 해당하는지 찾아
+    사람이 보기 좋은 표시용 이름을 반환. 못 찾으면 '브랜드 미상' 반환."""
+    lowered = (item_name or "").lower()
+    for display_name, candidates in TARGET_BRANDS.items():
+        if any(cand.lower() in lowered for cand in candidates):
+            return display_name
+    return "브랜드 미상"
+
+
 def _build_embed(item):
     price = getattr(item, "price", None)
     name = getattr(item, "name", "(제목 없음)")
@@ -156,14 +166,15 @@ def _build_embed(item):
         if value:
             image_url = value[0] if isinstance(value, (list, tuple)) else value
             break
+    brand_display = _match_brand_display_name(name)
     embed = {
-        "title": name[:250],
+        "title": brand_display,
         "url": url,
         "description": f"💴 {price}円",
         "color": 0x2ECC71,
     }
     if image_url:
-        embed["thumbnail"] = {"url": image_url}
+        embed["image"] = {"url": image_url}  # 큰 이미지로 표시
     return embed
 
 
