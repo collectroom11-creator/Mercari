@@ -45,7 +45,6 @@ TARGET_BRANDS = {
     "Raf Simons": ["Raf Simons", "ラフシモンズ"],
     "Junya Watanabe": ["Junya Watanabe", "ジュンヤワタナベ"],
     "junhashimoto": ["junhashimoto", "ジュンハシモト"],
-    "ARMANI EXCHANGE": ["ARMANI EXCHANGE", "A|X ARMANI EXCHANGE", "アルマーニ エクスチェンジ"],
     "NIL ADMIRARI": ["NIL ADMIRARI", "ニルアドミラリ"],
 }
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
