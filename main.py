@@ -38,13 +38,19 @@ TARGET_BRANDS = {
         "COMME des GARÇONS HOMME PLUS",
         "コムデギャルソン オムプリュス",
     ],
+    "PRADA": ["PRADA", "プラダ"],
     "PRADA SPORT": ["PRADA SPORT", "プラダスポーツ", "PRADA LINEA ROSSA", "プラダ リネアロッサ"],
-    "Maison Margiela": ["Maison Margiela", "メゾンマルジェラ", "Martin Margiela", "マルタンマルジェラ"],
+    "Maison Margiela": [
+        "Maison Margiela",
+        "メゾンマルジェラ",
+        "Martin Margiela",
+        "マルタンマルジェラ",
+        "メゾン マルタン マルジェラ",
+    ],
     "HELMUT LANG": ["HELMUT LANG", "ヘルムートラング"],
-    "D&G": ["D&G", "ディーアンドジー", "Dolce & Gabbana", "ドルチェ&ガッバーナ"],
+    "D&G": ["D&G", "ディーアンドジー", "Dolce & Gabbana", "ドルチェ&ガッバーナ", "ドルチェアンドガッバーナ"],
     "Raf Simons": ["Raf Simons", "ラフシモンズ"],
     "Junya Watanabe": ["Junya Watanabe", "ジュンヤワタナベ"],
-    "junhashimoto": ["junhashimoto", "ジュンハシモト"],
     "NIL ADMIRARI": ["NIL ADMIRARI", "ニルアドミラリ"],
 }
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
