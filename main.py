@@ -53,6 +53,7 @@ TARGET_BRANDS = {
     "eYe COMME des GARCONS JUNYA WATANABE MAN": ["eYe COMME des GARCONS JUNYA WATANABE MAN"],
     "Givenchy": ["Givenchy"],
     "Dior Homme": ["Dior Homme"],
+    "Yohji Yamamoto": ["Yohji Yamamoto"],
 }
 
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
