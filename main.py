@@ -7,9 +7,6 @@
   이 스크립트는 그 폴더 안의 모든 JSON 파일을 읽어 이름으로 매칭한다.
   (Mercari 내부 ID는 수시로 바뀔 수 있어서, 정적 URL을 하드코딩하지 않고
   항상 그 시점의 최신 값을 직접 생성해서 쓰는 방식이 더 안정적이다.)
-- 브랜드 탭 필터 검색과 별개로, 상품명 텍스트 키워드 검색도 추가로 돌려서
-  브랜드 태그가 안 되어 있어도 특정 키워드(빈티지 특징 등)가 제목에 있으면 잡는다.
-  두 검색 결과는 합쳐서 하나의 신규 목록으로 처리한다.
 - 이미 알림을 보낸 상품 ID는 data/seen.json 에 저장해두고,
   다음 실행에서 새 ID만 다시 알림.
 - 디스코드 알림은 embed 10개씩 묶어서 한 번의 webhook 요청으로 보낸다
@@ -55,21 +52,6 @@ TARGET_BRANDS = {
     "EYE JUNYA WATANABE MAN": ["EYE JUNYA WATANABE MAN"],
     "eYe COMME des GARCONS JUNYA WATANABE MAN": ["eYe COMME des GARCONS JUNYA WATANABE MAN"],
 }
-
-# 상품명 텍스트 검색용 키워드 (브랜드 무관, 빈티지 특징 위주)
-TARGET_KEYWORDS = [
-    "シングルステッチ",
-    "フェード",
-    "USA製",
-    "Made in USA",
-    "90s",
-    "80s",
-    "70s",
-    "archive",
-    "売り切り",
-    "早勝ち",
-    "即購入OK",
-]
 
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
 PRICE_MAX = 10000  # 엔
@@ -169,8 +151,7 @@ def save_seen(seen_ids):
 # ----------------------------------------------------------------------
 def _match_brand_display_name(item_name: str) -> str:
     """상품명 텍스트에서 TARGET_BRANDS 중 어느 브랜드에 해당하는지 찾아
-    사람이 보기 좋은 표시용 이름을 반환. 못 찾으면 '브랜드 미상' 반환
-    (키워드 검색으로 잡힌 항목은 브랜드 태그가 없을 수 있어 이 경우가 생길 수 있음)."""
+    사람이 보기 좋은 표시용 이름을 반환. 못 찾으면 '브랜드 미상' 반환."""
     lowered = (item_name or "").lower()
     for display_name, candidates in TARGET_BRANDS.items():
         if any(cand.lower() in lowered for cand in candidates):
@@ -273,69 +254,30 @@ async def main():
                 status_filter = [member]
                 break
 
-    sort_by = getattr(SearchRequestData.SortBy, "SORT_CREATED_TIME", None)
-
-    # ------------------------------------------------------------------
-    # 1) 브랜드 필터 기반 검색
-    # ------------------------------------------------------------------
-    brand_kwargs = dict(
+    kwargs = dict(
         categories=[category_id] if category_id else [],
         brands=brand_ids,
         price_max=PRICE_MAX,
         status=status_filter,
     )
+    sort_by = getattr(SearchRequestData.SortBy, "SORT_CREATED_TIME", None)
     if sort_by is not None:
-        brand_kwargs["sort_by"] = sort_by
-        brand_kwargs["sort_order"] = SearchRequestData.SortOrder.ORDER_DESC
+        kwargs["sort_by"] = sort_by
+        kwargs["sort_order"] = SearchRequestData.SortOrder.ORDER_DESC
 
-    brand_results = await m.search("", **brand_kwargs)
-    all_items = list(brand_results.items)
-    all_ids = {getattr(it, "id_", None) or getattr(it, "id", None) for it in all_items}
-    print(f"브랜드 필터 검색 결과: {len(all_items)}건")
+    results = await m.search("", **kwargs)
 
-    # ------------------------------------------------------------------
-    # 2) 상품명 텍스트 키워드 검색 (브랜드 무관, 카테고리/가격/판매상태는 동일 적용)
-    # ------------------------------------------------------------------
-    keyword_kwargs = dict(
-        categories=[category_id] if category_id else [],
-        price_max=PRICE_MAX,
-        status=status_filter,
-    )
-    if sort_by is not None:
-        keyword_kwargs["sort_by"] = sort_by
-        keyword_kwargs["sort_order"] = SearchRequestData.SortOrder.ORDER_DESC
-
-    for i, keyword in enumerate(TARGET_KEYWORDS):
-        try:
-            kw_results = await m.search(keyword, **keyword_kwargs)
-        except Exception as e:
-            print(f"경고: 키워드 '{keyword}' 검색 실패: {e}", file=sys.stderr)
-            continue
-        added = 0
-        for it in kw_results.items:
-            it_id = getattr(it, "id_", None) or getattr(it, "id", None)
-            if it_id and it_id not in all_ids:
-                all_items.append(it)
-                all_ids.add(it_id)
-                added += 1
-        print(f"키워드 '{keyword}' 검색 결과 {len(kw_results.items)}건 중 신규 추가 {added}건")
-        if i < len(TARGET_KEYWORDS) - 1:
-            await asyncio.sleep(1.5)  # 요청 사이 텀을 둬서 트래픽을 자연스럽게 분산
-
-    # ------------------------------------------------------------------
-    # 3) 신규 여부 판단 (브랜드 검색 + 키워드 검색 합친 결과 기준)
-    # ------------------------------------------------------------------
     is_first_run = not SEEN_FILE.exists()
     seen = load_seen()
     new_items = []
-    for item in all_items:
+    for item in results.items:
         item_id = getattr(item, "id_", None) or getattr(item, "id", None)
         # 주의: 여기서는 seen에 바로 넣지 않는다. 전송 성공 여부를 확인한 뒤에
         # 넣어야, 실패한 항목이 다음 실행에서 다시 시도된다.
         if item_id and item_id not in seen:
             new_items.append(item)
 
-    print(f"전체 검색 결과 {len(all_items)}건 중 신규 {len(new_items)}건")
+    print(f"검색 결과 {len(results.items)}건 중 신규 {len(new_items)}건")
 
     if is_first_run:
         for item in new_items:
