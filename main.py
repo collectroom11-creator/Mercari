@@ -60,6 +60,9 @@ TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッシ
 PRICE_MAX = 10000  # 엔
 CHUNK_SIZE = 10  # 디스코드 embed는 메시지 하나에 최대 10개까지
 
+# 상품명에 아래 키워드가 포함되면 넥타이/스카프류로 간주하고 알림에서 제외
+EXCLUDE_KEYWORDS = ["ネクタイ", "necktie", "tie", "スカーフ", "scarf", "マフラー"]
+
 FACETS_DIR = Path(__file__).parent / "facets"
 DATA_DIR = Path(__file__).parent / "data"
 SEEN_FILE = DATA_DIR / "seen.json"
@@ -152,6 +155,12 @@ def save_seen(seen_ids):
 # ----------------------------------------------------------------------
 # 디스코드 알림 (배치 전송)
 # ----------------------------------------------------------------------
+def _is_excluded_item(item_name: str) -> bool:
+    """넥타이/스카프류 등 제외 키워드가 상품명에 포함되어 있는지 확인."""
+    lowered = (item_name or "").lower()
+    return any(keyword.lower() in lowered for keyword in EXCLUDE_KEYWORDS)
+
+
 def _match_brand_display_name(item_name: str) -> str:
     """상품명 텍스트에서 TARGET_BRANDS 중 어느 브랜드에 해당하는지 찾아
     사람이 보기 좋은 표시용 이름을 반환. 못 찾으면 '브랜드 미상' 반환."""
@@ -275,9 +284,10 @@ async def main():
     new_items = []
     for item in results.items:
         item_id = getattr(item, "id_", None) or getattr(item, "id", None)
+        item_name = getattr(item, "name", "")
         # 주의: 여기서는 seen에 바로 넣지 않는다. 전송 성공 여부를 확인한 뒤에
         # 넣어야, 실패한 항목이 다음 실행에서 다시 시도된다.
-        if item_id and item_id not in seen:
+        if item_id and item_id not in seen and not _is_excluded_item(item_name):
             new_items.append(item)
 
     print(f"검색 결과 {len(results.items)}건 중 신규 {len(new_items)}건")
