@@ -1,32 +1,27 @@
 name: Mercari brand alert
-
 on:
   schedule:
     - cron: "7,22,37,52 * * * *"
   workflow_dispatch: {}  # Actions 탭에서 수동 실행도 가능
-
 # seen.json 커밋을 위해 쓰기 권한 필요
 permissions:
   contents: write
-
 concurrency:
   group: mercari-alert
-  cancel-in-progress: false
-
+  cancel-in-progress: true
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install dependencies
         run: pip install -r requirements.txt
-
       - name: Fetch latest Mercari category/brand facets
+        timeout-minutes: 5
         run: |
           set -e
           git clone --depth 1 https://github.com/take-kun/mercapi.git /tmp/mercapi-src
@@ -39,12 +34,11 @@ jobs:
             | xargs -0 -I{} cp {} "$GITHUB_WORKSPACE/facets/"
           echo "복사된 facets 파일 목록:"
           ls -la "$GITHUB_WORKSPACE/facets/"
-
       - name: Run checker
+        timeout-minutes: 3
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python main.py
-
       - name: Commit updated seen.json
         run: |
           git config user.name "mercari-alert-bot"
