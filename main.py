@@ -27,7 +27,7 @@ from mercapi.requests import SearchRequestData
 # ----------------------------------------------------------------------
 # 설정
 # ----------------------------------------------------------------------
-# 메루카리 앱에서 직접 확인한 정확한 브랜드 탭 표기 22개
+# 메루카리 앱에서 직접 확인한 정확한 브랜드 탭 표기
 TARGET_BRANDS = {
     "NIL ADMIRARI": ["NIL ADMIRARI"],
     "BLACK COMME des GARCONS": ["BLACK COMME des GARCONS"],
@@ -51,6 +51,8 @@ TARGET_BRANDS = {
     "RAF SIMONS": ["RAF SIMONS"],
     "EYE JUNYA WATANABE MAN": ["EYE JUNYA WATANABE MAN"],
     "eYe COMME des GARCONS JUNYA WATANABE MAN": ["eYe COMME des GARCONS JUNYA WATANABE MAN"],
+    "Givenchy": ["Givenchy"],
+    "Dior Homme": ["Dior Homme"],
 }
 
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
