@@ -15,6 +15,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -45,4 +47,15 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/seen.json
           git diff --cached --quiet || git commit -m "update seen items"
-          git push
+          # 야후옥션 워크플로우 등 다른 작업이 같은 브랜치에 동시에 push할 수 있으므로,
+          # 실패하면 최신 커밋을 받아와서(rebase) 몇 번 재시도한다.
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "push 성공"
+              break
+            fi
+            echo "push 실패, origin/main 기준으로 rebase 후 재시도 ($i/5)"
+            git fetch origin main
+            git rebase origin/main
+            sleep 3
+          done
