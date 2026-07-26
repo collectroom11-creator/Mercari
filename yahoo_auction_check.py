@@ -278,6 +278,13 @@ async def main():
                     all_new.append(item)
                     found_new += 1
 
+            # [디버그] 잔여시간 파싱이 실제로 되고 있는지 확인용 — 앞에서 3개만 샘플로 출력
+            sample = items[:3]
+            sample_str = ", ".join(
+                f"{it['id']}=price:{it['price']}/remain:{it['remaining_minutes']}분" for it in sample
+            )
+            print(f"  [디버그] 샘플 파싱 결과: {sample_str if sample else '(검색 결과 없음)'}")
+
             print(f"'{brand_display}' 검색 결과 {len(items)}건 중 마감임박 신규 {found_new}건")
             await asyncio.sleep(REQUEST_DELAY_SEC)
 
