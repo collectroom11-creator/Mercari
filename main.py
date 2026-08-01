@@ -54,6 +54,22 @@ TARGET_BRANDS = {
     "Givenchy": ["Givenchy"],
     "Dior Homme": ["Dior Homme"],
     "Yohji Yamamoto": ["Yohji Yamamoto"],
+    "whoop-de-doo": ["whoop-de-doo"],
+    "NEIL BARRETT": ["NEIL BARRETT"],
+    "SAINT LAURENT PARIS": ["SAINT LAURENT PARIS"],
+    "Saint Laurent": ["Saint Laurent"],
+    "InTheAttic": ["InTheAttic"],
+    "LAD MUSICIAN": ["LAD MUSICIAN"],
+    "ISAMUKATAYAMA BACKLASH": ["ISAMUKATAYAMA BACKLASH"],
+    "GUIDI": ["GUIDI"],
+}
+
+# 브랜드별 가격 상한이 다른 경우 여기에 예외로 등록 (없으면 기본 PRICE_MAX 적용)
+BRAND_PRICE_OVERRIDES = {
+    "SAINT LAURENT PARIS": 13000,
+    "Saint Laurent": 13000,
+    "GUIDI": 13000,
+    "Dior Homme": 13000,
 }
 
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
@@ -254,7 +270,13 @@ async def main():
         return
 
     print(f"검색 대상 브랜드({len(brand_id_map)}개): {list(brand_id_map.keys())}")
-    brand_ids = list(brand_id_map.values())
+
+    # 가격 상한이 브랜드별로 다를 수 있으므로, 같은 가격 상한을 쓰는 브랜드끼리 묶어서
+    # 그룹별로 따로 검색한다 (메루카리 검색 API는 요청 하나에 가격 상한을 하나만 지정 가능).
+    price_groups = {}
+    for display_name, brand_id in brand_id_map.items():
+        price_cap = BRAND_PRICE_OVERRIDES.get(display_name, PRICE_MAX)
+        price_groups.setdefault(price_cap, []).append(brand_id)
 
     m = Mercapi()
     status_filter = []
@@ -266,23 +288,27 @@ async def main():
                 status_filter = [member]
                 break
 
-    kwargs = dict(
-        categories=[category_id] if category_id else [],
-        brands=brand_ids,
-        price_max=PRICE_MAX,
-        status=status_filter,
-    )
     sort_by = getattr(SearchRequestData.SortBy, "SORT_CREATED_TIME", None)
-    if sort_by is not None:
-        kwargs["sort_by"] = sort_by
-        kwargs["sort_order"] = SearchRequestData.SortOrder.ORDER_DESC
 
-    results = await m.search("", **kwargs)
+    all_result_items = []
+    for price_cap, brand_ids in price_groups.items():
+        kwargs = dict(
+            categories=[category_id] if category_id else [],
+            brands=brand_ids,
+            price_max=price_cap,
+            status=status_filter,
+        )
+        if sort_by is not None:
+            kwargs["sort_by"] = sort_by
+            kwargs["sort_order"] = SearchRequestData.SortOrder.ORDER_DESC
+        print(f"가격상한 {price_cap}엔 그룹 검색: 브랜드 {len(brand_ids)}개")
+        group_results = await m.search("", **kwargs)
+        all_result_items.extend(group_results.items)
 
     is_first_run = not SEEN_FILE.exists()
     seen = load_seen()
     new_items = []
-    for item in results.items:
+    for item in all_result_items:
         item_id = getattr(item, "id_", None) or getattr(item, "id", None)
         item_name = getattr(item, "name", "")
         # 주의: 여기서는 seen에 바로 넣지 않는다. 전송 성공 여부를 확인한 뒤에
@@ -290,7 +316,7 @@ async def main():
         if item_id and item_id not in seen and not _is_excluded_item(item_name):
             new_items.append(item)
 
-    print(f"검색 결과 {len(results.items)}건 중 신규 {len(new_items)}건")
+    print(f"검색 결과 {len(all_result_items)}건 중 신규 {len(new_items)}건")
 
     if is_first_run:
         for item in new_items:
