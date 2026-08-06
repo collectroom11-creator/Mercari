@@ -1,0 +1,32 @@
+name: Diagnostic - sold items check
+on:
+  workflow_dispatch: {}  # 예약 실행 없음. 반드시 Actions 탭에서 수동으로만 실행.
+permissions:
+  contents: read  # 진단용이라 아무 것도 커밋/push 하지 않음
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Fetch latest Mercari category/brand facets
+        timeout-minutes: 5
+        run: |
+          set -e
+          git clone --depth 1 https://github.com/take-kun/mercapi.git /tmp/mercapi-src
+          cd /tmp/mercapi-src
+          pip install .
+          python utils/fetch_facets.py
+          mkdir -p "$GITHUB_WORKSPACE/facets"
+          find . -iname "*.json" -not -path "*/.git/*" -print0 \
+            | xargs -0 -I{} cp {} "$GITHUB_WORKSPACE/facets/"
+      - name: Run sold-item diagnostic
+        timeout-minutes: 3
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python diagnostic_sold_check.py
