@@ -62,22 +62,26 @@ TARGET_BRANDS = {
     "LAD MUSICIAN": ["LAD MUSICIAN"],
     "ISAMUKATAYAMA BACKLASH": ["ISAMUKATAYAMA BACKLASH"],
     "GUIDI": ["GUIDI"],
+    "junhashimoto": ["junhashimoto"],
+    "Alexander Wang": ["Alexander Wang"],
+    "ripvanwinkle": ["ripvanwinkle"],
+    "CABANE de ZUCCA": ["CABANE de ZUCCA"],
 }
 
 # 브랜드별 가격 상한이 다른 경우 여기에 예외로 등록 (없으면 기본 PRICE_MAX 적용)
-BRAND_PRICE_OVERRIDES = {
-    "SAINT LAURENT PARIS": 13000,
-    "Saint Laurent": 13000,
-    "GUIDI": 13000,
-    "Dior Homme": 13000,
-}
+# 현재는 모든 브랜드가 동일한 PRICE_MAX(20000엔)를 사용하므로 비워둠.
+BRAND_PRICE_OVERRIDES = {}
 
 TARGET_CATEGORY_CANDIDATES = ["メンズファッション", "男性ファッション", "men's fashion", "メンズ"]
-PRICE_MAX = 10000  # 엔
+PRICE_MAX = 20000  # 엔
 CHUNK_SIZE = 10  # 디스코드 embed는 메시지 하나에 최대 10개까지
 
-# 상품명에 아래 키워드가 포함되면 넥타이/스카프류로 간주하고 알림에서 제외
-EXCLUDE_KEYWORDS = ["ネクタイ", "necktie", "tie", "スカーフ", "scarf", "マフラー"]
+# 상품명에 아래 키워드가 포함되면 넥타이/스카프/지갑/시계류로 간주하고 알림에서 제외
+EXCLUDE_KEYWORDS = [
+    "ネクタイ", "necktie", "tie", "スカーフ", "scarf", "マフラー",
+    "財布", "wallet",
+    "腕時計", "時計", "watch",
+]
 
 FACETS_DIR = Path(__file__).parent / "facets"
 DATA_DIR = Path(__file__).parent / "data"
@@ -172,7 +176,7 @@ def save_seen(seen_ids):
 # 디스코드 알림 (배치 전송)
 # ----------------------------------------------------------------------
 def _is_excluded_item(item_name: str) -> bool:
-    """넥타이/스카프류 등 제외 키워드가 상품명에 포함되어 있는지 확인."""
+    """넥타이/스카프/지갑/시계류 등 제외 키워드가 상품명에 포함되어 있는지 확인."""
     lowered = (item_name or "").lower()
     return any(keyword.lower() in lowered for keyword in EXCLUDE_KEYWORDS)
 
