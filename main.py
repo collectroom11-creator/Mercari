@@ -13,6 +13,12 @@
   (레이트리밋 회피 목적). 배치 사이에는 0.5초 딜레이를 둔다.
   전송에 성공한 배치의 아이템만 seen에 기록하고, 실패한 배치는
   다음 실행에서 자동으로 재시도된다.
+- 카테고리 매칭은 "정확 일치"를 "부분 일치"보다 우선한다. 메루카리가
+  카테고리 구조를 바꿔서 후보 문자열을 포함하는 엉뚱한(더 좁은) 카테고리가
+  새로 생기면, 부분 일치만으로는 의도치 않은 카테고리에 잘못 매칭될 수
+  있기 때문이다. 또한 이전 실행과 카테고리 id가 달라지면 data/last_category.json
+  기록과 비교해 stderr에 경고를 남겨, 검색 결과가 조용히 0건이 되는 상황을
+  미리 알아챌 수 있게 한다.
 """
 import asyncio
 import json
@@ -43,6 +49,7 @@ CHUNK_SIZE = 10  # 디스코드 embed는 메시지 하나에 최대 10개까지
 FACETS_DIR = Path(__file__).parent / "facets"
 DATA_DIR = Path(__file__).parent / "data"
 SEEN_FILE = DATA_DIR / "seen.json"
+LAST_CATEGORY_FILE = DATA_DIR / "last_category.json"
 MAX_SEEN_KEEP = 3000
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
@@ -77,11 +84,59 @@ def load_facets():
 
 
 def resolve_category_id(entries):
+    """카테고리 후보 문자열로 facets에서 카테고리를 찾는다.
+
+    부분 문자열 매칭만 쓰면, 메루카리가 카테고리 구조를 바꿔서 후보
+    문자열을 포함하는 다른(보통 더 좁은) 카테고리가 새로 생겼을 때
+    엉뚱한 카테고리에 잘못 매칭될 수 있다. 그래서 이름이 후보와
+    "정확히" 일치하는 카테고리를 먼저 찾고, 그게 하나도 없을 때만
+    기존처럼 부분 문자열 포함 매칭으로 폴백한다.
+    """
+    # 1순위: 정확 일치
+    for cand in TARGET_CATEGORY_CANDIDATES:
+        for c in entries:
+            name = str(c.get("name", "")).strip()
+            if name.lower() == cand.strip().lower():
+                return c["id"], c.get("name")
+
+    # 2순위: 정확 일치가 하나도 없을 때만 부분 일치로 폴백
     for cand in TARGET_CATEGORY_CANDIDATES:
         for c in entries:
             if cand.lower() in str(c.get("name", "")).lower():
                 return c["id"], c.get("name")
+
     return None, None
+
+
+def check_category_drift(category_id, category_name):
+    """카테고리 id가 이전 실행과 달라졌으면 경고를 남기고 기록을 갱신한다.
+
+    메루카리가 카테고리 구조를 바꿔서 검색 범위가 의도치 않게 좁아지거나
+    엉뚱해지면, 검색 결과가 갑자기 0건 근처로 조용히 줄어들 수 있다.
+    이전에 성공했던 category_id를 파일로 남겨두고 매 실행마다 비교하면,
+    그런 상황이 생겼을 때 바로 로그에서 알아챌 수 있다.
+    """
+    prev = None
+    if LAST_CATEGORY_FILE.exists():
+        try:
+            prev = json.loads(LAST_CATEGORY_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            prev = None
+
+    if prev is not None and prev.get("id") != category_id:
+        print(
+            f"⚠️ 경고: 카테고리 id가 바뀌었습니다! "
+            f"이전: {prev.get('name')}(id={prev.get('id')}) → "
+            f"현재: {category_name}(id={category_id}). "
+            f"검색 범위가 의도와 달라졌을 수 있으니 확인이 필요합니다.",
+            file=sys.stderr,
+        )
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    LAST_CATEGORY_FILE.write_text(
+        json.dumps({"id": category_id, "name": category_name}, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
 
 def resolve_brand_ids(entries):
@@ -211,6 +266,7 @@ async def main():
               "카테고리 필터 없이 검색합니다.", file=sys.stderr)
     else:
         print(f"카테고리 매칭: {category_name} (id={category_id})")
+        check_category_drift(category_id, category_name)
 
     brand_id_map, missing_brands = resolve_brand_ids(facets)
     if missing_brands:
