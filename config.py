@@ -51,6 +51,10 @@ TARGET_BRANDS = [
     "ripvanwinkle",
     "CABANE de ZUCCA",
     "The Viridi-anne",
+    "Hysteric Glamour",
+    "UNDERCOVER",
+    "Vivienne Westwood",
+    "Vivienne Westwood MAN",
 ]
 
 # 전체 기본 가격 상한(엔). TARGET_BRANDS의 모든 브랜드에 적용됨.
