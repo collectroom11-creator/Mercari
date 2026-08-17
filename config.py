@@ -51,7 +51,6 @@ TARGET_BRANDS = [
     "ripvanwinkle",
     "CABANE de ZUCCA",
     "The Viridi-anne",
-    "Hysteric Glamour",
     "UNDERCOVER",
     "Vivienne Westwood",
     "Vivienne Westwood MAN",
