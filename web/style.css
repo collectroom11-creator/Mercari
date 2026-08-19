@@ -80,7 +80,7 @@ button:hover {
   flex-direction: column;
 }
 
-.card img {
+.card > img {
   width: 100%;
   aspect-ratio: 1 / 1;
   object-fit: cover;
@@ -96,10 +96,13 @@ button:hover {
 }
 
 .platform {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ink-dim);
+  display: block;
+}
+
+.platform img {
+  height: 16px;
+  width: auto;
+  display: block;
 }
 
 .brand {

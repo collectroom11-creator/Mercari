@@ -1,4 +1,8 @@
 const list = document.getElementById("list");
+const PLATFORM_LOGOS = {
+  "메루카리": "https://mercari-pi.vercel.app/logos/mercari.png",
+  "야후옥션": "https://mercari-pi.vercel.app/logos/yahoo.png",
+};
 
 function render(alerts) {
   list.innerHTML = "";
@@ -18,14 +22,30 @@ function render(alerts) {
 
     const info = document.createElement("div");
     info.className = "info";
-    info.innerHTML = `
-      <div class="platform"></div>
-      <div class="brand"></div>
-      <div class="price"></div>
-    `;
-    info.querySelector(".platform").textContent = a.platform || "";
-    info.querySelector(".brand").textContent = a.brand || "";
-    info.querySelector(".price").textContent = a.priceText || "";
+
+    const platformEl = document.createElement("div");
+    platformEl.className = "platform";
+    const logoUrl = PLATFORM_LOGOS[a.platform];
+    if (logoUrl) {
+      const logo = document.createElement("img");
+      logo.src = logoUrl;
+      logo.alt = a.platform || "";
+      platformEl.appendChild(logo);
+    } else {
+      platformEl.textContent = a.platform || "";
+    }
+    info.appendChild(platformEl);
+
+    const brandEl = document.createElement("div");
+    brandEl.className = "brand";
+    brandEl.textContent = a.brand || "";
+    info.appendChild(brandEl);
+
+    const priceEl = document.createElement("div");
+    priceEl.className = "price";
+    priceEl.textContent = a.priceText || "";
+    info.appendChild(priceEl);
+
     item.appendChild(info);
 
     list.appendChild(item);

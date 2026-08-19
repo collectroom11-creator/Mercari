@@ -1,4 +1,8 @@
-const POLL_INTERVAL_MS = 10000; // 완전한 실시간 푸시는 서버리스 구조상 불가능해서, 대신 짧은 주기로 계속 확인한다.
+const POLL_INTERVAL_MS = 10000;
+const PLATFORM_LOGOS = {
+  "메루카리": "/logos/mercari.png",
+  "야후옥션": "/logos/yahoo.png",
+}; // 완전한 실시간 푸시는 서버리스 구조상 불가능해서, 대신 짧은 주기로 계속 확인한다.
 const READ_VISIBILITY_THRESHOLD = 0.6; // 카드가 이 비율 이상 화면에 보이면 "읽었다"고 판단
 
 let alerts = [];
@@ -117,7 +121,15 @@ function renderCard(a) {
   platformLink.href = a.url;
   platformLink.target = "_blank";
   platformLink.rel = "noopener";
-  platformLink.textContent = a.platform;
+  const logoUrl = PLATFORM_LOGOS[a.platform];
+  if (logoUrl) {
+    const logo = document.createElement("img");
+    logo.src = logoUrl;
+    logo.alt = a.platform;
+    platformLink.appendChild(logo);
+  } else {
+    platformLink.textContent = a.platform;
+  }
   platformLink.addEventListener("click", () => markRead(a.messageId));
 
   const brandLink = document.createElement("a");
