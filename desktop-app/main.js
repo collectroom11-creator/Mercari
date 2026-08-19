@@ -93,8 +93,15 @@ async function pollAlerts() {
   }
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function markManyRead(ids) {
-  const CONCURRENCY = 5;
+  // /api/toggle 쪽에서도 디스코드 429를 재시도하지만, 배치 사이에도 약간
+  // 텀을 둬서 애초에 레이트리밋에 덜 걸리게 한다(메루카리/야후옥션 봇의
+  // 배치 전송과 같은 취지).
+  const CONCURRENCY = 3;
   for (let i = 0; i < ids.length; i += CONCURRENCY) {
     const batch = ids.slice(i, i + CONCURRENCY);
     await Promise.all(
@@ -106,6 +113,7 @@ async function markManyRead(ids) {
         }).catch(() => {})
       )
     );
+    if (i + CONCURRENCY < ids.length) await sleep(300);
   }
 }
 
