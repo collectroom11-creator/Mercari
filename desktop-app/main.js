@@ -2,7 +2,7 @@
 // 그대로 재사용한다 - 디스코드를 다시 읽는 로직을 여기 따로 만들 필요가 없다.
 // 뱃지 숫자 = "읽지 않은" 알림 개수(서버의 read 상태 기준). 팝업 패널을
 // 닫으면(blur) 그 시점에 보여주고 있던 알림들을 전부 읽음 처리한다.
-const { app, Tray, BrowserWindow, shell, ipcMain, nativeImage } = require("electron");
+const { app, Tray, BrowserWindow, shell, ipcMain, nativeImage, screen } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const https = require("https");
@@ -156,8 +156,17 @@ function createWindow() {
 function positionWindow() {
   const trayBounds = tray.getBounds();
   const windowBounds = win.getBounds();
-  const x = Math.round(trayBounds.x + trayBounds.width / 2 - windowBounds.width / 2);
+  // 아이콘 중앙에 맞추면(가운데 정렬) 아이콘이 화면 오른쪽 끝에 가까울 때
+  // 창의 오른쪽 절반이 화면 밖으로 잘린다. 대신 창의 오른쪽 끝을 아이콘의
+  // 오른쪽 끝에 맞춰서, 창이 아이콘으로부터 왼쪽으로 펼쳐지게 한다.
+  let x = Math.round(trayBounds.x + trayBounds.width - windowBounds.width);
   const y = Math.round(trayBounds.y + trayBounds.height);
+
+  const display = screen.getDisplayNearestPoint({ x: trayBounds.x, y: trayBounds.y });
+  const minX = display.workArea.x + 8;
+  const maxX = display.workArea.x + display.workArea.width - windowBounds.width - 8;
+  x = Math.min(Math.max(x, minX), maxX);
+
   win.setPosition(x, y, false);
 }
 
