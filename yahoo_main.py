@@ -202,6 +202,7 @@ def _build_embed(item: dict, brand_display: str) -> dict:
     if remaining_text:
         lines.append(remaining_text)
     embed = {
+        "author": {"name": "야후옥션"},
         "title": brand_display,
         "url": url,
         "description": "\n".join(lines),

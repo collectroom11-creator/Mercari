@@ -226,6 +226,7 @@ def _build_embed(item, brand_display: str):
     url = f"https://kenzpost.com/mercari/bid.s/{mercari_url}"  # 켄즈포스트 구매대행 링크
     thumbnails = getattr(item, "thumbnails", None)
     embed = {
+        "author": {"name": "메루카리"},
         "title": brand_display,
         "url": url,
         "description": f"💴 {price}円",
