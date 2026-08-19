@@ -12,23 +12,22 @@
     overflow-y: auto;
   }
   .item {
-    display: flex;
-    gap: 10px;
-    padding: 10px 14px;
+    display: block;
+    padding: 14px;
     border-bottom: 1px solid #333029;
     text-decoration: none;
     color: inherit;
   }
   .item:hover { background: #29271F; }
   .item img {
-    width: 84px;
-    height: 84px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
     object-fit: cover;
-    border-radius: 8px;
-    flex: none;
+    border-radius: 10px;
     background: #333029;
+    margin-bottom: 8px;
   }
-  .info { flex: 1; min-width: 0; }
+  .info { min-width: 0; }
   .platform {
     font-size: 10px;
     text-transform: uppercase;
