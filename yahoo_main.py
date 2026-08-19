@@ -14,8 +14,13 @@
   상품마다 data-auction-* 속성에 id/가격/제목/이미지가, data-cl-params
   속성에 등록 시각(st, 유닉스 타임스탬프)이 안정적으로 박혀있어서
   정규식으로 충분히 안정적으로 파싱할 수 있다.
-- "신규" 판단은 메루카리 봇과 동일하게 seen 파일 대조 + 등록 시각(st)이
-  최근 폴링 주기 이내인지로 한 번 더 거른다.
+- 알림 조건은 "새로 등록된 상품"이 아니라 "경매 종료가 임박한 상품"이다
+  (ENDING_SOON_MAX_MINUTES, 기본 24시간). 그래서 seen 파일의 의미도
+  메루카리 봇과 다르다 - "한 번이라도 검색에 걸린 적 있는 id"가 아니라
+  "이미 알림을 보낸 id"만 기록한다. 아직 종료까지 24시간 넘게 남은
+  상품은 seen에 넣지 않고 그냥 넘어가서, 나중에 24시간 이내로 들어오면
+  그때 다시 후보로 평가된다. data-cl-params의 end(종료 유닉스 타임스탬프)
+  값을 기준으로 남은 시간을 계산한다.
 - seen 기록은 메루카리 봇과 완전히 분리된 파일(data/yahoo_seen.json)에
   저장한다 - 플랫폼이 다르면 상품 id 체계도 다르므로 섞지 않는다.
   순서 보장 구조(dict)로 저장하는 이유는 메루카리 봇과 동일하다: set으로
@@ -46,7 +51,7 @@ from config import (
 # ----------------------------------------------------------------------
 SEARCH_URL = "https://auctions.yahoo.co.jp/search/search"
 CHUNK_SIZE = 10  # 디스코드 embed는 메시지 하나에 최대 10개까지
-NEW_ITEM_MAX_AGE_MINUTES = 10  # 등록시각(st)이 이보다 오래된 매물은 "신규"로 취급하지 않음
+ENDING_SOON_MAX_MINUTES = 24 * 60  # 종료까지 이 시간 이내로 남은 것만 알림
 SEARCH_CONCURRENCY = 5  # 브랜드x언어 검색을 동시에 몇 개까지 날릴지
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -69,7 +74,7 @@ ATTR_PATTERNS = {
     "price": re.compile(r'data-auction-price="([^"]*)"'),
     "cl_params": re.compile(r'data-cl-params="([^"]*)"'),
 }
-START_TIME_RE = re.compile(r"st:(\d+)")
+END_TIME_RE = re.compile(r"end:(\d+)")
 
 
 # ----------------------------------------------------------------------
@@ -88,11 +93,11 @@ def _parse_search_html(page_html: str) -> list:
         if not item_id or item_id in items:
             continue
 
-        created = None
+        end = None
         if values.get("cl_params"):
-            st_match = START_TIME_RE.search(values["cl_params"])
-            if st_match:
-                created = datetime.fromtimestamp(int(st_match.group(1)))
+            end_match = END_TIME_RE.search(values["cl_params"])
+            if end_match:
+                end = datetime.fromtimestamp(int(end_match.group(1)))
 
         try:
             price = int(values["price"]) if values.get("price") else None
@@ -104,7 +109,7 @@ def _parse_search_html(page_html: str) -> list:
             "title": html.unescape(values.get("title") or ""),
             "img": values.get("img"),
             "price": price,
-            "created": created,
+            "end": end,
         }
     return list(items.values())
 
@@ -158,26 +163,48 @@ def _is_excluded_item(title: str) -> bool:
     return any(keyword.lower() in lowered for keyword in EXCLUDE_KEYWORDS)
 
 
-def _is_recently_created(created: Optional[datetime]) -> bool:
-    # 야후옥션도 등록시각(st)을 로컬 타임존 기준 유닉스 타임스탬프로 준다.
+def _minutes_remaining(end: Optional[datetime]) -> Optional[float]:
+    # 야후옥션도 종료시각(end)을 로컬 타임존 기준 유닉스 타임스탬프로 준다.
     # GitHub Actions 러너의 로컬 타임존은 기본적으로 UTC라 datetime.now()와 그대로 비교해도 맞다.
-    if created is None:
-        return True
-    age_seconds = (datetime.now() - created).total_seconds()
-    return age_seconds <= NEW_ITEM_MAX_AGE_MINUTES * 60
+    if end is None:
+        return None
+    return (end - datetime.now()).total_seconds() / 60
+
+
+def _is_ending_soon(end: Optional[datetime]) -> bool:
+    remaining = _minutes_remaining(end)
+    # 종료시각을 못 읽었으면 안전하게 알림하지 않는다(파싱 실패를 "임박"으로 오인하면 안 됨).
+    # 이미 끝난 경매(remaining <= 0)도 제외한다.
+    if remaining is None:
+        return False
+    return 0 < remaining <= ENDING_SOON_MAX_MINUTES
 
 
 # ----------------------------------------------------------------------
 # 디스코드 알림 (배치 전송) - 메루카리 봇과 동일한 방식/채널
 # ----------------------------------------------------------------------
+def _format_remaining(minutes: Optional[float]) -> str:
+    if minutes is None:
+        return ""
+    total_minutes = max(0, int(minutes))
+    hours, mins = divmod(total_minutes, 60)
+    return f"⏰ {hours}시간 {mins}분 남음"
+
+
 def _build_embed(item: dict, brand_display: str) -> dict:
     original_url = f"https://auctions.yahoo.co.jp/jp/auction/{item['id']}"
     url = f"https://kenzpost.com/yahoo/bid.s/{original_url}"  # 켄즈포스트 구매대행 링크
     price = item.get("price")
+    lines = []
+    if price is not None:
+        lines.append(f"💴 {price}円")
+    remaining_text = _format_remaining(_minutes_remaining(item.get("end")))
+    if remaining_text:
+        lines.append(remaining_text)
     embed = {
         "title": brand_display,
         "url": url,
-        "description": f"💴 {price}円" if price is not None else "",
+        "description": "\n".join(lines),
         "color": 0x3B82F6,
     }
     if item.get("img"):
@@ -242,7 +269,10 @@ async def main():
         all_items.append((display_name, items))
     total_raw = sum(len(items) for _, items in all_items)
 
-    is_first_run = not SEEN_FILE.exists()
+    # seen은 "이미 알림 보낸 id"만 담는다. 종료까지 24시간 넘게 남은 상품은
+    # 여기서 그냥 넘어가고(seen에 넣지 않음), 나중에 임박 구간에 들어오면
+    # 그때 다시 후보로 평가된다 - 그래서 첫 실행이라고 특별히 억제할 필요가
+    # 없다: 이미 임박한 상품이면 첫 실행이든 아니든 똑같이 알림이 필요하다.
     seen = load_seen()
     seen_this_run = set()
     new_items = []
@@ -254,17 +284,13 @@ async def main():
             seen_this_run.add(item_id)
             if _is_excluded_item(item["title"]):
                 continue
-            if not _is_recently_created(item["created"]):
+            if not _is_ending_soon(item["end"]):
                 continue
             new_items.append((item, display_name))
 
-    print(f"검색 결과 {total_raw}건(중복 포함) 중 신규 {len(new_items)}건")
+    print(f"검색 결과 {total_raw}건(중복 포함) 중 종료임박 {len(new_items)}건")
 
-    if is_first_run:
-        for item_id in seen_this_run:
-            seen[item_id] = None
-        print("첫 실행이므로 알림 없이 현재 매물을 기준점으로만 저장합니다.")
-    elif new_items:
+    if new_items:
         with httpx.Client() as sync_client:
             success_count = 0
             for i in range(0, len(new_items), CHUNK_SIZE):
