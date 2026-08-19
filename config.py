@@ -5,7 +5,7 @@
 # 알림받고 싶은 브랜드의 "표시 이름" 목록.
 # facets 폴더의 브랜드 JSON에 있는 name과 정확히 일치(우선), 없으면 부분 일치(폴백)하는 걸 찾는다.
 TARGET_BRANDS = [
-    # "Dior Homme",
+    "Dior Homme",
 ]
 
 # 기본 가격 상한(엔). TARGET_BRANDS 중 BRAND_PRICE_OVERRIDES에 없는 브랜드는 이 값을 쓴다.
