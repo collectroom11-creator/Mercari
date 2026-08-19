@@ -19,7 +19,7 @@ BRAND_PRICE_OVERRIDES = {
 # 카테고리 후보 이름들 (정확 일치 우선, 없으면 부분 일치로 폴백).
 # facets 폴더의 카테고리 JSON에 있는 name과 비교한다.
 TARGET_CATEGORY_CANDIDATES = [
-    "メンズファッション",
+    "メンズ",
 ]
 
 # 상품명에 이 키워드 중 하나라도 포함되면 알림에서 제외한다.
