@@ -1,0 +1,148 @@
+:root {
+  --bg: #F5F3EE;
+  --surface: #FFFFFF;
+  --border: #E4DFD2;
+  --ink: #211E19;
+  --ink-dim: #6E6759;
+  --accent: #2C6E63;
+  --star: #C98A2B;
+  --check: #2C8C5A;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid var(--border);
+  z-index: 10;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+select, button {
+  font-size: 14px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 20px 24px 60px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.card img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: var(--border);
+}
+
+.card-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.platform {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-dim);
+}
+
+.brand {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.price {
+  font-size: 14px;
+  color: var(--ink-dim);
+}
+
+.card-actions {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 12px;
+}
+
+.card-actions button {
+  flex: 1;
+  font-size: 13px;
+  padding: 6px 8px;
+}
+
+.card-actions button.active[data-kind="interested"] {
+  background: var(--star);
+  color: #fff;
+  border-color: var(--star);
+}
+
+.card-actions button.active[data-kind="read"] {
+  background: var(--check);
+  color: #fff;
+  border-color: var(--check);
+}
+
+.card.is-read {
+  opacity: 0.55;
+}
+
+.empty, .status {
+  text-align: center;
+  color: var(--ink-dim);
+  padding: 40px;
+}
