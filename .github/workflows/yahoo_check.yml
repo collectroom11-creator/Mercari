@@ -30,6 +30,7 @@ jobs:
           # yahoo_main.py가 설정 오류 등으로 조기 종료하면 이 파일이 아직 없을 수
           # 있으니, 없는 파일 때문에 git add 자체가 실패하지 않게 한다.
           git add data/yahoo_seen.json 2>/dev/null || true
+          git add data/yahoo_first_seen.json 2>/dev/null || true
           git diff --cached --quiet || git commit -m "update yahoo seen items"
           # check.yml/facets.yml 등 다른 워크플로우가 같은 브랜치에 동시에
           # push할 수 있으므로, 실패하면 최신 커밋을 받아와서(rebase) 재시도한다.

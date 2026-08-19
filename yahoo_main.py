@@ -26,6 +26,11 @@
   순서 보장 구조(dict)로 저장하는 이유는 메루카리 봇과 동일하다: set으로
   저장하면 MAX_SEEN_KEEP개로 자를 때 무작위로 id가 탈락해서 재알림
   버그가 생긴다.
+- 종료 임박으로 처음 알림되는 시점에, "우리가 이 상품을 검색에서 처음
+  발견한 시각"과 "경매 시작 시각"을 stderr에 함께 로그로 남긴다
+  (data/yahoo_first_seen.json). 둘 사이 간격이 크면, 그 상품이 인기
+  검색어 상위 100위 밖에 있다가 나중에 다시 들어왔다는 뜻이다 - "종료
+  임박까지 왜 못 봤는지"를 나중에 로그로 바로 확인할 수 있게 하기 위함.
 """
 import asyncio
 import html
@@ -57,6 +62,12 @@ SEARCH_CONCURRENCY = 5  # 브랜드x언어 검색을 동시에 몇 개까지 날
 DATA_DIR = Path(__file__).parent / "data"
 SEEN_FILE = DATA_DIR / "yahoo_seen.json"
 MAX_SEEN_KEEP = 3000
+# "우리가 이 상품을 검색 결과에서 처음 본 시각" 기록 (알림 여부와 무관하게,
+# 후보 필터를 통과 못해도 기록한다). 경매 시작 시각과 비교해서 "왜 늦게
+# 발견됐는지"(가격/카테고리 검색 상위 100위 밖으로 밀려났었는지 등)를
+# 진단하기 위한 용도 - seen.json과는 목적이 다른 별도 파일이다.
+FIRST_SEEN_FILE = DATA_DIR / "yahoo_first_seen.json"
+MAX_FIRST_SEEN_KEEP = 5000
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
 REQUEST_HEADERS = {
@@ -75,6 +86,7 @@ ATTR_PATTERNS = {
     "cl_params": re.compile(r'data-cl-params="([^"]*)"'),
 }
 END_TIME_RE = re.compile(r"end:(\d+)")
+START_TIME_RE = re.compile(r"st:(\d+)")
 
 
 # ----------------------------------------------------------------------
@@ -94,10 +106,14 @@ def _parse_search_html(page_html: str) -> list:
             continue
 
         end = None
+        start = None
         if values.get("cl_params"):
             end_match = END_TIME_RE.search(values["cl_params"])
             if end_match:
                 end = datetime.fromtimestamp(int(end_match.group(1)))
+            start_match = START_TIME_RE.search(values["cl_params"])
+            if start_match:
+                start = datetime.fromtimestamp(int(start_match.group(1)))
 
         try:
             price = int(values["price"]) if values.get("price") else None
@@ -109,6 +125,7 @@ def _parse_search_html(page_html: str) -> list:
             "title": html.unescape(values.get("title") or ""),
             "img": values.get("img"),
             "price": price,
+            "start": start,
             "end": end,
         }
     return list(items.values())
@@ -155,6 +172,22 @@ def save_seen(seen_ids):
     SEEN_FILE.write_text(json.dumps(trimmed, ensure_ascii=False), encoding="utf-8")
 
 
+def load_first_seen() -> dict:
+    if FIRST_SEEN_FILE.exists():
+        try:
+            return json.loads(FIRST_SEEN_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return {}
+    return {}
+
+
+def save_first_seen(first_seen: dict):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    # dict는 삽입 순서를 유지하므로, 오래전에 처음 본 것부터 잘라낸다.
+    trimmed = dict(list(first_seen.items())[-MAX_FIRST_SEEN_KEEP:])
+    FIRST_SEEN_FILE.write_text(json.dumps(trimmed, ensure_ascii=False), encoding="utf-8")
+
+
 # ----------------------------------------------------------------------
 # 신규 판단
 # ----------------------------------------------------------------------
@@ -178,6 +211,28 @@ def _is_ending_soon(end: Optional[datetime]) -> bool:
     if remaining is None:
         return False
     return 0 < remaining <= ENDING_SOON_MAX_MINUTES
+
+
+def _log_discovery_diagnostics(item: dict, first_seen_iso: Optional[str]):
+    # "이 상품이 왜 종료 임박 시점에야 알림됐는지" 나중에 진단하기 위한 로그.
+    # start(경매 시작)~first_seen(우리가 처음 검색에서 발견한 시각) 간격이 크면
+    # 그 사이엔 검색 상위 100위 밖에 있었다는 뜻이다.
+    remaining = _minutes_remaining(item.get("end"))
+    start = item.get("start")
+    gap_desc = "알 수 없음"
+    if start and first_seen_iso:
+        try:
+            first_seen_dt = datetime.fromisoformat(first_seen_iso)
+            gap_minutes = (first_seen_dt - start).total_seconds() / 60
+            gap_desc = f"{gap_minutes:.0f}분"
+        except ValueError:
+            pass
+    print(
+        f"진단[{item['id']}] 알림 시점 잔여 {remaining:.0f}분 | "
+        f"경매 시작 {start} 종료 {item.get('end')} | "
+        f"최초 발견 {first_seen_iso} | 시작~최초발견 간격 {gap_desc}",
+        file=sys.stderr,
+    )
 
 
 # ----------------------------------------------------------------------
@@ -275,6 +330,12 @@ async def main():
     # 그때 다시 후보로 평가된다 - 그래서 첫 실행이라고 특별히 억제할 필요가
     # 없다: 이미 임박한 상품이면 첫 실행이든 아니든 똑같이 알림이 필요하다.
     seen = load_seen()
+    first_seen = load_first_seen()
+    now_iso = datetime.now().isoformat()
+    for display_name, items in all_items:
+        for item in items:
+            first_seen.setdefault(item["id"], now_iso)
+
     seen_this_run = set()
     new_items = []
     for display_name, items in all_items:
@@ -287,6 +348,7 @@ async def main():
                 continue
             if not _is_ending_soon(item["end"]):
                 continue
+            _log_discovery_diagnostics(item, first_seen.get(item_id))
             new_items.append((item, display_name))
 
     print(f"검색 결과 {total_raw}건(중복 포함) 중 종료임박 {len(new_items)}건")
@@ -305,6 +367,7 @@ async def main():
             print(f"전송 성공 {success_count}건 / 시도 {len(new_items)}건 (배치 단위 전송)")
 
     save_seen(seen)
+    save_first_seen(first_seen)
 
 
 if __name__ == "__main__":
