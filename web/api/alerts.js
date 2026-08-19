@@ -1,10 +1,16 @@
 // 디스코드 채널의 메시지 기록을 읽어와서 알림 목록으로 변환한다.
-// 별도 저장소(DB) 없이 디스코드 자체를 저장소로 쓴다 - 봇이 이미 embed로
-// 보내는 title(브랜드)/author(플랫폼)/description(가격)/image/url을 그대로
-// 파싱하고, "관심"/"읽음" 상태는 봇 계정 자신의 이모지 반응(⭐/✅) 존재
-// 여부로 판단한다(reactions[].me).
-const INTERESTED_EMOJI = "⭐";
-const READ_EMOJI = "✅";
+// 알림 내용(제목/가격/이미지)은 디스코드 메시지의 embed에서 그대로 읽지만,
+// "관심"/"읽음" 상태는 더는 디스코드 이모지 반응으로 저장하지 않는다 -
+// 디스코드 반응 API는 레이트리밋이 빡빡해서 여러 개를 한꺼번에 처리하면
+// 일부가 조용히 실패했다. 대신 Redis(Upstash, @vercel/kv)에 읽음/관심
+// 상품 id 집합을 저장한다 - 한 번의 SMEMBERS 조회로 전체 상태를 가져올
+// 수 있어 훨씬 빠르고 안정적이다.
+const { Redis } = require("@upstash/redis");
+
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 module.exports = async function handler(req, res) {
   const token = process.env.DISCORD_BOT_TOKEN;
@@ -14,25 +20,27 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const resp = await fetch(
-    `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`,
-    { headers: { Authorization: `Bot ${token}` } }
-  );
+  const [discordResp, readIds, interestedIds] = await Promise.all([
+    fetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=100`, {
+      headers: { Authorization: `Bot ${token}` },
+    }),
+    redis.smembers("read"),
+    redis.smembers("interested"),
+  ]);
 
-  if (!resp.ok) {
-    const text = await resp.text();
-    res.status(resp.status).json({ error: `디스코드 API 오류 (${resp.status}): ${text}` });
+  if (!discordResp.ok) {
+    const text = await discordResp.text();
+    res.status(discordResp.status).json({ error: `디스코드 API 오류 (${discordResp.status}): ${text}` });
     return;
   }
 
-  const messages = await resp.json();
+  const readSet = new Set(readIds);
+  const interestedSet = new Set(interestedIds);
+  const messages = await discordResp.json();
 
   const alerts = [];
   for (const m of messages) {
     for (const embed of m.embeds || []) {
-      const reactions = m.reactions || [];
-      const interested = reactions.some((r) => r.emoji?.name === INTERESTED_EMOJI && r.me);
-      const read = reactions.some((r) => r.emoji?.name === READ_EMOJI && r.me);
       alerts.push({
         messageId: m.id,
         platform: embed.author?.name || "",
@@ -41,8 +49,8 @@ module.exports = async function handler(req, res) {
         url: embed.url || "",
         image: embed.image?.url || "",
         createdAt: m.timestamp,
-        interested,
-        read,
+        interested: interestedSet.has(m.id),
+        read: readSet.has(m.id),
       });
     }
   }

@@ -1,5 +1,3 @@
-const INTERESTED_EMOJI = "⭐";
-const READ_EMOJI = "✅";
 const POLL_INTERVAL_MS = 10000; // 완전한 실시간 푸시는 서버리스 구조상 불가능해서, 대신 짧은 주기로 계속 확인한다.
 const READ_VISIBILITY_THRESHOLD = 0.6; // 카드가 이 비율 이상 화면에 보이면 "읽었다"고 판단
 
@@ -141,8 +139,8 @@ function renderCard(a) {
 
   const actions = document.createElement("div");
   actions.className = "card-actions";
-  actions.appendChild(makeToggleButton("interested", "⭐ 관심", a.interested, a.messageId, INTERESTED_EMOJI));
-  actions.appendChild(makeToggleButton("read", "✅ 읽음", a.read, a.messageId, READ_EMOJI));
+  actions.appendChild(makeToggleButton("interested", "⭐ 관심", a.interested, a.messageId));
+  actions.appendChild(makeToggleButton("read", "✅ 읽음", a.read, a.messageId));
   card.appendChild(actions);
 
   if (!a.read) {
@@ -152,7 +150,7 @@ function renderCard(a) {
   return card;
 }
 
-function makeToggleButton(kind, label, isActive, messageId, emoji) {
+function makeToggleButton(kind, label, isActive, messageId) {
   const btn = document.createElement("button");
   btn.dataset.kind = kind;
   btn.textContent = label;
@@ -162,7 +160,7 @@ function makeToggleButton(kind, label, isActive, messageId, emoji) {
     const nextOn = !btn.classList.contains("active");
     btn.disabled = true;
     try {
-      await toggleReaction(messageId, emoji, nextOn);
+      await toggleState(messageId, kind, nextOn);
       const item = alerts.find((x) => x.messageId === messageId);
       if (item) item[kind] = nextOn;
       btn.classList.toggle("active", nextOn);
@@ -191,7 +189,7 @@ async function markRead(messageId) {
     if (readBtn) readBtn.classList.add("active");
   }
   try {
-    await toggleReaction(messageId, READ_EMOJI, true);
+    await toggleState(messageId, "read", true);
   } catch (e) {
     item.read = false;
     if (card) card.classList.remove("is-read");
@@ -199,11 +197,11 @@ async function markRead(messageId) {
   }
 }
 
-async function toggleReaction(messageId, emoji, on) {
+async function toggleState(messageId, kind, on) {
   const resp = await fetch("/api/toggle", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messageId, emoji, on }),
+    body: JSON.stringify({ messageId, kind, on }),
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) throw new Error(data.error || "요청 실패");
