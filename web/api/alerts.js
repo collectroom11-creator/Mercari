@@ -27,16 +27,6 @@ module.exports = async function handler(req, res) {
 
   const messages = await resp.json();
 
-  if (req.query && req.query.debug) {
-    res.status(200).json({
-      debug: true,
-      isArray: Array.isArray(messages),
-      count: Array.isArray(messages) ? messages.length : null,
-      sample: Array.isArray(messages) ? messages.slice(0, 2) : messages,
-    });
-    return;
-  }
-
   const alerts = [];
   for (const m of messages) {
     for (const embed of m.embeds || []) {
