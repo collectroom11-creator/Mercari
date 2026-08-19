@@ -12,8 +12,9 @@
     overflow-y: auto;
   }
   .item {
-    display: block;
-    padding: 14px;
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
     border-bottom: 1px solid #333029;
     text-decoration: none;
     color: inherit;
@@ -21,14 +22,21 @@
   .item:hover { background: #29271F; }
   .item img {
     display: block;
-    width: 100%;
-    height: 170px;
+    width: 110px;
+    height: 110px;
     object-fit: contain;
-    border-radius: 10px;
+    border-radius: 8px;
     background: #14130F;
-    margin-bottom: 8px;
+    flex: none;
   }
-  .info { min-width: 0; }
+  .info {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+  }
   .platform {
     font-size: 10px;
     text-transform: uppercase;
