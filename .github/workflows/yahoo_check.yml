@@ -1,0 +1,45 @@
+name: Yahoo Auctions brand alert
+on:
+  # check.yml과 동일한 이유로 GitHub 자체 schedule cron은 쓰지 않는다.
+  # cron-job.org가 주기적으로 이 workflow_dispatch를 REST API로 호출한다.
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency:
+  group: mercari-yahoo-alert
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run checker
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python yahoo_main.py
+      - name: Commit updated yahoo_seen.json
+        run: |
+          git config user.name "mercari-alert-bot"
+          git config user.email "actions@users.noreply.github.com"
+          # yahoo_main.py가 설정 오류 등으로 조기 종료하면 이 파일이 아직 없을 수
+          # 있으니, 없는 파일 때문에 git add 자체가 실패하지 않게 한다.
+          git add data/yahoo_seen.json 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "update yahoo seen items"
+          # check.yml/facets.yml 등 다른 워크플로우가 같은 브랜치에 동시에
+          # push할 수 있으므로, 실패하면 최신 커밋을 받아와서(rebase) 재시도한다.
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "push 성공"
+              break
+            fi
+            echo "push 실패, origin/main 기준으로 rebase 후 재시도 ($i/5)"
+            git fetch origin main
+            git rebase origin/main
+            sleep 3
+          done

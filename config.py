@@ -27,3 +27,12 @@ EXCLUDE_KEYWORDS = [
     "ネクタイ",
     "スカーフ",
 ]
+
+# 야후옥션용 브랜드 목록. 야후옥션은 브랜드 ID 필터가 없어서 키워드로
+# 검색한다(mercapi 검색과 다름). 셀러가 영어/일본어 중 아무 표기로나
+# 상품명을 적기 때문에, 브랜드마다 두 표기를 다 넣어 두 번 검색한다.
+# 가격상한은 위 PRICE_MAX / BRAND_PRICE_OVERRIDES를 그대로 재사용한다
+# (display 이름이 BRAND_PRICE_OVERRIDES의 키와 일치해야 적용됨).
+TARGET_BRANDS_YAHOO = [
+    # {"display": "Dior Homme", "queries": ["Dior Homme", "ディオール オム"]},
+]
