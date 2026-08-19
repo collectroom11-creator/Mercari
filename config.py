@@ -34,5 +34,5 @@ EXCLUDE_KEYWORDS = [
 # 가격상한은 위 PRICE_MAX / BRAND_PRICE_OVERRIDES를 그대로 재사용한다
 # (display 이름이 BRAND_PRICE_OVERRIDES의 키와 일치해야 적용됨).
 TARGET_BRANDS_YAHOO = [
-    # {"display": "Dior Homme", "queries": ["Dior Homme", "ディオール オム"]},
+    {"display": "Dior Homme", "queries": ["Dior Homme", "ディオール オム"]},
 ]
