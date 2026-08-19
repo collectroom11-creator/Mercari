@@ -121,7 +121,7 @@ async def _search_keyword(client: httpx.AsyncClient, semaphore: asyncio.Semaphor
         "s1": "new",
         "o1": "d",
         "aucmaxprice": str(price_max),
-        "n": "50",
+        "n": "100",  # 야후옥션이 실제로 허용하는 최댓값(200을 넣으면 조용히 50으로 되돌아감)
         "b": "1",
     }
     async with semaphore:
