@@ -1,0 +1,45 @@
+name: Mercari brand alert
+on:
+  # GitHub 자체 schedule cron은 이 저장소에서 사실상 발화하지 않아서 쓰지 않는다.
+  # 대신 cron-job.org가 1분마다 이 workflow_dispatch를 REST API로 강제 호출한다.
+  workflow_dispatch: {}
+# seen.json / last_category.json 커밋을 위해 쓰기 권한 필요
+permissions:
+  contents: write
+concurrency:
+  group: mercari-alert
+  # 1분 주기로 새 트리거가 들어오므로, 이전 실행이 아직 안 끝났으면 강제 종료하고 새로 시작한다.
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run checker
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python main.py
+      - name: Commit updated seen.json
+        run: |
+          git config user.name "mercari-alert-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/seen.json data/last_category.json
+          git diff --cached --quiet || git commit -m "update seen items"
+          # facets.yml 등 다른 워크플로우가 같은 브랜치에 동시에 push할 수 있으므로,
+          # 실패하면 최신 커밋을 받아와서(rebase) 몇 번 재시도한다.
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "push 성공"
+              break
+            fi
+            echo "push 실패, origin/main 기준으로 rebase 후 재시도 ($i/5)"
+            git fetch origin main
+            git rebase origin/main
+            sleep 3
+          done
