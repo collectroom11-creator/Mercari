@@ -1,10 +1,10 @@
 const INTERESTED_EMOJI = "⭐";
 const READ_EMOJI = "✅";
+const POLL_INTERVAL_MS = 10000; // 완전한 실시간 푸시는 서버리스 구조상 불가능해서, 대신 짧은 주기로 계속 확인한다.
+const READ_VISIBILITY_THRESHOLD = 0.6; // 카드가 이 비율 이상 화면에 보이면 "읽었다"고 판단
 
 let alerts = [];
-// 이전 새로고침에서 보여줬던(아직 안 읽은) 상품 id들. 다음 새로고침이 시작될 때
-// 이걸 전부 읽음 처리한다 - "한 번 화면에 띄운 건 다음에 올 때는 다 본 것"으로 취급.
-let previousUnreadIds = null;
+let hasLoadedOnce = false;
 
 const grid = document.getElementById("grid");
 const emptyEl = document.getElementById("empty");
@@ -12,35 +12,46 @@ const statusEl = document.getElementById("status");
 const platformFilter = document.getElementById("platformFilter");
 const brandFilter = document.getElementById("brandFilter");
 const hideRead = document.getElementById("hideRead");
-const refreshBtn = document.getElementById("refreshBtn");
 
-async function loadAlerts() {
-  statusEl.textContent = "불러오는 중...";
-  try {
-    if (previousUnreadIds && previousUnreadIds.length > 0) {
-      await markManyRead(previousUnreadIds);
+// 카드가 뷰포트에 일정 비율 이상 들어오면 자동으로 읽음 처리한다.
+const readObserver = new IntersectionObserver(
+  (entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        markRead(entry.target.dataset.messageId);
+        readObserver.unobserve(entry.target);
+      }
     }
+  },
+  { threshold: READ_VISIBILITY_THRESHOLD }
+);
 
+async function pollAlerts() {
+  try {
     const resp = await fetch("/api/alerts");
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || "불러오기 실패");
-    alerts = data.alerts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     statusEl.textContent = "";
-    previousUnreadIds = alerts.filter((a) => !a.read).map((a) => a.messageId);
-    populateFilters();
-    render();
+
+    const fresh = data.alerts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const existingIds = new Set(alerts.map((a) => a.messageId));
+    const newOnes = fresh.filter((a) => !existingIds.has(a.messageId));
+    alerts = fresh;
+
+    if (!hasLoadedOnce) {
+      hasLoadedOnce = true;
+      populateFilters();
+      render();
+    } else if (newOnes.length > 0) {
+      populateFilters();
+      // fresh는 최신순으로 정렬돼 있으므로, 오래된 것부터 하나씩 맨 앞에 꽂으면
+      // 최종적으로 화면 맨 위가 제일 최신이 된다.
+      for (const a of [...newOnes].reverse()) {
+        prependAlert(a);
+      }
+    }
   } catch (e) {
     statusEl.textContent = `오류: ${e.message}`;
-  }
-}
-
-// 여러 건을 한꺼번에 읽음 처리한다. 디스코드 레이트리밋을 피하려고
-// CONCURRENCY 개씩 나눠서 순차적으로 처리한다.
-async function markManyRead(messageIds) {
-  const CONCURRENCY = 5;
-  for (let i = 0; i < messageIds.length; i += CONCURRENCY) {
-    const batch = messageIds.slice(i, i + CONCURRENCY);
-    await Promise.all(batch.map((id) => toggleReaction(id, READ_EMOJI, true).catch(() => {})));
   }
 }
 
@@ -62,29 +73,37 @@ function populateFilters() {
   if (brands.includes(currentBrand)) brandFilter.value = currentBrand;
 }
 
-function render() {
+function passesFilter(a) {
   const platform = platformFilter.value;
   const brand = brandFilter.value;
-  const hideReadOn = hideRead.checked;
+  if (platform && a.platform !== platform) return false;
+  if (brand && a.brand !== brand) return false;
+  if (hideRead.checked && a.read) return false;
+  return true;
+}
 
-  const filtered = alerts.filter((a) => {
-    if (platform && a.platform !== platform) return false;
-    if (brand && a.brand !== brand) return false;
-    if (hideReadOn && a.read) return false;
-    return true;
-  });
-
+// 필터가 바뀌었을 때만 쓰는 전체 재구성. 폴링으로 새 항목이 왔을 때는
+// prependAlert를 써서 기존 카드는 그대로 두고 새 카드만 앞에 추가한다
+// (전체를 다시 그리면 스크롤 위치가 튀고 이미지가 깜빡인다).
+function render() {
+  const filtered = alerts.filter(passesFilter);
   grid.innerHTML = "";
   emptyEl.hidden = filtered.length > 0;
-
   for (const a of filtered) {
     grid.appendChild(renderCard(a));
   }
 }
 
+function prependAlert(a) {
+  if (!passesFilter(a)) return;
+  emptyEl.hidden = true;
+  grid.prepend(renderCard(a));
+}
+
 function renderCard(a) {
   const card = document.createElement("div");
   card.className = "card" + (a.read ? " is-read" : "");
+  card.dataset.messageId = a.messageId;
 
   const img = document.createElement("img");
   img.src = a.image || "";
@@ -122,12 +141,13 @@ function renderCard(a) {
 
   const actions = document.createElement("div");
   actions.className = "card-actions";
-
-  const interestedBtn = makeToggleButton("interested", "⭐ 관심", a.interested, a.messageId, INTERESTED_EMOJI);
-  const readBtn = makeToggleButton("read", "✅ 읽음", a.read, a.messageId, READ_EMOJI);
-  actions.appendChild(interestedBtn);
-  actions.appendChild(readBtn);
+  actions.appendChild(makeToggleButton("interested", "⭐ 관심", a.interested, a.messageId, INTERESTED_EMOJI));
+  actions.appendChild(makeToggleButton("read", "✅ 읽음", a.read, a.messageId, READ_EMOJI));
   card.appendChild(actions);
+
+  if (!a.read) {
+    readObserver.observe(card);
+  }
 
   return card;
 }
@@ -145,7 +165,10 @@ function makeToggleButton(kind, label, isActive, messageId, emoji) {
       await toggleReaction(messageId, emoji, nextOn);
       const item = alerts.find((x) => x.messageId === messageId);
       if (item) item[kind] = nextOn;
-      render();
+      btn.classList.toggle("active", nextOn);
+      if (kind === "read") {
+        btn.closest(".card").classList.toggle("is-read", nextOn);
+      }
     } catch (e) {
       statusEl.textContent = `오류: ${e.message}`;
     } finally {
@@ -156,18 +179,22 @@ function makeToggleButton(kind, label, isActive, messageId, emoji) {
   return btn;
 }
 
-// 상품 링크를 열어보면(실제로 읽으면) 자동으로 읽음 처리한다.
-// 이미 읽음이면 다시 요청하지 않는다.
+// 카드가 화면에 보이거나 링크를 열어보면 자동으로 읽음 처리한다. 이미 읽음이면 아무것도 안 한다.
 async function markRead(messageId) {
   const item = alerts.find((x) => x.messageId === messageId);
   if (!item || item.read) return;
   item.read = true;
-  render();
+  const card = grid.querySelector(`.card[data-message-id="${CSS.escape(messageId)}"]`);
+  if (card) {
+    card.classList.add("is-read");
+    const readBtn = card.querySelector('button[data-kind="read"]');
+    if (readBtn) readBtn.classList.add("active");
+  }
   try {
     await toggleReaction(messageId, READ_EMOJI, true);
   } catch (e) {
     item.read = false;
-    render();
+    if (card) card.classList.remove("is-read");
     statusEl.textContent = `오류: ${e.message}`;
   }
 }
@@ -188,13 +215,9 @@ function escapeHtml(str) {
   }[c]));
 }
 
-function escapeAttr(str) {
-  return escapeHtml(str);
-}
-
 platformFilter.addEventListener("change", render);
 brandFilter.addEventListener("change", render);
 hideRead.addEventListener("change", render);
-refreshBtn.addEventListener("click", loadAlerts);
 
-loadAlerts();
+pollAlerts();
+setInterval(pollAlerts, POLL_INTERVAL_MS);
