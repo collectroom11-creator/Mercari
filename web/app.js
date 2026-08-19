@@ -76,11 +76,30 @@ function renderCard(a) {
 
   const body = document.createElement("div");
   body.className = "card-body";
-  body.innerHTML = `
-    <a class="platform" href="${escapeAttr(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.platform)}</a>
-    <a class="brand" href="${escapeAttr(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.brand)}</a>
-    <div class="price">${escapeHtml(a.priceText)}</div>
-  `;
+
+  const platformLink = document.createElement("a");
+  platformLink.className = "platform";
+  platformLink.href = a.url;
+  platformLink.target = "_blank";
+  platformLink.rel = "noopener";
+  platformLink.textContent = a.platform;
+  platformLink.addEventListener("click", () => markRead(a.messageId));
+
+  const brandLink = document.createElement("a");
+  brandLink.className = "brand";
+  brandLink.href = a.url;
+  brandLink.target = "_blank";
+  brandLink.rel = "noopener";
+  brandLink.textContent = a.brand;
+  brandLink.addEventListener("click", () => markRead(a.messageId));
+
+  const priceEl = document.createElement("div");
+  priceEl.className = "price";
+  priceEl.textContent = a.priceText;
+
+  body.appendChild(platformLink);
+  body.appendChild(brandLink);
+  body.appendChild(priceEl);
   card.appendChild(body);
 
   const actions = document.createElement("div");
@@ -117,6 +136,22 @@ function makeToggleButton(kind, label, isActive, messageId, emoji) {
   });
 
   return btn;
+}
+
+// 상품 링크를 열어보면(실제로 읽으면) 자동으로 읽음 처리한다.
+// 이미 읽음이면 다시 요청하지 않는다.
+async function markRead(messageId) {
+  const item = alerts.find((x) => x.messageId === messageId);
+  if (!item || item.read) return;
+  item.read = true;
+  render();
+  try {
+    await toggleReaction(messageId, READ_EMOJI, true);
+  } catch (e) {
+    item.read = false;
+    render();
+    statusEl.textContent = `오류: ${e.message}`;
+  }
 }
 
 async function toggleReaction(messageId, emoji, on) {
