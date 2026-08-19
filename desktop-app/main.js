@@ -25,6 +25,17 @@ const ENV = loadEnv();
 
 const API_BASE = "https://mercari-pi.vercel.app";
 const POLL_INTERVAL_MS = 10000;
+// 밤 11시~아침 8시는 폴링을 쉰다. Redis 무료 한도를 아끼는 목적도 있고,
+// 자는 동안 배지가 계속 바뀌는 걸 막는 목적도 있다. 8시가 되면 그냥 다시
+// 폴링이 시작되면서 그 사이 쌓인 걸 한 번에 가져오게 되므로, 따로
+// "모아서 보내기" 로직은 필요 없다.
+const QUIET_HOURS_START = 23;
+const QUIET_HOURS_END = 8;
+
+function isQuietHours() {
+  const hour = new Date().getHours();
+  return hour >= QUIET_HOURS_START || hour < QUIET_HOURS_END;
+}
 const WINDOW_WIDTH = 400;
 const WINDOW_HEIGHT = 560;
 // 트레이 아이콘을 다시 클릭해서 닫으려 할 때, 포커스를 잃어서 자동으로 닫히는
@@ -207,7 +218,9 @@ app.whenReady().then(() => {
   createBadgeRenderer();
   createWindow();
   pollAlerts();
-  setInterval(pollAlerts, POLL_INTERVAL_MS);
+  setInterval(() => {
+    if (!isQuietHours()) pollAlerts();
+  }, POLL_INTERVAL_MS);
 });
 
 app.on("window-all-closed", (e) => {

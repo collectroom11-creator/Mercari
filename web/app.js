@@ -1,9 +1,19 @@
+// 완전한 실시간 푸시는 서버리스 구조상 불가능해서, 대신 짧은 주기로 계속 확인한다.
 const POLL_INTERVAL_MS = 10000;
 const PLATFORM_LOGOS = {
   "메루카리": "/logos/mercari.png",
   "야후옥션": "/logos/yahoo.png",
-}; // 완전한 실시간 푸시는 서버리스 구조상 불가능해서, 대신 짧은 주기로 계속 확인한다.
+};
 const READ_VISIBILITY_THRESHOLD = 0.6; // 카드가 이 비율 이상 화면에 보이면 "읽었다"고 판단
+// 밤 11시~아침 8시는 폴링을 쉰다(레디스 무료 한도 절약 + 자는 동안 안 흔들리게).
+// 8시가 되면 다시 폴링이 시작되면서 그 사이 쌓인 게 한 번에 반영된다.
+const QUIET_HOURS_START = 23;
+const QUIET_HOURS_END = 8;
+
+function isQuietHours() {
+  const hour = new Date().getHours();
+  return hour >= QUIET_HOURS_START || hour < QUIET_HOURS_END;
+}
 
 let alerts = [];
 let hasLoadedOnce = false;
@@ -230,4 +240,6 @@ brandFilter.addEventListener("change", render);
 hideRead.addEventListener("change", render);
 
 pollAlerts();
-setInterval(pollAlerts, POLL_INTERVAL_MS);
+setInterval(() => {
+  if (!isQuietHours()) pollAlerts();
+}, POLL_INTERVAL_MS);
