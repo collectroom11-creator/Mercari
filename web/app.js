@@ -2,6 +2,9 @@ const INTERESTED_EMOJI = "⭐";
 const READ_EMOJI = "✅";
 
 let alerts = [];
+// 이전 새로고침에서 보여줬던(아직 안 읽은) 상품 id들. 다음 새로고침이 시작될 때
+// 이걸 전부 읽음 처리한다 - "한 번 화면에 띄운 건 다음에 올 때는 다 본 것"으로 취급.
+let previousUnreadIds = null;
 
 const grid = document.getElementById("grid");
 const emptyEl = document.getElementById("empty");
@@ -14,15 +17,30 @@ const refreshBtn = document.getElementById("refreshBtn");
 async function loadAlerts() {
   statusEl.textContent = "불러오는 중...";
   try {
+    if (previousUnreadIds && previousUnreadIds.length > 0) {
+      await markManyRead(previousUnreadIds);
+    }
+
     const resp = await fetch("/api/alerts");
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || "불러오기 실패");
     alerts = data.alerts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     statusEl.textContent = "";
+    previousUnreadIds = alerts.filter((a) => !a.read).map((a) => a.messageId);
     populateFilters();
     render();
   } catch (e) {
     statusEl.textContent = `오류: ${e.message}`;
+  }
+}
+
+// 여러 건을 한꺼번에 읽음 처리한다. 디스코드 레이트리밋을 피하려고
+// CONCURRENCY 개씩 나눠서 순차적으로 처리한다.
+async function markManyRead(messageIds) {
+  const CONCURRENCY = 5;
+  for (let i = 0; i < messageIds.length; i += CONCURRENCY) {
+    const batch = messageIds.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map((id) => toggleReaction(id, READ_EMOJI, true).catch(() => {})));
   }
 }
 
