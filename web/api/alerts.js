@@ -10,6 +10,11 @@ const { Redis } = require("@upstash/redis");
 const redis = new Redis({
   url: process.env.KV_REST_API_URL,
   token: process.env.KV_REST_API_TOKEN,
+  // 디스코드 메시지 id는 순수 숫자로만 된 문자열이라, 기본 자동
+  // 역직렬화(JSON.parse)를 거치면 숫자로 바뀌어서 정밀도가 깨지고
+  // readSet.has(m.id) 비교도 타입이 달라져(number !== string) 항상
+  // 실패한다. 그래서 smembers 결과를 원문 문자열 그대로 받는다.
+  automaticDeserialization: false,
 });
 
 module.exports = async function handler(req, res) {
