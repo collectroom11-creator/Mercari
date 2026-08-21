@@ -53,4 +53,7 @@ TARGET_BRANDS_YAHOO = [
     {"display": "ARMANI JEANS", "queries": ["ARMANI JEANS", "アルマーニ ジーンズ"]},
     {"display": "EMPORIO ARMANI EA7", "queries": ["EMPORIO ARMANI EA7", "エンポリオ アルマーニ EA7"]},
     {"display": "ARMANI", "queries": ["ARMANI", "アルマーニ"]},
+    {"display": "D&G ／ Dolce＆Gabbana", "queries": ["D&G", "ドルチェ&ガッバーナ"]},
+    {"display": "Maison Margiela", "queries": ["Maison Margiela", "メゾン マルジェラ"]},
+    {"display": "Maison Martin Margiela", "queries": ["Maison Martin Margiela", "メゾン マルタン マルジェラ"]},
 ]
