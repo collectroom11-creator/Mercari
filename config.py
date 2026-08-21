@@ -12,6 +12,9 @@ TARGET_BRANDS = [
     "ARMANI JEANS",
     "EMPORIO ARMANI EA7",
     "ARMANI",
+    "D&G ／ Dolce＆Gabbana",
+    "Maison Margiela",
+    "Maison Martin Margiela",
 ]
 
 # 기본 가격 상한(엔). TARGET_BRANDS 중 BRAND_PRICE_OVERRIDES에 없는 브랜드는 이 값을 쓴다.
