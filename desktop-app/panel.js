@@ -1,5 +1,4 @@
 const list = document.getElementById("list");
-document.getElementById("closeBtn").addEventListener("click", () => window.api.closeWindow());
 const PLATFORM_LOGOS = {
   "메루카리": "https://mercari-pi.vercel.app/logos/mercari.png",
   "야후옥션": "https://mercari-pi.vercel.app/logos/yahoo.png",
@@ -16,6 +15,7 @@ function render(alerts) {
     item.className = "item";
     item.href = a.url;
     item.target = "_blank";
+    item.addEventListener("click", () => window.api.notifyLinkOpened());
 
     const img = document.createElement("img");
     img.src = a.image || "";
