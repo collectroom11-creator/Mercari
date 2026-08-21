@@ -32,6 +32,9 @@ TARGET_CATEGORY_CANDIDATES = [
 EXCLUDE_KEYWORDS = [
     "ネクタイ",
     "スカーフ",
+    "香水",
+    "時計",
+    "下着",
 ]
 
 # 야후옥션용 브랜드 목록. 야후옥션은 브랜드 ID 필터가 없어서 키워드로
