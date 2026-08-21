@@ -102,6 +102,10 @@ async function pollAlerts() {
     alerts = data.alerts || [];
     updateBadge();
     if (win && win.isVisible()) {
+      // 패널이 열려있는 동안 새 알림이 폴링으로 들어오면 화면엔 반영되지만,
+      // showWindow()때 찍어둔 shownUnreadIds엔 없어서 닫아도 안 읽음 처리가
+      // 안 됐다 - 열려있는 동안엔 매번 "지금 보여주는 목록"으로 갱신한다.
+      shownUnreadIds = unreadAlerts().map((a) => a.messageId);
       win.webContents.send("alerts", unreadAlerts());
     }
   } catch (e) {
