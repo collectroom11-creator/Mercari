@@ -21,6 +21,16 @@
   상품은 seen에 넣지 않고 그냥 넘어가서, 나중에 24시간 이내로 들어오면
   그때 다시 후보로 평가된다. data-cl-params의 end(종료 유닉스 타임스탬프)
   값을 기준으로 남은 시간을 계산한다.
+  예외로, 즉결가(data-auction-buynowprice)가 있고 그 가격이 브랜드
+  가격상한 이내면 종료 임박 여부와 무관하게 바로 알림한다 - 즉결가는
+  입찰 없이 그 값을 그대로 내면 살 수 있는 가격이라 기다릴 이유가 없다.
+  단, 이 조건을 처음 켜는 시점엔 지금까지 쌓인 매물 전체가 한꺼번에
+  "신규"로 잡혀 알림이 폭주하고(디스코드 전송이 오래 걸려 1분 주기
+  워크플로우가 겹쳐 취소되면서 seen 저장 전에 죽어 같은 상품이 계속
+  재알림되는 사고까지 있었다), 그래서 즉결가 조건은 최초 1회에 한해
+  알림 없이 seen에만 채워 넣는 "백로그 흡수"를 거친다
+  (data/yahoo_buynow_seeded 파일 존재 여부로 흡수 완료를 기록한다).
+  그 이후 실행부터는 새로 올라온 즉결가 매물만 정상적으로 알림된다.
 - seen 기록은 메루카리 봇과 완전히 분리된 파일(data/yahoo_seen.json)에
   저장한다 - 플랫폼이 다르면 상품 id 체계도 다르므로 섞지 않는다.
   순서 보장 구조(dict)로 저장하는 이유는 메루카리 봇과 동일하다: set으로
@@ -68,6 +78,9 @@ MAX_SEEN_KEEP = 3000
 # 진단하기 위한 용도 - seen.json과는 목적이 다른 별도 파일이다.
 FIRST_SEEN_FILE = DATA_DIR / "yahoo_first_seen.json"
 MAX_FIRST_SEEN_KEEP = 5000
+# 즉결가 알림 조건의 최초 백로그 흡수가 끝났는지 표시하는 마커 파일.
+# 존재하면 이후로는 즉결가 매물도 정상적으로 알림한다.
+BUYNOW_SEEDED_FILE = DATA_DIR / "yahoo_buynow_seeded"
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
 
 REQUEST_HEADERS = {
@@ -230,6 +243,10 @@ def _is_ending_soon(end: Optional[datetime]) -> bool:
     return 0 < remaining <= ENDING_SOON_MAX_MINUTES
 
 
+def _is_buy_now_within_cap(buynowprice: Optional[int], price_cap: int) -> bool:
+    return buynowprice is not None and buynowprice <= price_cap
+
+
 def _log_discovery_diagnostics(item: dict, first_seen_iso: Optional[str]):
     # "이 상품이 왜 종료 임박 시점에야 알림됐는지" 나중에 진단하기 위한 로그.
     # start(경매 시작)~first_seen(우리가 처음 검색에서 발견한 시각) 간격이 크면
@@ -344,16 +361,24 @@ async def main():
         all_items.append((display_name, items))
     total_raw = sum(len(items) for _, items in all_items)
 
-    # seen은 "이미 알림 보낸 id"만 담는다. 종료까지 24시간 넘게 남은 상품은
-    # 여기서 그냥 넘어가고(seen에 넣지 않음), 나중에 임박 구간에 들어오면
-    # 그때 다시 후보로 평가된다 - 그래서 첫 실행이라고 특별히 억제할 필요가
-    # 없다: 이미 임박한 상품이면 첫 실행이든 아니든 똑같이 알림이 필요하다.
+    # seen은 "이미 알림 보낸 id"만 담는다. 종료까지 24시간 넘게 남았고 즉결가도
+    # 없거나 가격상한을 넘는 상품은 여기서 그냥 넘어가고(seen에 넣지 않음),
+    # 나중에 임박 구간에 들어오면 그때 다시 후보로 평가된다 - 그래서 첫
+    # 실행이라고 특별히 억제할 필요가 없다: 이미 임박한 상품이면 첫
+    # 실행이든 아니든 똑같이 알림이 필요하다.
+    # 즉결가 조건은 다르다 - 이건 "지금 이 순간 살 수 있는 모든 매물"에
+    # 해당해서, 최초 1회는 백로그 전체가 한꺼번에 알림으로 터진다. 그래서
+    # BUYNOW_SEEDED_FILE이 아직 없으면 즉결가로 걸린 건 알림하지 않고
+    # seen에만 채워 넣는다("이미 봤음" 처리만) - 그 이후 새로 올라오는
+    # 것만 정상적으로 알림된다.
     seen = load_seen()
     first_seen = load_first_seen()
     now_iso = datetime.now().isoformat()
     for display_name, items in all_items:
         for item in items:
             first_seen.setdefault(item["id"], now_iso)
+
+    buynow_seeded = BUYNOW_SEEDED_FILE.exists()
 
     seen_this_run = set()
     new_items = []
@@ -365,12 +390,26 @@ async def main():
             seen_this_run.add(item_id)
             if _is_excluded_item(item["title"]):
                 continue
-            if not _is_ending_soon(item["end"]):
-                continue
-            _log_discovery_diagnostics(item, first_seen.get(item_id))
-            new_items.append((item, display_name))
 
-    print(f"검색 결과 {total_raw}건(중복 포함) 중 종료임박 {len(new_items)}건")
+            if _is_ending_soon(item["end"]):
+                _log_discovery_diagnostics(item, first_seen.get(item_id))
+                new_items.append((item, display_name))
+                continue
+
+            price_cap = BRAND_PRICE_OVERRIDES.get(display_name, PRICE_MAX)
+            if _is_buy_now_within_cap(item.get("buynowprice"), price_cap):
+                if buynow_seeded:
+                    _log_discovery_diagnostics(item, first_seen.get(item_id))
+                    new_items.append((item, display_name))
+                else:
+                    seen[item_id] = None  # 백로그 흡수: 알림 없이 이미 본 걸로 기록
+
+    if not buynow_seeded:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        BUYNOW_SEEDED_FILE.write_text(now_iso, encoding="utf-8")
+        print("즉결가 백로그 흡수 완료 - 다음 실행부터 즉결가 알림이 켜집니다.")
+
+    print(f"검색 결과 {total_raw}건(중복 포함) 중 알림 대상 {len(new_items)}건")
 
     if new_items:
         with httpx.Client() as sync_client:
