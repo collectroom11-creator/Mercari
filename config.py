@@ -41,4 +41,10 @@ EXCLUDE_KEYWORDS = [
 # (display 이름이 BRAND_PRICE_OVERRIDES의 키와 일치해야 적용됨).
 TARGET_BRANDS_YAHOO = [
     {"display": "Dior Homme", "queries": ["Dior Homme", "ディオール オム"]},
+    {"display": "Giorgio Armani", "queries": ["Giorgio Armani", "ジョルジオ アルマーニ"]},
+    {"display": "EMPORIO ARMANI", "queries": ["EMPORIO ARMANI", "エンポリオ アルマーニ"]},
+    {"display": "ARMANI COLLEZIONI", "queries": ["ARMANI COLLEZIONI", "アルマーニ コレツィオーニ"]},
+    {"display": "ARMANI JEANS", "queries": ["ARMANI JEANS", "アルマーニ ジーンズ"]},
+    {"display": "EMPORIO ARMANI EA7", "queries": ["EMPORIO ARMANI EA7", "エンポリオ アルマーニ EA7"]},
+    {"display": "ARMANI", "queries": ["ARMANI", "アルマーニ"]},
 ]
