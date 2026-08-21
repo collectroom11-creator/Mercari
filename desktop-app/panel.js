@@ -5,6 +5,10 @@ const PLATFORM_LOGOS = {
 };
 
 function render(alerts) {
+  // body는 height를 따로 지정하지 않아서 실제 스크롤은 #list가 아니라
+  // 문서(window) 기준으로 일어난다 - list.scrollTop을 쓰면 항상 0이라
+  // 매번 다시 그릴 때마다 스크롤이 맨 위로 튕기는 버그가 있었다.
+  const scrollY = window.scrollY;
   list.innerHTML = "";
   if (!alerts || alerts.length === 0) {
     list.innerHTML = '<div class="empty">새 알림이 없습니다.</div>';
@@ -51,6 +55,7 @@ function render(alerts) {
 
     list.appendChild(item);
   }
+  window.scrollTo(0, scrollY);
 }
 
 window.api.onAlerts(render);
