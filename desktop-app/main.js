@@ -1,7 +1,8 @@
 // 맥 메뉴바 상주 앱. 웹 대시보드와 같은 백엔드(/api/alerts, /api/toggle)를
 // 그대로 재사용한다 - 디스코드를 다시 읽는 로직을 여기 따로 만들 필요가 없다.
 // 뱃지 숫자 = "읽지 않은" 알림 개수(서버의 read 상태 기준). 팝업 패널을
-// 닫으면(blur) 그 시점에 보여주고 있던 알림들을 전부 읽음 처리한다.
+// 닫으면(X 버튼 또는 트레이 아이콘 재클릭) 그 시점에 보여주고 있던 알림들을
+// 전부 읽음 처리한다.
 const { app, Tray, BrowserWindow, shell, ipcMain, nativeImage, screen } = require("electron");
 const fs = require("fs");
 const path = require("path");
@@ -38,9 +39,8 @@ function isQuietHours() {
 }
 const WINDOW_WIDTH = 400;
 const WINDOW_HEIGHT = 560;
-// 트레이 아이콘을 다시 클릭해서 닫으려 할 때, 포커스를 잃어서 자동으로 닫히는
-// blur 이벤트와 그 클릭 자체의 click 이벤트가 겹쳐서 "닫혔다가 바로 다시 열리는"
-// 문제가 있다. blur로 닫힌 직후 짧은 시간 안에 들어온 클릭은 무시해서 막는다.
+// 트레이 아이콘을 클릭해서 닫은 직후 짧은 시간 안에 다시 들어온 클릭은
+// 무시해서, 연타로 인해 닫혔다가 바로 다시 열리는 걸 막는다.
 const REOPEN_GUARD_MS = 250;
 
 let tray = null;
@@ -157,7 +157,7 @@ function createWindow() {
     return { action: "deny" };
   });
 
-  win.on("blur", () => {
+  ipcMain.on("close-window", () => {
     hideWindow();
   });
 }

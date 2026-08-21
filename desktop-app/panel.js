@@ -1,4 +1,5 @@
 const list = document.getElementById("list");
+document.getElementById("closeBtn").addEventListener("click", () => window.api.closeWindow());
 const PLATFORM_LOGOS = {
   "메루카리": "https://mercari-pi.vercel.app/logos/mercari.png",
   "야후옥션": "https://mercari-pi.vercel.app/logos/yahoo.png",
