@@ -135,6 +135,7 @@ async def _search_keyword(client: httpx.AsyncClient, semaphore: asyncio.Semaphor
     params = {
         "p": keyword,
         "va": keyword,
+        "auccat": "23176",  # ファッション > メンズファッション. brand_id와 달리 이건 실제로 결과를 필터링한다.
         "s1": "new",
         "o1": "d",
         "aucmaxprice": str(price_max),
