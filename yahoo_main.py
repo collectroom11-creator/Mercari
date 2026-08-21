@@ -21,6 +21,10 @@
   상품은 seen에 넣지 않고 그냥 넘어가서, 나중에 24시간 이내로 들어오면
   그때 다시 후보로 평가된다. data-cl-params의 end(종료 유닉스 타임스탬프)
   값을 기준으로 남은 시간을 계산한다.
+  예외로, 즉결가(data-auction-buynowprice)가 있고 그 가격이 브랜드
+  가격상한 이내면 종료 임박 여부와 무관하게 바로 알림한다 - 즉결가는
+  입찰 없이 그 값을 그대로 내면 살 수 있는 가격이라 "곧 끝나서 놓치기
+  전에" 기다릴 이유가 없다.
 - seen 기록은 메루카리 봇과 완전히 분리된 파일(data/yahoo_seen.json)에
   저장한다 - 플랫폼이 다르면 상품 id 체계도 다르므로 섞지 않는다.
   순서 보장 구조(dict)로 저장하는 이유는 메루카리 봇과 동일하다: set으로
@@ -88,11 +92,26 @@ ATTR_PATTERNS = {
 END_TIME_RE = re.compile(r"end:(\d+)")
 START_TIME_RE = re.compile(r"st:(\d+)")
 
+# 즉결가는 Product__imageLink가 아니라 각 상품 카드의 별도
+# <div class="Product__bonus" data-auction-id="..." data-auction-endtime="..."
+#      data-auction-buynowprice="..."> 에 들어있어서 따로 id 기준으로 매칭한다.
+# "0"은 즉결가 없음(경매 전용)을 의미한다.
+BUYNOW_RE = re.compile(
+    r'data-auction-id="([^"]*)"\s*data-auction-endtime="[^"]*"\s*data-auction-buynowprice="([^"]*)"'
+)
 
 # ----------------------------------------------------------------------
 # 검색
 # ----------------------------------------------------------------------
 def _parse_search_html(page_html: str) -> list:
+    buynow_by_id = {}
+    for bid, bprice in BUYNOW_RE.findall(page_html):
+        try:
+            val = int(bprice)
+        except ValueError:
+            val = 0
+        buynow_by_id[bid] = val or None  # "0"은 즉결가 없음(경매 전용)을 의미한다.
+
     items = {}
     for m in ITEM_LINK_RE.finditer(page_html):
         attrs = m.group(1)
@@ -125,6 +144,7 @@ def _parse_search_html(page_html: str) -> list:
             "title": html.unescape(values.get("title") or ""),
             "img": values.get("img"),
             "price": price,
+            "buynowprice": buynow_by_id.get(item_id),
             "start": start,
             "end": end,
         }
@@ -214,6 +234,10 @@ def _is_ending_soon(end: Optional[datetime]) -> bool:
     return 0 < remaining <= ENDING_SOON_MAX_MINUTES
 
 
+def _is_buy_now_within_cap(buynowprice: Optional[int], price_cap: int) -> bool:
+    return buynowprice is not None and buynowprice <= price_cap
+
+
 def _log_discovery_diagnostics(item: dict, first_seen_iso: Optional[str]):
     # "이 상품이 왜 종료 임박 시점에야 알림됐는지" 나중에 진단하기 위한 로그.
     # start(경매 시작)~first_seen(우리가 처음 검색에서 발견한 시각) 간격이 크면
@@ -254,6 +278,8 @@ def _build_embed(item: dict, brand_display: str) -> dict:
     lines = []
     if price is not None:
         lines.append(f"💴 {price}円")
+    if item.get("buynowprice") is not None:
+        lines.append(f"⚡ 즉결 {item['buynowprice']}円")
     remaining_text = _format_remaining(_minutes_remaining(item.get("end")))
     if remaining_text:
         lines.append(remaining_text)
@@ -347,7 +373,8 @@ async def main():
             seen_this_run.add(item_id)
             if _is_excluded_item(item["title"]):
                 continue
-            if not _is_ending_soon(item["end"]):
+            price_cap = BRAND_PRICE_OVERRIDES.get(display_name, PRICE_MAX)
+            if not (_is_ending_soon(item["end"]) or _is_buy_now_within_cap(item.get("buynowprice"), price_cap)):
                 continue
             _log_discovery_diagnostics(item, first_seen.get(item_id))
             new_items.append((item, display_name))
