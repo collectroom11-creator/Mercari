@@ -59,6 +59,7 @@ from config import (
     PRICE_MAX,
     BRAND_PRICE_OVERRIDES,
     EXCLUDE_KEYWORDS,
+    HELMUT_LANG_KEYWORDS,
 )
 
 # ----------------------------------------------------------------------
@@ -226,6 +227,28 @@ def _is_excluded_item(title: str) -> bool:
     return any(keyword.lower() in lowered for keyword in EXCLUDE_KEYWORDS)
 
 
+# HELMUT_LANG_KEYWORDS 중 순수 두자리 숫자(86~05)는 단순 부분일치로 찾으면
+# "2018AW"에 "01"이 우연히 포함되는 식으로 오탐이 난다. 앞뒤로 다른 숫자가
+# 붙어있지 않을 때만("18AW"처럼 시즌 표기로 쓰였을 때) 매칭되게 제한한다.
+# main.py(메루카리 봇)와 동일한 규칙 - 야후는 브랜드를 상세조회 없이 검색
+# 단계에서부터 알고 있어서(display_name) 별도 브랜드명 조회가 필요 없다.
+_HELMUT_LANG_TEXT_KEYWORDS = [kw for kw in HELMUT_LANG_KEYWORDS if not kw.isdigit()]
+_HELMUT_LANG_YEAR_RE = re.compile(
+    r"(?<!\d)(?:" + "|".join(kw for kw in HELMUT_LANG_KEYWORDS if kw.isdigit()) + r")(?!\d)"
+)
+
+
+def _passes_helmut_lang_rule(title: str, display_name: str) -> bool:
+    """헬무트 랭이 아니면 그냥 통과. 헬무트 랭이면 제목에 HELMUT_LANG_KEYWORDS 중
+    하나가 있어야만 통과한다."""
+    if display_name.strip().lower() != "helmut lang":
+        return True
+    lowered = (title or "").lower()
+    if _HELMUT_LANG_YEAR_RE.search(lowered):
+        return True
+    return any(kw.lower() in lowered for kw in _HELMUT_LANG_TEXT_KEYWORDS)
+
+
 def _minutes_remaining(end: Optional[datetime]) -> Optional[float]:
     # 야후옥션도 종료시각(end)을 로컬 타임존 기준 유닉스 타임스탬프로 준다.
     # GitHub Actions 러너의 로컬 타임존은 기본적으로 UTC라 datetime.now()와 그대로 비교해도 맞다.
@@ -389,6 +412,8 @@ async def main():
                 continue
             seen_this_run.add(item_id)
             if _is_excluded_item(item["title"]):
+                continue
+            if not _passes_helmut_lang_rule(item["title"], display_name):
                 continue
 
             if _is_ending_soon(item["end"]):

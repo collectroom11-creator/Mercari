@@ -41,6 +41,7 @@
 import asyncio
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime
@@ -55,7 +56,9 @@ from config import (
     PRICE_MAX,
     BRAND_PRICE_OVERRIDES,
     TARGET_CATEGORY_CANDIDATES,
+    BRAND_CATEGORY_OVERRIDES,
     EXCLUDE_KEYWORDS,
+    HELMUT_LANG_KEYWORDS,
 )
 
 # ----------------------------------------------------------------------
@@ -117,6 +120,28 @@ def resolve_category_id(entries):
                 return c["id"], c.get("name")
 
     return None, None
+
+
+def resolve_category_ids_for_names(entries, names, root_name=None):
+    """이름 목록 각각에 대해 정확히 일치하는 카테고리 id를 찾아 리스트로 반환한다.
+    root_name을 주면 그 루트(예: メンズ) 하위 카테고리만 대상으로 한다 - "パンツ" 같은
+    이름은 메ンズ/레디스 등 여러 루트에 동명이인으로 존재해서 범위를 좁혀야 한다."""
+    ids = []
+    for name in names:
+        target = name.strip().lower()
+        match = next(
+            (
+                c for c in entries
+                if str(c.get("name", "")).strip().lower() == target
+                and (root_name is None or c.get("root_category_name") == root_name)
+            ),
+            None,
+        )
+        if match:
+            ids.append(match["id"])
+        else:
+            print(f"경고: 카테고리 '{name}'(루트={root_name})를 facets에서 찾지 못했습니다.", file=sys.stderr)
+    return ids
 
 
 def check_category_drift(category_id, category_name):
@@ -190,6 +215,27 @@ def save_seen(seen_ids):
 def _is_excluded_item(item_name: str) -> bool:
     lowered = (item_name or "").lower()
     return any(keyword.lower() in lowered for keyword in EXCLUDE_KEYWORDS)
+
+
+# HELMUT_LANG_KEYWORDS 중 순수 두자리 숫자(86~05)는 단순 부분일치로 찾으면
+# "2018AW"에 "01"이 우연히 포함되는 식으로 오탐이 난다. 앞뒤로 다른 숫자가
+# 붙어있지 않을 때만("18AW"처럼 시즌 표기로 쓰였을 때) 매칭되게 제한한다.
+_HELMUT_LANG_TEXT_KEYWORDS = [kw for kw in HELMUT_LANG_KEYWORDS if not kw.isdigit()]
+_HELMUT_LANG_YEAR_RE = re.compile(
+    r"(?<!\d)(?:" + "|".join(kw for kw in HELMUT_LANG_KEYWORDS if kw.isdigit()) + r")(?!\d)"
+)
+
+
+def _passes_helmut_lang_rule(item, brand_name: Optional[str]) -> bool:
+    """헬무트 랭이 아니면 그냥 통과. 헬무트 랭이면 제목에 HELMUT_LANG_KEYWORDS 중 하나가
+    있어야만 통과한다 - "본인 디렉팅 시절" 여부는 구조화된 데이터가 없어 제목 키워드로만
+    추정 가능하다."""
+    if not brand_name or "helmut lang" not in brand_name.strip().lower():
+        return True
+    title = (getattr(item, "name", "") or "").lower()
+    if _HELMUT_LANG_YEAR_RE.search(title):
+        return True
+    return any(kw.lower() in title for kw in _HELMUT_LANG_TEXT_KEYWORDS)
 
 
 def _is_recently_created(created: Optional[datetime]) -> bool:
@@ -297,32 +343,47 @@ async def main():
 
     print(f"검색 대상 브랜드({len(brand_id_map)}개): {list(brand_id_map.keys())}")
 
+    # 브랜드별로 기본 카테고리(TARGET_CATEGORY_CANDIDATES) 대신 다른 카테고리를 쓰고
+    # 싶으면 BRAND_CATEGORY_OVERRIDES에 등록한다 (예: 특정 브랜드만 바지/청바지로 제한).
+    brand_category_ids = {}
+    for display_name, cand_names in BRAND_CATEGORY_OVERRIDES.items():
+        ids = resolve_category_ids_for_names(facets, cand_names, root_name="メンズ")
+        if ids:
+            brand_category_ids[display_name] = ids
+            print(f"카테고리 오버라이드: {display_name} -> {cand_names} (id={ids})")
+        else:
+            print(f"경고: {display_name}의 카테고리 오버라이드({cand_names})를 하나도 못 찾아 기본 카테고리를 씁니다.", file=sys.stderr)
+
     m = Mercapi()
     status_filter = [SearchRequestData.Status.STATUS_ON_SALE]
     sort_by = SearchRequestData.SortBy.SORT_CREATED_TIME
 
-    # 가격 상한이 브랜드별로 다를 수 있으므로, 같은 가격 상한을 쓰는 브랜드끼리 묶어서
+    # 가격 상한/카테고리가 브랜드별로 다를 수 있으므로, 둘 다 같은 브랜드끼리 묶어서
     # 그룹별로 따로 검색한다 (메루카리 검색 API는 요청 하나에 가격 상한을 하나만 지정 가능).
     # 브랜드를 하나씩 나눠 검색하지 않는 이유: 1분마다 도는 워크플로우에서 브랜드 수만큼
     # 요청이 나가면 메루카리 쪽에서 차단될 위험이 있다 - 브랜드 식별은 신규 상품만
     # 상세조회해서 해결한다(아래 _fetch_item_brand).
-    price_groups = {}
+    search_groups = {}
     for display_name, brand_id in brand_id_map.items():
         price_cap = BRAND_PRICE_OVERRIDES.get(display_name, PRICE_MAX)
-        price_groups.setdefault(price_cap, []).append(brand_id)
+        if display_name in brand_category_ids:
+            categories = tuple(brand_category_ids[display_name])
+        else:
+            categories = (category_id,) if category_id else ()
+        search_groups.setdefault((price_cap, categories), []).append(brand_id)
 
     all_result_items = []
-    for price_cap, brand_ids in price_groups.items():
+    for (price_cap, categories), brand_ids in search_groups.items():
         results = await m.search(
             "",
-            categories=[category_id] if category_id else [],
+            categories=list(categories),
             brands=brand_ids,
             price_max=price_cap,
             status=status_filter,
             sort_by=sort_by,
             sort_order=SearchRequestData.SortOrder.ORDER_DESC,
         )
-        print(f"가격상한 {price_cap}엔 그룹 검색: 브랜드 {len(brand_ids)}개, 결과 {len(results.items)}건")
+        print(f"가격상한 {price_cap}엔/카테고리 {categories} 그룹 검색: 브랜드 {len(brand_ids)}개, 결과 {len(results.items)}건")
         all_result_items.extend(results.items)
 
     is_first_run = not SEEN_FILE.exists()
@@ -353,6 +414,7 @@ async def main():
     new_items = [
         (item, brand_name or "브랜드 미상")
         for item, brand_name in zip(new_candidates, brand_names)
+        if _passes_helmut_lang_rule(item, brand_name)
     ]
 
     if is_first_run:
