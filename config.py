@@ -39,7 +39,7 @@ TARGET_CATEGORY_CANDIDATES = [
 # "メンズ" 루트 아래에서 이름이 정확히 일치하는 카테고리들을 전부 찾아서 검색에 쓴다
 # (여러 개면 OR로 검색됨).
 BRAND_CATEGORY_OVERRIDES = {
-    "Hysteric Glamour": ["パンツ", "デニム/ジーンズ"],  # 남성 바지/청바지
+    "Hysteric Glamour": ["デニム/ジーンズ"],  # 남성 청바지
 }
 
 # 헬무트 랭: 브랜드+가격상한만으로는 "헬무트 랭 본인이 디렉터였던 시절
@@ -84,13 +84,11 @@ TARGET_BRANDS_YAHOO = [
     {"display": "Maison Margiela", "queries": ["Maison Margiela", "メゾン マルジェラ"]},
     {"display": "Maison Martin Margiela", "queries": ["Maison Martin Margiela", "メゾン マルタン マルジェラ"]},
     {"display": "Helmut Lang", "queries": ["Helmut Lang", "ヘルムートラング"]},
-    # 야후는 카테고리 필터가 없어서, 검색어 자체에 パンツ/デニム를 섞어 바지/청바지로 좁힌다.
+    # 야후는 카테고리 필터가 없어서, 검색어 자체에 デニム를 섞어 청바지로 좁힌다.
     {
         "display": "Hysteric Glamour",
         "queries": [
-            "Hysteric Glamour パンツ",
             "Hysteric Glamour デニム",
-            "ヒステリックグラマー パンツ",
             "ヒステリックグラマー デニム",
         ],
     },
