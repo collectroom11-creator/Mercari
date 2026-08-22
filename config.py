@@ -67,6 +67,14 @@ EXCLUDE_KEYWORDS = [
     "下着",
 ]
 
+# 야후옥션 카테고리 오버라이드. 야후는 브랜드 ID 필터는 없지만(그래서 키워드로
+# 검색) 카테고리 필터(auccat)는 실제로 작동한다 - 기본값은 yahoo_main.py의
+# DEFAULT_AUCCAT(메ンズファッション). 여기 등록된 브랜드는 그 대신 이 auccat을 쓴다.
+# 23188 = ファッション > メンズファッション > ジーンズ (실제 검색으로 확인함).
+BRAND_CATEGORY_OVERRIDES_YAHOO = {
+    "Hysteric Glamour": "23188",
+}
+
 # 야후옥션용 브랜드 목록. 야후옥션은 브랜드 ID 필터가 없어서 키워드로
 # 검색한다(mercapi 검색과 다름). 셀러가 영어/일본어 중 아무 표기로나
 # 상품명을 적기 때문에, 브랜드마다 두 표기를 다 넣어 두 번 검색한다.
@@ -84,12 +92,5 @@ TARGET_BRANDS_YAHOO = [
     {"display": "Maison Margiela", "queries": ["Maison Margiela", "メゾン マルジェラ"]},
     {"display": "Maison Martin Margiela", "queries": ["Maison Martin Margiela", "メゾン マルタン マルジェラ"]},
     {"display": "Helmut Lang", "queries": ["Helmut Lang", "ヘルムートラング"]},
-    # 야후는 카테고리 필터가 없어서, 검색어 자체에 デニム를 섞어 청바지로 좁힌다.
-    {
-        "display": "Hysteric Glamour",
-        "queries": [
-            "Hysteric Glamour デニム",
-            "ヒステリックグラマー デニム",
-        ],
-    },
+    {"display": "Hysteric Glamour", "queries": ["Hysteric Glamour", "ヒステリックグラマー"]},
 ]

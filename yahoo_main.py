@@ -58,6 +58,7 @@ from config import (
     TARGET_BRANDS_YAHOO,
     PRICE_MAX,
     BRAND_PRICE_OVERRIDES,
+    BRAND_CATEGORY_OVERRIDES_YAHOO,
     EXCLUDE_KEYWORDS,
     HELMUT_LANG_KEYWORDS,
 )
@@ -66,6 +67,7 @@ from config import (
 # 설정
 # ----------------------------------------------------------------------
 SEARCH_URL = "https://auctions.yahoo.co.jp/search/search"
+DEFAULT_AUCCAT = "23176"  # ファッション > メンズファッション
 CHUNK_SIZE = 10  # 디스코드 embed는 메시지 하나에 최대 10개까지
 ENDING_SOON_MAX_MINUTES = 24 * 60  # 종료까지 이 시간 이내로 남은 것만 알림
 SEARCH_CONCURRENCY = 5  # 브랜드x언어 검색을 동시에 몇 개까지 날릴지
@@ -161,11 +163,11 @@ def _parse_search_html(page_html: str) -> list:
     return list(items.values())
 
 
-async def _search_keyword(client: httpx.AsyncClient, semaphore: asyncio.Semaphore, keyword: str, price_max: int) -> list:
+async def _search_keyword(client: httpx.AsyncClient, semaphore: asyncio.Semaphore, keyword: str, price_max: int, auccat: str = DEFAULT_AUCCAT) -> list:
     params = {
         "p": keyword,
         "va": keyword,
-        "auccat": "23176",  # ファッション > メンズファッション. brand_id와 달리 이건 실제로 결과를 필터링한다.
+        "auccat": auccat,  # brand_id와 달리 이건 실제로 결과를 필터링한다.
         "s1": "new",
         "o1": "d",
         "aucmaxprice": str(price_max),
@@ -371,8 +373,9 @@ async def main():
         for brand in TARGET_BRANDS_YAHOO:
             display_name = brand["display"]
             price_cap = BRAND_PRICE_OVERRIDES.get(display_name, PRICE_MAX)
+            auccat = BRAND_CATEGORY_OVERRIDES_YAHOO.get(display_name, DEFAULT_AUCCAT)
             for keyword in brand["queries"]:
-                tasks.append(_search_keyword(client, semaphore, keyword, price_cap))
+                tasks.append(_search_keyword(client, semaphore, keyword, price_cap, auccat))
                 task_brand.append(display_name)
 
         results = await asyncio.gather(*tasks)
