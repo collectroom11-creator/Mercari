@@ -106820,6 +106820,11 @@
                     "sub_name": "JINADICT"
                 },
                 {
+                    "id": 57973,
+                    "name": "genie [ファッション]",
+                    "sub_name": "genie [fashion]"
+                },
+                {
                     "id": 32250,
                     "name": "ZINUS",
                     "sub_name": "ZINUS"
@@ -263174,6 +263179,6 @@
     ],
     "meta": {
         "is_last": true,
-        "requested": 1787724040
+        "requested": 1787725835
     }
 }
