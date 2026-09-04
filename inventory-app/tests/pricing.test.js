@@ -90,3 +90,32 @@ test("computeDashboard: 이번달 매출원가 = 월초재고 + 이번달매입 
   assert.equal(result.monthProfit, 200000);
   assert.equal(result.targetProgressPct, 20);
 });
+
+test("computeDashboard: 개인구매 항목은 monthCogs/monthRevenue 계산에서도 제외된다", () => {
+  const now = new Date("2026-09-15T00:00:00.000Z");
+  const baseItems = [
+    item({ costKrw: 500000, status: "재고", createdAt: "2026-08-10T00:00:00.000Z" }),
+    item({ costKrw: 300000, status: "판매완료", createdAt: "2026-08-20T00:00:00.000Z", soldAt: "2026-09-05T00:00:00.000Z", actualPrice: 500000 }),
+    item({ costKrw: 200000, status: "재고", createdAt: "2026-09-02T00:00:00.000Z" }),
+  ];
+  // 개인구매 항목: 이번 달에 팔린 것처럼 보이는 큰 금액을 갖고 있지만 monthCogs/monthRevenue 어디에도 새면 안 됨
+  const personalPurchase = item({
+    costKrw: 999999999,
+    status: "개인구매",
+    createdAt: "2026-09-03T00:00:00.000Z",
+    soldAt: "2026-09-10T00:00:00.000Z",
+    actualPrice: 999999999,
+  });
+
+  const withoutPersonal = computeDashboard(baseItems, { capKrw: 3000000, monthlyTargetKrw: 1000000, now });
+  const withPersonal = computeDashboard([...baseItems, personalPurchase], {
+    capKrw: 3000000,
+    monthlyTargetKrw: 1000000,
+    now,
+  });
+
+  assert.equal(withPersonal.monthCogs, withoutPersonal.monthCogs);
+  assert.equal(withPersonal.monthRevenue, withoutPersonal.monthRevenue);
+  assert.equal(withPersonal.monthCogs, 300000);
+  assert.equal(withPersonal.monthRevenue, 500000);
+});
