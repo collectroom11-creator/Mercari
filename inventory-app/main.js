@@ -1,5 +1,5 @@
 // inventory-app/main.js
-const { app, BrowserWindow, ipcMain, session } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("node:path");
 const {
   computeCostKrw,
@@ -47,6 +47,10 @@ function openLoginWindow() {
 }
 
 async function fetchHtmlWithSession(url) {
+  const { hostname } = new URL(url);
+  if (hostname !== "kenzpost.com" && !hostname.endsWith(".kenzpost.com")) {
+    throw new Error("켄즈포스트 링크만 가져올 수 있어요.");
+  }
   const win = new BrowserWindow({
     show: false,
     webPreferences: { partition: KENZ_PARTITION },

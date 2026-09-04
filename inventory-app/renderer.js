@@ -17,8 +17,15 @@ document.getElementById("loginBtn").addEventListener("click", () => {
 document.getElementById("fetchBtn").addEventListener("click", async () => {
   const url = document.getElementById("urlInput").value.trim();
   if (!url) return;
-  const result = await window.api.fetchItem(url);
   const resultDiv = document.getElementById("fetchResult");
+  let result;
+  try {
+    result = await window.api.fetchItem(url);
+  } catch (err) {
+    resultDiv.textContent = `링크를 불러오지 못했어요 (${err.message}). 아래 값을 직접 입력해주세요.`;
+    document.getElementById("saveForm").hidden = false;
+    return;
+  }
   if (result.jpyPrice == null) {
     resultDiv.textContent = result.needsLogin
       ? "로그인이 안 되어 있는 것 같아요. 상단의 '켄즈포스트 로그인'을 먼저 눌러주세요."
@@ -85,15 +92,26 @@ async function renderList() {
     `;
     const actionTd = tr.querySelector("td:last-child");
     if (item.status === "재고") {
+      const priceInput = document.createElement("input");
+      priceInput.type = "number";
+      priceInput.value = item.targetPrice;
+      priceInput.style.width = "90px";
+      actionTd.appendChild(priceInput);
+
+      const dateInput = document.createElement("input");
+      dateInput.type = "date";
+      dateInput.value = new Date().toISOString().slice(0, 10);
+      actionTd.appendChild(dateInput);
+
       const sellBtn = document.createElement("button");
       sellBtn.textContent = "판매완료 처리";
       sellBtn.addEventListener("click", async () => {
-        const actual = prompt("실제 판매가(원)를 입력하세요", item.targetPrice);
-        if (actual == null) return;
+        const actual = Number(priceInput.value);
+        if (!actual || !dateInput.value) return;
         await window.api.updateItem(item.id, {
           status: "판매완료",
-          actualPrice: Number(actual),
-          soldAt: new Date().toISOString(),
+          actualPrice: actual,
+          soldAt: new Date(dateInput.value).toISOString(),
         });
         renderList();
       });
