@@ -1,0 +1,13 @@
+{
+  "name": "inventory-app",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.js"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}
