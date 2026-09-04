@@ -119,3 +119,20 @@ test("computeDashboard: 개인구매 항목은 monthCogs/monthRevenue 계산에�
   assert.equal(withPersonal.monthCogs, 300000);
   assert.equal(withPersonal.monthRevenue, 500000);
 });
+
+test("computeDashboard: 지난달에 사서 지난달에 판 물건은 이번달 계산에 안 들어간다", () => {
+  const now = new Date("2026-09-15T00:00:00.000Z");
+  const items = [
+    item({
+      costKrw: 400000,
+      status: "판매완료",
+      createdAt: "2026-07-10T00:00:00.000Z",
+      soldAt: "2026-07-20T00:00:00.000Z",
+      actualPrice: 600000,
+    }),
+  ];
+  const result = computeDashboard(items, { capKrw: 3000000, monthlyTargetKrw: 1000000, now });
+  assert.equal(result.monthCogs, 0);
+  assert.equal(result.monthRevenue, 0);
+  assert.equal(result.monthProfit, 0);
+});

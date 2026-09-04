@@ -26,7 +26,7 @@ function startOfMonth(date) {
 function inStockAt(item, t) {
   if (item.status === "개인구매") return false;
   const created = new Date(item.createdAt);
-  if (created > t) return false;
+  if (created >= t) return false;
   if (item.status === "판매완료") {
     const sold = item.soldAt ? new Date(item.soldAt) : null;
     return sold ? sold > t : false;
@@ -40,7 +40,7 @@ function computeDashboard(items, opts) {
 
   const businessItems = items.filter((i) => i.status !== "개인구매");
 
-  const stockCostTotal = items
+  const stockCostTotal = businessItems
     .filter((i) => i.status === "재고")
     .reduce((sum, i) => sum + i.costKrw, 0);
 
