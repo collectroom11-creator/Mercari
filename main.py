@@ -57,7 +57,10 @@ from config import (
     BRAND_PRICE_OVERRIDES,
     TARGET_CATEGORY_CANDIDATES,
     BRAND_CATEGORY_OVERRIDES,
+    BRAND_CATEGORY_EXCLUDE_OVERRIDES,
     EXCLUDE_KEYWORDS,
+    BRAND_EXCLUDE_KEYWORDS_OVERRIDES,
+    BRAND_REQUIRE_KEYWORDS_OVERRIDES,
     HELMUT_LANG_KEYWORDS,
 )
 
@@ -144,6 +147,39 @@ def resolve_category_ids_for_names(entries, names, root_name=None):
     return ids
 
 
+def resolve_leaf_category_ids_excluding(entries, root_name, exclude_names):
+    """root_name(예: メンズ) 하위의 모든 "리프"(하위 카테고리가 없는 말단) 카테고리
+    id를 exclude_names에 있는 이름만 뺀 채로 반환한다. 여러 개를 OR로 검색에 넘기면
+    "이 루트 전체에서 제외 목록만 뺀 나머지"를 검색하는 효과가 난다 - 제목 텍스트가
+    아니라 실제 등록 카테고리 기준이라 더 정확하다.
+    exclude_names는 리프 자신의 이름(예: "Tシャツ/カットソー(半袖/袖なし)")뿐 아니라
+    그 리프의 상위 카테고리 이름(예: "靴")과도 비교한다 - "靴" 자체는 리프가
+    아니라 스니ーカー/부츠/로퍼 등 여러 리프를 묶은 상위 카테고리라서, 상위
+    이름 하나로 그 밑 리프 전부를 한 번에 뺄 수 있게 하기 위함이다."""
+    exclude_set = {name.strip().lower() for name in exclude_names}
+
+    def is_excluded(c):
+        name = str(c.get("name", "")).strip().lower()
+        parent = str(c.get("parent_category_name", "")).strip().lower()
+        return name in exclude_set or parent in exclude_set
+
+    candidates = [
+        c for c in entries
+        if c.get("root_category_name") == root_name and not c.get("child")
+    ]
+    ids = [c["id"] for c in candidates if not is_excluded(c)]
+
+    matched_names = {
+        str(c.get("name", "")).strip().lower() for c in candidates
+    } | {
+        str(c.get("parent_category_name", "")).strip().lower() for c in candidates
+    }
+    for name in exclude_names:
+        if name.strip().lower() not in matched_names:
+            print(f"경고: 제외 카테고리 '{name}'(루트={root_name})를 facets에서 찾지 못했습니다.", file=sys.stderr)
+    return ids
+
+
 def check_category_drift(category_id, category_name):
     """이전 실행의 category_id와 다르면 stderr에 경고하고 기록을 갱신한다."""
     prev = None
@@ -224,6 +260,42 @@ _HELMUT_LANG_TEXT_KEYWORDS = [kw for kw in HELMUT_LANG_KEYWORDS if not kw.isdigi
 _HELMUT_LANG_YEAR_RE = re.compile(
     r"(?<!\d)(?:" + "|".join(kw for kw in HELMUT_LANG_KEYWORDS if kw.isdigit()) + r")(?!\d)"
 )
+
+
+_BRAND_EXCLUDE_KEYWORDS_LOWER = {
+    display_name.strip().lower(): [kw.lower() for kw in keywords]
+    for display_name, keywords in BRAND_EXCLUDE_KEYWORDS_OVERRIDES.items()
+}
+
+
+def _passes_brand_exclude_rule(item, brand_name: Optional[str]) -> bool:
+    """브랜드별 제외 키워드(BRAND_EXCLUDE_KEYWORDS_OVERRIDES)에 해당 브랜드가
+    없으면 그냥 통과. 있으면 제목에 그 키워드 중 하나라도 있으면 걸러낸다."""
+    if not brand_name:
+        return True
+    keywords = _BRAND_EXCLUDE_KEYWORDS_LOWER.get(brand_name.strip().lower())
+    if not keywords:
+        return True
+    title = (getattr(item, "name", "") or "").lower()
+    return not any(kw in title for kw in keywords)
+
+
+_BRAND_REQUIRE_KEYWORDS_LOWER = {
+    display_name.strip().lower(): [kw.lower() for kw in keywords]
+    for display_name, keywords in BRAND_REQUIRE_KEYWORDS_OVERRIDES.items()
+}
+
+
+def _passes_brand_require_rule(item, brand_name: Optional[str]) -> bool:
+    """브랜드별 필수 키워드(BRAND_REQUIRE_KEYWORDS_OVERRIDES)에 해당 브랜드가
+    없으면 그냥 통과. 있으면 제목에 그 키워드 중 하나라도 있어야만 통과한다."""
+    if not brand_name:
+        return True
+    keywords = _BRAND_REQUIRE_KEYWORDS_LOWER.get(brand_name.strip().lower())
+    if not keywords:
+        return True
+    title = (getattr(item, "name", "") or "").lower()
+    return any(kw in title for kw in keywords)
 
 
 def _passes_helmut_lang_rule(item, brand_name: Optional[str]) -> bool:
@@ -354,6 +426,16 @@ async def main():
         else:
             print(f"경고: {display_name}의 카테고리 오버라이드({cand_names})를 하나도 못 찾아 기본 카테고리를 씁니다.", file=sys.stderr)
 
+    # 브랜드별로 "メンズ 전체에서 이 카테고리만 빼고" 검색하고 싶으면
+    # BRAND_CATEGORY_EXCLUDE_OVERRIDES에 등록한다 (예: 티셔츠 카테고리만 제외).
+    for display_name, exclude_names in BRAND_CATEGORY_EXCLUDE_OVERRIDES.items():
+        ids = resolve_leaf_category_ids_excluding(facets, "メンズ", exclude_names)
+        if ids:
+            brand_category_ids[display_name] = ids
+            print(f"카테고리 제외 오버라이드: {display_name} -> 메ンズ 전체 - {exclude_names} (리프 {len(ids)}개)")
+        else:
+            print(f"경고: {display_name}의 카테고리 제외 오버라이드에서 리프 카테고리를 하나도 못 찾아 기본 카테고리를 씁니다.", file=sys.stderr)
+
     m = Mercapi()
     status_filter = [SearchRequestData.Status.STATUS_ON_SALE]
     sort_by = SearchRequestData.SortBy.SORT_CREATED_TIME
@@ -415,6 +497,8 @@ async def main():
         (item, brand_name or "브랜드 미상")
         for item, brand_name in zip(new_candidates, brand_names)
         if _passes_helmut_lang_rule(item, brand_name)
+        and _passes_brand_exclude_rule(item, brand_name)
+        and _passes_brand_require_rule(item, brand_name)
     ]
 
     if is_first_run:
