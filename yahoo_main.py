@@ -60,6 +60,8 @@ from config import (
     BRAND_PRICE_OVERRIDES,
     BRAND_CATEGORY_OVERRIDES_YAHOO,
     EXCLUDE_KEYWORDS,
+    BRAND_EXCLUDE_KEYWORDS_OVERRIDES,
+    BRAND_REQUIRE_KEYWORDS_OVERRIDES,
     HELMUT_LANG_KEYWORDS,
 )
 
@@ -227,6 +229,38 @@ def save_first_seen(first_seen: dict):
 def _is_excluded_item(title: str) -> bool:
     lowered = (title or "").lower()
     return any(keyword.lower() in lowered for keyword in EXCLUDE_KEYWORDS)
+
+
+_BRAND_EXCLUDE_KEYWORDS_LOWER = {
+    display_name.strip().lower(): [kw.lower() for kw in keywords]
+    for display_name, keywords in BRAND_EXCLUDE_KEYWORDS_OVERRIDES.items()
+}
+
+
+def _is_brand_excluded_item(title: str, display_name: str) -> bool:
+    """BRAND_EXCLUDE_KEYWORDS_OVERRIDES에 해당 브랜드가 없으면 통과(제외 안 됨).
+    있으면 제목에 그 키워드 중 하나라도 있으면 제외 대상."""
+    keywords = _BRAND_EXCLUDE_KEYWORDS_LOWER.get(display_name.strip().lower())
+    if not keywords:
+        return False
+    lowered = (title or "").lower()
+    return any(kw in lowered for kw in keywords)
+
+
+_BRAND_REQUIRE_KEYWORDS_LOWER = {
+    display_name.strip().lower(): [kw.lower() for kw in keywords]
+    for display_name, keywords in BRAND_REQUIRE_KEYWORDS_OVERRIDES.items()
+}
+
+
+def _passes_brand_require_rule(title: str, display_name: str) -> bool:
+    """BRAND_REQUIRE_KEYWORDS_OVERRIDES에 해당 브랜드가 없으면 그냥 통과.
+    있으면 제목에 그 키워드 중 하나라도 있어야만 통과한다."""
+    keywords = _BRAND_REQUIRE_KEYWORDS_LOWER.get(display_name.strip().lower())
+    if not keywords:
+        return True
+    lowered = (title or "").lower()
+    return any(kw in lowered for kw in keywords)
 
 
 # HELMUT_LANG_KEYWORDS 중 순수 두자리 숫자(86~05)는 단순 부분일치로 찾으면
@@ -415,6 +449,10 @@ async def main():
                 continue
             seen_this_run.add(item_id)
             if _is_excluded_item(item["title"]):
+                continue
+            if _is_brand_excluded_item(item["title"], display_name):
+                continue
+            if not _passes_brand_require_rule(item["title"], display_name):
                 continue
             if not _passes_helmut_lang_rule(item["title"], display_name):
                 continue
