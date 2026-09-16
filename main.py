@@ -256,9 +256,14 @@ def _is_excluded_item(item_name: str) -> bool:
 # HELMUT_LANG_KEYWORDS 중 순수 두자리 숫자(86~05)는 단순 부분일치로 찾으면
 # "2018AW"에 "01"이 우연히 포함되는 식으로 오탐이 난다. 앞뒤로 다른 숫자가
 # 붙어있지 않을 때만("18AW"처럼 시즌 표기로 쓰였을 때) 매칭되게 제한한다.
+# 그런데 이 제한 때문에 "2003AW"처럼 4자리로 연도를 쓴 진짜 매물을 실제로
+# 놓친 적이 있다(m64278541850) - "03"의 앞뒤에 "20"의 "0"과 "AW"가 아니라
+# 뒤의 다른 숫자가 붙어있어서 안 걸렸다. 그래서 두자리(86~05)뿐 아니라
+# 4자리(1986~2005)로 통짜로 쓴 연도도 별도로 매칭하게 추가했다.
 _HELMUT_LANG_TEXT_KEYWORDS = [kw for kw in HELMUT_LANG_KEYWORDS if not kw.isdigit()]
 _HELMUT_LANG_YEAR_RE = re.compile(
     r"(?<!\d)(?:" + "|".join(kw for kw in HELMUT_LANG_KEYWORDS if kw.isdigit()) + r")(?!\d)"
+    r"|(?<!\d)(?:19(?:8[6-9]|9\d)|20(?:0[0-5]))(?!\d)"
 )
 
 

@@ -268,9 +268,12 @@ def _passes_brand_require_rule(title: str, display_name: str) -> bool:
 # 붙어있지 않을 때만("18AW"처럼 시즌 표기로 쓰였을 때) 매칭되게 제한한다.
 # main.py(메루카리 봇)와 동일한 규칙 - 야후는 브랜드를 상세조회 없이 검색
 # 단계에서부터 알고 있어서(display_name) 별도 브랜드명 조회가 필요 없다.
+# "2003AW"처럼 4자리로 쓴 연도를 실제로 놓친 적이 있어서(main.py 쪽 주석 참고)
+# 두자리(86~05)뿐 아니라 4자리(1986~2005) 통짜 연도도 매칭하게 추가했다.
 _HELMUT_LANG_TEXT_KEYWORDS = [kw for kw in HELMUT_LANG_KEYWORDS if not kw.isdigit()]
 _HELMUT_LANG_YEAR_RE = re.compile(
     r"(?<!\d)(?:" + "|".join(kw for kw in HELMUT_LANG_KEYWORDS if kw.isdigit()) + r")(?!\d)"
+    r"|(?<!\d)(?:19(?:8[6-9]|9\d)|20(?:0[0-5]))(?!\d)"
 )
 
 
