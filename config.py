@@ -13,6 +13,7 @@ TARGET_BRANDS = [
     "ARMANI",
     "Maison Margiela",
     "Maison Martin Margiela",
+    "Ann Demeulemeester",
     "Helmut Lang",
     "Hysteric Glamour",
     # 빈티지(올드) 제품만 원하는 브랜드 - 가격상한은 5000엔, 제목에
@@ -39,6 +40,7 @@ BRAND_PRICE_OVERRIDES = {
     "ARMANI": 30000,
     "Maison Margiela": 30000,
     "Maison Martin Margiela": 30000,
+    "Ann Demeulemeester": 30000,
     "VANS": 5000,
     "STUSSY": 5000,
 }
@@ -137,6 +139,7 @@ TARGET_BRANDS_YAHOO = [
     {"display": "ARMANI", "queries": ["ARMANI", "アルマーニ"]},
     {"display": "Maison Margiela", "queries": ["Maison Margiela", "メゾン マルジェラ"]},
     {"display": "Maison Martin Margiela", "queries": ["Maison Martin Margiela", "メゾン マルタン マルジェラ"]},
+    {"display": "Ann Demeulemeester", "queries": ["Ann Demeulemeester", "アン ドゥムルメステール"]},
     {"display": "Helmut Lang", "queries": ["Helmut Lang", "ヘルムートラング"]},
     {"display": "Hysteric Glamour", "queries": ["Hysteric Glamour", "ヒステリックグラマー"]},
     {"display": "VANS", "queries": ["VANS", "バンズ"]},
