@@ -41,7 +41,6 @@
 import asyncio
 import json
 import os
-import re
 import sys
 import time
 from datetime import datetime
@@ -61,7 +60,6 @@ from config import (
     EXCLUDE_KEYWORDS,
     BRAND_EXCLUDE_KEYWORDS_OVERRIDES,
     BRAND_REQUIRE_KEYWORDS_OVERRIDES,
-    HELMUT_LANG_KEYWORDS,
 )
 
 # ----------------------------------------------------------------------
@@ -253,20 +251,6 @@ def _is_excluded_item(item_name: str) -> bool:
     return any(keyword.lower() in lowered for keyword in EXCLUDE_KEYWORDS)
 
 
-# HELMUT_LANG_KEYWORDS 중 순수 두자리 숫자(86~05)는 단순 부분일치로 찾으면
-# "2018AW"에 "01"이 우연히 포함되는 식으로 오탐이 난다. 앞뒤로 다른 숫자가
-# 붙어있지 않을 때만("18AW"처럼 시즌 표기로 쓰였을 때) 매칭되게 제한한다.
-# 그런데 이 제한 때문에 "2003AW"처럼 4자리로 연도를 쓴 진짜 매물을 실제로
-# 놓친 적이 있다(m64278541850) - "03"의 앞뒤에 "20"의 "0"과 "AW"가 아니라
-# 뒤의 다른 숫자가 붙어있어서 안 걸렸다. 그래서 두자리(86~05)뿐 아니라
-# 4자리(1986~2005)로 통짜로 쓴 연도도 별도로 매칭하게 추가했다.
-_HELMUT_LANG_TEXT_KEYWORDS = [kw for kw in HELMUT_LANG_KEYWORDS if not kw.isdigit()]
-_HELMUT_LANG_YEAR_RE = re.compile(
-    r"(?<!\d)(?:" + "|".join(kw for kw in HELMUT_LANG_KEYWORDS if kw.isdigit()) + r")(?!\d)"
-    r"|(?<!\d)(?:19(?:8[6-9]|9\d)|20(?:0[0-5]))(?!\d)"
-)
-
-
 _BRAND_EXCLUDE_KEYWORDS_LOWER = {
     display_name.strip().lower(): [kw.lower() for kw in keywords]
     for display_name, keywords in BRAND_EXCLUDE_KEYWORDS_OVERRIDES.items()
@@ -301,18 +285,6 @@ def _passes_brand_require_rule(item, brand_name: Optional[str]) -> bool:
         return True
     title = (getattr(item, "name", "") or "").lower()
     return any(kw in title for kw in keywords)
-
-
-def _passes_helmut_lang_rule(item, brand_name: Optional[str]) -> bool:
-    """헬무트 랭이 아니면 그냥 통과. 헬무트 랭이면 제목에 HELMUT_LANG_KEYWORDS 중 하나가
-    있어야만 통과한다 - "본인 디렉팅 시절" 여부는 구조화된 데이터가 없어 제목 키워드로만
-    추정 가능하다."""
-    if not brand_name or "helmut lang" not in brand_name.strip().lower():
-        return True
-    title = (getattr(item, "name", "") or "").lower()
-    if _HELMUT_LANG_YEAR_RE.search(title):
-        return True
-    return any(kw.lower() in title for kw in _HELMUT_LANG_TEXT_KEYWORDS)
 
 
 def _is_recently_created(created: Optional[datetime]) -> bool:
@@ -501,8 +473,7 @@ async def main():
     new_items = [
         (item, brand_name or "브랜드 미상")
         for item, brand_name in zip(new_candidates, brand_names)
-        if _passes_helmut_lang_rule(item, brand_name)
-        and _passes_brand_exclude_rule(item, brand_name)
+        if _passes_brand_exclude_rule(item, brand_name)
         and _passes_brand_require_rule(item, brand_name)
     ]
 
