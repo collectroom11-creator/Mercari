@@ -10,7 +10,6 @@ TARGET_BRANDS = [
     "EMPORIO ARMANI",
     "ARMANI COLLEZIONI",
     "ARMANI JEANS",
-    "EMPORIO ARMANI EA7",
     "ARMANI",
     "Maison Margiela",
     "Maison Martin Margiela",
@@ -37,7 +36,6 @@ BRAND_PRICE_OVERRIDES = {
     "EMPORIO ARMANI": 30000,
     "ARMANI COLLEZIONI": 30000,
     "ARMANI JEANS": 30000,
-    "EMPORIO ARMANI EA7": 30000,
     "ARMANI": 30000,
     "Maison Margiela": 30000,
     "Maison Martin Margiela": 30000,
@@ -117,6 +115,7 @@ EXCLUDE_KEYWORDS = [
 # 브랜드명 기준으로, yahoo_main.py는 검색에 쓴 display명 기준으로 판단한다.
 BRAND_EXCLUDE_KEYWORDS_OVERRIDES = {
     "Hysteric Glamour": ["Tシャツ", "T-Shirt", "Tshirt", "ティーシャツ"],
+    "PRADA": ["バッグ", "かばん", "鞄", "Bag"],
 }
 
 # 야후옥션 카테고리 오버라이드. 야후는 브랜드 ID 필터는 없지만(그래서 키워드로
@@ -135,7 +134,6 @@ TARGET_BRANDS_YAHOO = [
     {"display": "EMPORIO ARMANI", "queries": ["EMPORIO ARMANI", "エンポリオ アルマーニ"]},
     {"display": "ARMANI COLLEZIONI", "queries": ["ARMANI COLLEZIONI", "アルマーニ コレツィオーニ"]},
     {"display": "ARMANI JEANS", "queries": ["ARMANI JEANS", "アルマーニ ジーンズ"]},
-    {"display": "EMPORIO ARMANI EA7", "queries": ["EMPORIO ARMANI EA7", "エンポリオ アルマーニ EA7"]},
     {"display": "ARMANI", "queries": ["ARMANI", "アルマーニ"]},
     {"display": "Maison Margiela", "queries": ["Maison Margiela", "メゾン マルジェラ"]},
     {"display": "Maison Martin Margiela", "queries": ["Maison Martin Margiela", "メゾン マルタン マルジェラ"]},
