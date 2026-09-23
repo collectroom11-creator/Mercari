@@ -57,6 +57,7 @@ from config import (
     TARGET_CATEGORY_CANDIDATES,
     BRAND_CATEGORY_OVERRIDES,
     BRAND_CATEGORY_EXCLUDE_OVERRIDES,
+    GLOBAL_CATEGORY_EXCLUDE,
     EXCLUDE_KEYWORDS,
     BRAND_EXCLUDE_KEYWORDS_OVERRIDES,
     BRAND_REQUIRE_KEYWORDS_OVERRIDES,
@@ -403,15 +404,21 @@ async def main():
         else:
             print(f"경고: {display_name}의 카테고리 오버라이드({cand_names})를 하나도 못 찾아 기본 카테고리를 씁니다.", file=sys.stderr)
 
-    # 브랜드별로 "メンズ 전체에서 이 카테고리만 빼고" 검색하고 싶으면
-    # BRAND_CATEGORY_EXCLUDE_OVERRIDES에 등록한다 (예: 티셔츠 카테고리만 제외).
-    for display_name, exclude_names in BRAND_CATEGORY_EXCLUDE_OVERRIDES.items():
+    # GLOBAL_CATEGORY_EXCLUDE(아クセサリー/小物 등)는 모든 브랜드에 기본 적용하고,
+    # BRAND_CATEGORY_EXCLUDE_OVERRIDES에 등록된 브랜드는 거기에 추가로 더 뺀다.
+    # 이미 BRAND_CATEGORY_OVERRIDES로 카테고리가 정해진 브랜드는 건드리지 않는다.
+    print(f"전역 카테고리 제외: 모든 브랜드에서 메ンズ 전체 - {GLOBAL_CATEGORY_EXCLUDE}")
+    for display_name in brand_id_map:
+        if display_name in brand_category_ids:
+            continue
+        exclude_names = GLOBAL_CATEGORY_EXCLUDE + BRAND_CATEGORY_EXCLUDE_OVERRIDES.get(display_name, [])
         ids = resolve_leaf_category_ids_excluding(facets, "メンズ", exclude_names)
         if ids:
             brand_category_ids[display_name] = ids
-            print(f"카테고리 제외 오버라이드: {display_name} -> 메ンズ 전체 - {exclude_names} (리프 {len(ids)}개)")
+            if display_name in BRAND_CATEGORY_EXCLUDE_OVERRIDES:
+                print(f"브랜드별 추가 카테고리 제외: {display_name} -> {BRAND_CATEGORY_EXCLUDE_OVERRIDES[display_name]}")
         else:
-            print(f"경고: {display_name}의 카테고리 제외 오버라이드에서 리프 카테고리를 하나도 못 찾아 기본 카테고리를 씁니다.", file=sys.stderr)
+            print(f"경고: {display_name}의 카테고리 제외 설정에서 리프 카테고리를 하나도 못 찾아 기본 카테고리를 씁니다.", file=sys.stderr)
 
     m = Mercapi()
     status_filter = [SearchRequestData.Status.STATUS_ON_SALE]
