@@ -41,6 +41,12 @@ TARGET_BRANDS = [
     "John Galliano",
     # "Black Barrett"가 아니라 메루카리 브랜드 태그명 그대로 써야 매칭된다.
     "BLACKBARRETT by NEIL BARRETT",
+    "LAD MUSICIAN",
+    "junhashimoto",
+    "TORNADO MART",
+    "ATTACHMENT",
+    # "Rip Van Winkle Japan"이 아니라 메루카리 브랜드 태그명(공백 없이 붙여쓴 표기) 그대로 써야 매칭된다.
+    "ripvanwinkle",
     # 빈티지(올드) 제품만 원하는 브랜드 - 가격상한은 5000엔, 제목에
     # BRAND_REQUIRE_KEYWORDS_OVERRIDES 키워드가 있어야만 알림한다(아래 참고).
     "VANS",
@@ -88,6 +94,11 @@ BRAND_PRICE_OVERRIDES = {
     "TAKAHIROMIYASHITATheSoloist.": 30000,
     "John Galliano": 30000,
     "BLACKBARRETT by NEIL BARRETT": 30000,
+    "LAD MUSICIAN": 30000,
+    "junhashimoto": 30000,
+    "TORNADO MART": 30000,
+    "ATTACHMENT": 30000,
+    "ripvanwinkle": 30000,
     "VANS": 5000,
     "STUSSY": 5000,
 }
@@ -121,7 +132,7 @@ BRAND_CATEGORY_OVERRIDES = {}
 # 카테고리를 이런 식으로 다룰 수 없어서(auccat 하나만 지정 가능) 이건
 # main.py(메루카리)에서만 쓰이고, 야후 쪽은 여전히 BRAND_EXCLUDE_KEYWORDS_OVERRIDES로
 # 처리한다.
-GLOBAL_CATEGORY_EXCLUDE = ["アクセサリー", "小物"]
+GLOBAL_CATEGORY_EXCLUDE = ["アクセサリー", "小物", "時計"]
 
 # 브랜드별로 GLOBAL_CATEGORY_EXCLUDE에 추가로 더 빼고 싶은 카테고리가 있을 때만 채운다.
 BRAND_CATEGORY_EXCLUDE_OVERRIDES = {
@@ -194,6 +205,11 @@ TARGET_BRANDS_YAHOO = [
     {"display": "TAKAHIROMIYASHITATheSoloist.", "queries": ["Takahiromiyashita The Soloist", "タカヒロミヤシタザソロイスト"]},
     {"display": "John Galliano", "queries": ["John Galliano", "ジョンガリアーノ"]},
     {"display": "BLACKBARRETT by NEIL BARRETT", "queries": ["Black Barrett", "ブラックバレット"]},
+    {"display": "LAD MUSICIAN", "queries": ["Lad Musician", "ラッドミュージシャン"]},
+    {"display": "junhashimoto", "queries": ["junhashimoto", "ジュンハシモト"]},
+    {"display": "TORNADO MART", "queries": ["Tornado Mart", "トルネードマート"]},
+    {"display": "ATTACHMENT", "queries": ["Attachment", "アタッチメント"]},
+    {"display": "ripvanwinkle", "queries": ["Rip Van Winkle", "リップヴァンウィンクル"]},
     {"display": "VANS", "queries": ["VANS", "バンズ"]},
     {"display": "STUSSY", "queries": ["STUSSY", "ステューシー"]},
     {"display": "PRADA", "queries": ["PRADA", "プラダ"]},
