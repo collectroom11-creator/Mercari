@@ -3,8 +3,10 @@
 // "관심"/"읽음" 상태는 더는 디스코드 이모지 반응으로 저장하지 않는다 -
 // 디스코드 반응 API는 레이트리밋이 빡빡해서 여러 개를 한꺼번에 처리하면
 // 일부가 조용히 실패했다. 대신 Redis(Upstash, @vercel/kv)에 읽음/관심
-// 상품 id 집합을 저장한다 - 한 번의 SMEMBERS 조회로 전체 상태를 가져올
-// 수 있어 훨씬 빠르고 안정적이다.
+// 상품 id 집합을 저장한다.
+// 상태 조회는 SMEMBERS(집합 전체 다운로드)가 아니라 SMISMEMBER로 "지금 가져온
+// 메시지 id들만" 묻는다. 읽음 집합은 8월부터 지워지지 않고 계속 커져서, 매 폴링마다
+// 전체를 받으면 Upstash 무료 플랜 전송량(월 10GB)을 다 써버려 DB가 막혔었다.
 const { Redis } = require("@upstash/redis");
 
 const redis = new Redis({
@@ -25,13 +27,9 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const [discordResp, readIds, interestedIds] = await Promise.all([
-    fetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=100`, {
-      headers: { Authorization: `Bot ${token}` },
-    }),
-    redis.smembers("read"),
-    redis.smembers("interested"),
-  ]);
+  const discordResp = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages?limit=100`, {
+    headers: { Authorization: `Bot ${token}` },
+  });
 
   if (!discordResp.ok) {
     const text = await discordResp.text();
@@ -39,9 +37,14 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const readSet = new Set(readIds);
-  const interestedSet = new Set(interestedIds);
   const messages = await discordResp.json();
+  const ids = messages.map((m) => m.id);
+  // automaticDeserialization이 꺼져 있어서 플래그가 숫자 1 또는 문자열 "1"로 올 수 있다.
+  const [readFlags, interestedFlags] = ids.length
+    ? await Promise.all([redis.smismember("read", ids), redis.smismember("interested", ids)])
+    : [[], []];
+  const readSet = new Set(ids.filter((_, i) => Number(readFlags[i]) === 1));
+  const interestedSet = new Set(ids.filter((_, i) => Number(interestedFlags[i]) === 1));
 
   const alerts = [];
   for (const m of messages) {
