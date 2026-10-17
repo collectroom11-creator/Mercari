@@ -138,10 +138,7 @@ BRAND_CATEGORY_OVERRIDES = {}
 # "アクセサリー"(목걸이/반지 등)와 "小物"(지갑/벨트/키홀더 등)은 실제로 뒤져보면
 # 저가 잡화 위주라 의류 위주로 보고 싶은 목적에 안 맞아서 브랜드 상관없이 전부 뺀다.
 # 이름은 리프 자신뿐 아니라 상위 카테고리 이름과도 비교되므로(resolve_leaf_category_ids_excluding
-# 참고) 이렇게 상위 카테고리 이름만 적어도 그 밑 리프 전부가 빠진다. 야후옥션은
-# 카테고리를 이런 식으로 다룰 수 없어서(auccat 하나만 지정 가능) 이건
-# main.py(메루카리)에서만 쓰이고, 야후 쪽은 여전히 BRAND_EXCLUDE_KEYWORDS_OVERRIDES로
-# 처리한다.
+# 참고) 이렇게 상위 카테고리 이름만 적어도 그 밑 리프 전부가 빠진다.
 GLOBAL_CATEGORY_EXCLUDE = ["アクセサリー", "小物", "時計"]
 
 # 브랜드별로 GLOBAL_CATEGORY_EXCLUDE에 추가로 더 빼고 싶은 카테고리가 있을 때만 채운다.
@@ -161,70 +158,8 @@ EXCLUDE_KEYWORDS = [
 ]
 
 # 특정 브랜드에서만 이 키워드가 제목에 있으면 제외한다(EXCLUDE_KEYWORDS와 별개로
-# 추가 적용됨, 다른 브랜드에는 영향 없음). main.py는 상품 상세조회로 얻은 실제
-# 브랜드명 기준으로, yahoo_main.py는 검색에 쓴 display명 기준으로 판단한다.
+# 추가 적용됨, 다른 브랜드에는 영향 없음). 상품 상세조회로 얻은 실제 브랜드명 기준으로 판단한다.
 BRAND_EXCLUDE_KEYWORDS_OVERRIDES = {
     "Hysteric Glamour": ["Tシャツ", "T-Shirt", "Tshirt", "ティーシャツ"],
     "PRADA": ["バッグ", "かばん", "鞄", "Bag"],
 }
-
-# 야후옥션 카테고리 오버라이드. 야후는 브랜드 ID 필터는 없지만(그래서 키워드로
-# 검색) 카테고리 필터(auccat)는 실제로 작동한다 - 기본값은 yahoo_main.py의
-# DEFAULT_AUCCAT(메ンズファッション). 여기 등록된 브랜드는 그 대신 이 auccat을 쓴다.
-BRAND_CATEGORY_OVERRIDES_YAHOO = {}
-
-# 야후옥션용 브랜드 목록. 야후옥션은 브랜드 ID 필터가 없어서 키워드로
-# 검색한다(mercapi 검색과 다름). 셀러가 영어/일본어 중 아무 표기로나
-# 상품명을 적기 때문에, 브랜드마다 두 표기를 다 넣어 두 번 검색한다.
-# 가격상한은 위 PRICE_MAX / BRAND_PRICE_OVERRIDES를 그대로 재사용한다
-# (display 이름이 BRAND_PRICE_OVERRIDES의 키와 일치해야 적용됨).
-TARGET_BRANDS_YAHOO = [
-    {"display": "Dior Homme", "queries": ["Dior Homme", "ディオール オム"]},
-    {"display": "Giorgio Armani", "queries": ["Giorgio Armani", "ジョルジオ アルマーニ"]},
-    {"display": "EMPORIO ARMANI", "queries": ["EMPORIO ARMANI", "エンポリオ アルマーニ"]},
-    {"display": "ARMANI COLLEZIONI", "queries": ["ARMANI COLLEZIONI", "アルマーニ コレツィオーニ"]},
-    {"display": "ARMANI JEANS", "queries": ["ARMANI JEANS", "アルマーニ ジーンズ"]},
-    {"display": "ARMANI", "queries": ["ARMANI", "アルマーニ"]},
-    {"display": "Maison Margiela", "queries": ["Maison Margiela", "メゾン マルジェラ"]},
-    {"display": "Maison Martin Margiela", "queries": ["Maison Martin Margiela", "メゾン マルタン マルジェラ"]},
-    {"display": "Ann Demeulemeester", "queries": ["Ann Demeulemeester", "アン ドゥムルメステール"]},
-    {"display": "JEAN PAUL GAULTIER", "queries": ["Jean Paul Gaultier", "ジャンポールゴルチエ"]},
-    {"display": "Jean Paul GAULTIER HOMME", "queries": ["Jean Paul Gaultier Homme", "ジャンポールゴルチエ オム"]},
-    {"display": "SAINT LAURENT PARIS", "queries": ["Saint Laurent Paris", "サンローラン パリ"]},
-    {"display": "Saint Laurent", "queries": ["Saint Laurent", "サンローラン"]},
-    {"display": "Helmut Lang", "queries": ["Helmut Lang", "ヘルムートラング"]},
-    {"display": "Hysteric Glamour", "queries": ["Hysteric Glamour", "ヒステリックグラマー"]},
-    {"display": "Dries Van Noten", "queries": ["Dries Van Noten", "ドリスヴァンノッテン"]},
-    {"display": "Neil Barrett", "queries": ["Neil Barrett", "ニールバレット"]},
-    {"display": "Undercover", "queries": ["Undercover", "アンダーカバー"]},
-    {"display": "Gucci", "queries": ["Gucci", "グッチ"]},
-    {"display": "Vivienne Westwood", "queries": ["Vivienne Westwood", "ヴィヴィアンウエストウッド"]},
-    {"display": "Givenchy", "queries": ["Givenchy", "ジバンシィ"]},
-    {"display": "Stone Island", "queries": ["Stone Island", "ストーンアイランド"]},
-    {"display": "Junya Watanabe", "queries": ["Junya Watanabe", "ジュンヤワタナベ"]},
-    {"display": "Celine", "queries": ["Celine", "セリーヌ"]},
-    {"display": "D&G ／ Dolce＆Gabbana", "queries": ["Dolce & Gabbana", "D&G", "ドルチェアンドガッバーナ"]},
-    {"display": "Kris Van Assche", "queries": ["Kris Van Assche", "クリスヴァンアッシュ"]},
-    {"display": "Dirk Bikkembergs", "queries": ["Dirk Bikkembergs", "ダークビッケンバーグ"]},
-    {"display": "Yohji Yamamoto", "queries": ["Yohji Yamamoto", "ヨウジヤマモト"]},
-    {"display": "Issey Miyake", "queries": ["Issey Miyake", "イッセイミヤケ"]},
-    {"display": "wjk", "queries": ["wjk"]},
-    {"display": "TAKAHIROMIYASHITATheSoloist.", "queries": ["Takahiromiyashita The Soloist", "タカヒロミヤシタザソロイスト"]},
-    {"display": "John Galliano", "queries": ["John Galliano", "ジョンガリアーノ"]},
-    {"display": "BLACKBARRETT by NEIL BARRETT", "queries": ["Black Barrett", "ブラックバレット"]},
-    {"display": "LAD MUSICIAN", "queries": ["Lad Musician", "ラッドミュージシャン"]},
-    {"display": "junhashimoto", "queries": ["junhashimoto", "ジュンハシモト"]},
-    {"display": "TORNADO MART", "queries": ["Tornado Mart", "トルネードマート"]},
-    {"display": "ATTACHMENT", "queries": ["Attachment", "アタッチメント"]},
-    {"display": "ripvanwinkle", "queries": ["Rip Van Winkle", "リップヴァンウィンクル"]},
-    {"display": "PRADA", "queries": ["PRADA", "プラダ"]},
-    {"display": "PRADA SPORT", "queries": ["PRADA SPORT", "プラダスポーツ"]},
-    {"display": "Hugo Boss", "queries": ["Hugo Boss", "ヒューゴボス"]},
-    {"display": "MARITHE + FRANCOIS GIRBAUD", "queries": ["Marithe Francois Girbaud", "マリテフランソワジルボー"]},
-    {"display": "COMME des GARCONS HOMME PLUS", "queries": ["COMME des GARCONS HOMME PLUS", "コムデギャルソンオムプリュス"]},
-    {"display": "COMME des GARCONS HOMME", "queries": ["COMME des GARCONS HOMME", "コムデギャルソンオム"]},
-    {"display": "AZbyjunhashimoto", "queries": ["AZ by junhashimoto", "エーゼイバイジュンハシモト"]},
-    {"display": "Alexander Wang", "queries": ["Alexander Wang", "アレキサンダーワン"]},
-    {"display": "McQ Alexander McQueen", "queries": ["McQ Alexander McQueen", "マックキュー"]},
-    {"display": "ALEXANDER McQUEEN", "queries": ["Alexander McQueen", "アレキサンダーマックイーン"]},
-]
