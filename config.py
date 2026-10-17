@@ -47,12 +47,17 @@ TARGET_BRANDS = [
     "ATTACHMENT",
     # "Rip Van Winkle Japan"이 아니라 메루카리 브랜드 태그명(공백 없이 붙여쓴 표기) 그대로 써야 매칭된다.
     "ripvanwinkle",
-    # 빈티지(올드) 제품만 원하는 브랜드 - 가격상한은 5000엔, 제목에
-    # BRAND_REQUIRE_KEYWORDS_OVERRIDES 키워드가 있어야만 알림한다(아래 참고).
-    "VANS",
-    "STUSSY",
     "PRADA",
     "PRADA SPORT",
+    "Hugo Boss",
+    "MARITHE + FRANCOIS GIRBAUD",
+    "COMME des GARCONS HOMME PLUS",
+    "COMME des GARCONS HOMME",
+    "AZbyjunhashimoto",
+    "Alexander Wang",
+    "McQ Alexander McQueen",
+    "McQ",
+    "ALEXANDER McQUEEN",
 ]
 
 # 기본 가격 상한(엔). TARGET_BRANDS 중 BRAND_PRICE_OVERRIDES에 없는 브랜드는 이 값을 쓴다.
@@ -62,7 +67,7 @@ PRICE_MAX = 20000
 BRAND_PRICE_OVERRIDES = {
     # "Supreme": 0,
     "Helmut Lang": 30000,
-    "Hysteric Glamour": 20000,
+    "Hysteric Glamour": 30000,
     "Dior Homme": 30000,
     "Giorgio Armani": 30000,
     "EMPORIO ARMANI": 30000,
@@ -99,17 +104,22 @@ BRAND_PRICE_OVERRIDES = {
     "TORNADO MART": 30000,
     "ATTACHMENT": 30000,
     "ripvanwinkle": 30000,
-    "VANS": 5000,
-    "STUSSY": 5000,
+    "PRADA": 30000,
+    "PRADA SPORT": 30000,
+    "Hugo Boss": 30000,
+    "MARITHE + FRANCOIS GIRBAUD": 30000,
+    "COMME des GARCONS HOMME PLUS": 30000,
+    "COMME des GARCONS HOMME": 30000,
+    "AZbyjunhashimoto": 30000,
+    "Alexander Wang": 30000,
+    "McQ Alexander McQueen": 30000,
+    "McQ": 30000,
+    "ALEXANDER McQUEEN": 30000,
 }
 
 # 브랜드+가격상한만으로는 부족하고, 제목에 특정 키워드 중 하나라도 있어야만
 # 알림하고 싶을 때 채운다.
-# VANS/STUSSY: 올드(빈티지) 제품만 원해서 old/90s/00s 중 하나라도 있어야 통과.
-BRAND_REQUIRE_KEYWORDS_OVERRIDES = {
-    "VANS": ["old", "90s", "00s"],
-    "STUSSY": ["old", "90s", "00s"],
-}
+BRAND_REQUIRE_KEYWORDS_OVERRIDES = {}
 
 # 카테고리 후보 이름들 (정확 일치 우선, 없으면 부분 일치로 폴백).
 # facets 폴더의 카테고리 JSON에 있는 name과 비교한다.
@@ -138,9 +148,6 @@ GLOBAL_CATEGORY_EXCLUDE = ["アクセサリー", "小物", "時計"]
 BRAND_CATEGORY_EXCLUDE_OVERRIDES = {
     # 히스테릭글래머: 티셔츠, 그리고 모자도 원하지 않아서 뺐다.
     "Hysteric Glamour": ["Tシャツ/カットソー(半袖/袖なし)", "Tシャツ/カットソー(七分/長袖)", "帽子"],
-    # "靴"는 리프가 아니라 스니ーカー/부츠/로퍼 등을 묶은 상위 카테고리 이름 - VANS는
-    # 신발 자체보다 다른 아이템(의류/굿즈 등)을 원해서 신발 카테고리 전체를 뺐다.
-    "VANS": ["靴"],
 }
 
 # 상품명에 이 키워드 중 하나라도 포함되면 알림에서 제외한다(모든 브랜드 공통).
@@ -210,8 +217,14 @@ TARGET_BRANDS_YAHOO = [
     {"display": "TORNADO MART", "queries": ["Tornado Mart", "トルネードマート"]},
     {"display": "ATTACHMENT", "queries": ["Attachment", "アタッチメント"]},
     {"display": "ripvanwinkle", "queries": ["Rip Van Winkle", "リップヴァンウィンクル"]},
-    {"display": "VANS", "queries": ["VANS", "バンズ"]},
-    {"display": "STUSSY", "queries": ["STUSSY", "ステューシー"]},
     {"display": "PRADA", "queries": ["PRADA", "プラダ"]},
     {"display": "PRADA SPORT", "queries": ["PRADA SPORT", "プラダスポーツ"]},
+    {"display": "Hugo Boss", "queries": ["Hugo Boss", "ヒューゴボス"]},
+    {"display": "MARITHE + FRANCOIS GIRBAUD", "queries": ["Marithe Francois Girbaud", "マリテフランソワジルボー"]},
+    {"display": "COMME des GARCONS HOMME PLUS", "queries": ["COMME des GARCONS HOMME PLUS", "コムデギャルソンオムプリュス"]},
+    {"display": "COMME des GARCONS HOMME", "queries": ["COMME des GARCONS HOMME", "コムデギャルソンオム"]},
+    {"display": "AZbyjunhashimoto", "queries": ["AZ by junhashimoto", "エーゼイバイジュンハシモト"]},
+    {"display": "Alexander Wang", "queries": ["Alexander Wang", "アレキサンダーワン"]},
+    {"display": "McQ Alexander McQueen", "queries": ["McQ Alexander McQueen", "マックキュー"]},
+    {"display": "ALEXANDER McQUEEN", "queries": ["Alexander McQueen", "アレキサンダーマックイーン"]},
 ]
