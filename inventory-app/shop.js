@@ -79,4 +79,284 @@ document.getElementById("ledgerImportBtn").addEventListener("click", async () =>
   document.getElementById("ledgerFrame").contentWindow.location.reload();
 });
 
+// ---- 알림 팝업 (할인 필요 + 찜 가격 인하) ----
+const alertsBtn = document.getElementById("alertsBtn");
+const alertsPopup = document.getElementById("alertsPopup");
+const alertsBadge = document.getElementById("alertsBadge");
+const yen = (n) => `¥${Number(n).toLocaleString()}`;
+const kenzLink = (id) => `https://kenzpost.com/mercari/bid.s/https://jp.mercari.com/item/${id}`;
+
+async function refreshAlerts() {
+  const { discounts, drops } = await window.api.getAlerts();
+  const count = discounts.length + drops.length;
+  alertsBadge.textContent = count;
+  alertsBadge.hidden = count === 0;
+
+  const discountRows = discounts.length
+    ? discounts.map((a) => `
+        <div class="alert-row">
+          <div class="alert-main">
+            <div class="alert-title">${escapeHtml(a.title)}</div>
+            <div class="alert-sub">업로드 ${a.weeks}주째 · ${won(a.listPrice)} → ${won(a.newPrice)}</div>
+          </div>
+          <button class="alert-action" data-discount="${a.id}" data-pct="${a.pct}">${a.pct}% 할인</button>
+          <button class="alert-close" data-dismiss="${a.id}" data-pct="${a.pct}" title="닫기">✕</button>
+        </div>`).join("")
+    : `<div class="alerts-empty">할인이 필요한 상품이 없어요</div>`;
+  const dropRows = drops.length
+    ? drops.map((d) => `
+        <div class="alert-row">
+          <div class="alert-main">
+            <div class="alert-title">${escapeHtml(d.title)}</div>
+            <div class="alert-sub">${yen(d.oldPrice)} → <b class="negative">${yen(d.newPrice)}</b></div>
+          </div>
+          <button class="alert-action" data-open="${d.id}">보기</button>
+          <button class="alert-close" data-ack="${escapeHtml(d.dropId)}" title="확인">✕</button>
+        </div>`).join("")
+    : `<div class="alerts-empty">가격이 내려간 찜 상품이 없어요</div>`;
+  alertsPopup.innerHTML = `
+    <div class="alerts-section-title">할인 필요</div>${discountRows}
+    <div class="alerts-section-title">찜 상품 가격 인하</div>${dropRows}`;
+}
+
+alertsBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  alertsPopup.hidden = !alertsPopup.hidden;
+  if (!alertsPopup.hidden) refreshAlerts();
+});
+document.addEventListener("click", (e) => {
+  if (!alertsPopup.hidden && !alertsPopup.contains(e.target)) alertsPopup.hidden = true;
+});
+alertsPopup.addEventListener("click", async (e) => {
+  e.stopPropagation();
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.discount) {
+    await window.api.applyDiscount(b.dataset.discount, Number(b.dataset.pct));
+    if (typeof renderList === "function") renderList();
+  } else if (b.dataset.dismiss) {
+    await window.api.dismissDiscount(b.dataset.dismiss, Number(b.dataset.pct));
+  } else if (b.dataset.open) {
+    window.api.openExternal(kenzLink(b.dataset.open));
+    return;
+  } else if (b.dataset.ack) {
+    await window.api.ackDrop(b.dataset.ack);
+  }
+  refreshAlerts();
+});
+window.addEventListener("focus", refreshAlerts);
+setInterval(refreshAlerts, 5 * 60 * 1000);
+
+// ---- 찜 목록 ----
+async function renderWishlist() {
+  const page = document.getElementById("page-wishlist");
+  const { items, lastRunAt } = await window.api.getWishlist();
+  const fmt = (iso) => (iso ? new Date(iso).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-");
+  const rows = items
+    .sort((a, b) => Number(a.soldOut) - Number(b.soldOut))
+    .map((w) => `
+      <tr>
+        <td class="col-title"><a href="#" data-open="${w.id}">${escapeHtml(w.title)}</a></td>
+        <td class="col-num">${w.lastPrice != null ? yen(w.lastPrice) : "-"}</td>
+        <td>${w.soldOut ? '<span class="badge badge-done">품절</span>' : ""}</td>
+        <td>${w.manual ? "직접 추가" : "켄즈포스트"}</td>
+        <td>${fmt(w.checkedAt)}</td>
+        <td>${w.manual ? `<button class="btn-ghost btn-sm" data-remove="${w.id}">삭제</button>` : ""}</td>
+      </tr>`).join("");
+  page.innerHTML = `
+    <div class="page-card">
+      <h2 class="page-title">찜 상품 추가</h2>
+      <div class="inline-row">
+        <input id="wishLinkInput" placeholder="켄즈포스트 메루카리 링크나 jp.mercari.com 링크">
+        <button id="wishAddBtn" class="btn-primary">추가</button>
+      </div>
+      <div id="wishAddMsg"></div>
+      <p class="hint">켄즈포스트 관심상품은 자동으로 들어와요. 가격 확인은 30분마다 자동으로 돌아요 (마지막 확인 ${fmt(lastRunAt)}).</p>
+    </div>
+    <div class="page-card table-wrap">
+      <table class="item-table">
+        <thead><tr><th class="col-title">상품</th><th class="col-num">현재가</th><th>상태</th><th>출처</th><th>마지막 확인</th><th></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="6" class="empty">찜 상품이 없어요</td></tr>`}</tbody>
+      </table>
+    </div>`;
+
+  const msg = document.getElementById("wishAddMsg");
+  document.getElementById("wishAddBtn").addEventListener("click", async () => {
+    const input = document.getElementById("wishLinkInput");
+    const r = await window.api.addWishlistLink(input.value.trim());
+    if (!r.ok) {
+      msg.className = "inline-error";
+      msg.textContent = r.error;
+      return;
+    }
+    renderWishlist();
+  });
+  document.getElementById("wishLinkInput").addEventListener("input", () => (msg.textContent = ""));
+  page.querySelectorAll("[data-remove]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      await window.api.removeWishlistLink(b.dataset.remove);
+      renderWishlist();
+    })
+  );
+  page.querySelectorAll("[data-open]").forEach((a) =>
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.api.openExternal(kenzLink(a.dataset.open));
+    })
+  );
+}
+pageRenderers["page-wishlist"] = renderWishlist;
+
+// ---- 메루카리 필터 ----
+let filterDraft = null;
+
+async function loadFilterPage() {
+  const page = document.getElementById("page-filters");
+  page.innerHTML = `<div class="page-card">GitHub에서 최신 필터를 불러오는 중...</div>`;
+  const r = await window.api.getFilters();
+  if (!r.ok) {
+    page.innerHTML = `<div class="page-card"><div class="inline-error">필터를 불러오지 못했어요: ${escapeHtml(r.error)}</div></div>`;
+    return;
+  }
+  filterDraft = structuredClone(r.filters);
+  renderFilterPage();
+}
+
+function chipList(words, makeAttrs) {
+  return words.map((w, i) => `<span class="chip">${escapeHtml(w)}<button ${makeAttrs(i)} title="삭제">✕</button></span>`).join("");
+}
+
+function renderFilterPage(message = "") {
+  const page = document.getElementById("page-filters");
+  const f = filterDraft;
+  const brandRows = f.brands
+    .map((b, i) => `
+      <tr>
+        <td class="col-title">${escapeHtml(b.name)}</td>
+        <td><input class="price-input" type="number" step="1000" min="1" value="${b.priceMax}" data-price="${i}"> 엔 이하</td>
+        <td><button class="btn-ghost btn-sm" data-del-brand="${i}">삭제</button></td>
+      </tr>`).join("");
+  const brandKw = Object.entries(f.brandExcludeKeywords)
+    .map(([brand, words]) => `
+      <div style="margin-bottom:10px"><b>${escapeHtml(brand)}</b>
+        <div>${chipList(words, (i) => `data-del-bkw="${escapeHtml(brand)}" data-idx="${i}"`)}</div>
+        <div class="inline-row"><input placeholder="${escapeHtml(brand)} 제외 키워드 추가" data-bkw-input="${escapeHtml(brand)}"><button class="btn-ghost btn-sm" data-add-bkw="${escapeHtml(brand)}">추가</button></div>
+      </div>`).join("");
+  page.innerHTML = `
+    <div class="page-card">
+      <div class="inline-row" style="justify-content:space-between">
+        <h2 class="page-title" style="margin:0">브랜드 (${f.brands.length}개)</h2>
+        <button id="filterSaveBtn" class="btn-primary">저장</button>
+      </div>
+      <div id="filterMsg">${message}</div>
+      <div class="inline-row" style="margin-top:12px">
+        <input id="brandInput" placeholder="브랜드 이름 (메루카리 표기로 확인해요)">
+        <input id="brandPriceInput" class="price-input" type="number" step="1000" value="30000">
+        <button id="brandAddBtn" class="btn-ghost">추가</button>
+      </div>
+      <div id="brandCandidates" class="candidate-list"></div>
+      <div class="table-wrap" style="margin-top:12px">
+        <table class="item-table"><tbody>${brandRows}</tbody></table>
+      </div>
+    </div>
+    <div class="page-card">
+      <h2 class="page-title">공통 제외 키워드</h2>
+      <div>${chipList(f.excludeKeywords, (i) => `data-del-kw="${i}"`)}</div>
+      <div class="inline-row"><input id="kwInput" placeholder="제목에 이 단어가 있으면 알림 제외"><button id="kwAddBtn" class="btn-ghost btn-sm">추가</button></div>
+    </div>
+    <div class="page-card">
+      <h2 class="page-title">브랜드별 제외 키워드</h2>
+      ${brandKw}
+      <div class="inline-row"><select id="bkwBrandSelect">${f.brands.filter((b) => !f.brandExcludeKeywords[b.name]).map((b) => `<option>${escapeHtml(b.name)}</option>`).join("")}</select><button id="bkwBrandAddBtn" class="btn-ghost btn-sm">브랜드 추가</button></div>
+    </div>`;
+  bindFilterPage();
+}
+
+function setFilterMsg(text, ok) {
+  const el = document.getElementById("filterMsg");
+  el.className = ok ? "inline-ok" : "inline-error";
+  el.textContent = text;
+}
+
+function addBrand(name) {
+  const price = Number(document.getElementById("brandPriceInput").value);
+  if (!Number.isInteger(price) || price <= 0) return setFilterMsg("가격 상한을 숫자로 넣어주세요", false);
+  if (filterDraft.brands.some((b) => b.name.toLowerCase() === name.toLowerCase())) return setFilterMsg(`${name}은(는) 이미 있어요`, false);
+  filterDraft.brands.push({ name, priceMax: price });
+  renderFilterPage(`<div class="inline-ok">${escapeHtml(name)} 추가됨 - 저장을 눌러야 반영돼요</div>`);
+}
+
+function bindFilterPage() {
+  const page = document.getElementById("page-filters");
+  page.querySelectorAll("[data-price]").forEach((inp) =>
+    inp.addEventListener("change", () => (filterDraft.brands[Number(inp.dataset.price)].priceMax = Number(inp.value)))
+  );
+  page.querySelectorAll("[data-del-brand]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const [removed] = filterDraft.brands.splice(Number(b.dataset.delBrand), 1);
+      delete filterDraft.brandExcludeKeywords[removed.name];
+      renderFilterPage();
+    })
+  );
+  document.getElementById("brandAddBtn").addEventListener("click", async () => {
+    const input = document.getElementById("brandInput").value.trim();
+    if (!input) return;
+    const { exact, candidates } = await window.api.matchBrand(input);
+    if (exact) return addBrand(exact);
+    const box = document.getElementById("brandCandidates");
+    if (!candidates.length) {
+      box.innerHTML = "";
+      return setFilterMsg(`메루카리에 '${input}' 브랜드가 없어요. 표기를 확인해주세요`, false);
+    }
+    setFilterMsg("정확히 같은 이름이 없어요. 아래에서 골라주세요", false);
+    box.innerHTML = candidates.map((c) => `<button class="candidate" data-cand="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("");
+    box.querySelectorAll("[data-cand]").forEach((c) => c.addEventListener("click", () => addBrand(c.dataset.cand)));
+  });
+  page.querySelectorAll("[data-del-kw]").forEach((b) =>
+    b.addEventListener("click", () => {
+      filterDraft.excludeKeywords.splice(Number(b.dataset.delKw), 1);
+      renderFilterPage();
+    })
+  );
+  document.getElementById("kwAddBtn").addEventListener("click", () => {
+    const v = document.getElementById("kwInput").value.trim();
+    if (v && !filterDraft.excludeKeywords.includes(v)) filterDraft.excludeKeywords.push(v);
+    renderFilterPage();
+  });
+  page.querySelectorAll("[data-del-bkw]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const brand = b.dataset.delBkw;
+      filterDraft.brandExcludeKeywords[brand].splice(Number(b.dataset.idx), 1);
+      renderFilterPage();
+    })
+  );
+  page.querySelectorAll("[data-add-bkw]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const brand = b.dataset.addBkw;
+      const v = page.querySelector(`[data-bkw-input="${CSS.escape(brand)}"]`).value.trim();
+      if (v && !filterDraft.brandExcludeKeywords[brand].includes(v)) filterDraft.brandExcludeKeywords[brand].push(v);
+      renderFilterPage();
+    })
+  );
+  document.getElementById("bkwBrandAddBtn").addEventListener("click", () => {
+    const brand = document.getElementById("bkwBrandSelect").value;
+    if (brand) filterDraft.brandExcludeKeywords[brand] = [];
+    renderFilterPage();
+  });
+  document.getElementById("filterSaveBtn").addEventListener("click", async () => {
+    // 키워드가 하나도 없는 브랜드별 항목은 저장하지 않는다.
+    const toSave = structuredClone(filterDraft);
+    for (const [brand, words] of Object.entries(toSave.brandExcludeKeywords)) {
+      if (!words.length) delete toSave.brandExcludeKeywords[brand];
+    }
+    setFilterMsg("저장 중...", true);
+    const r = await window.api.saveFilters(toSave);
+    if (r.ok && r.unchanged) return setFilterMsg("바뀐 내용이 없어요", true);
+    if (r.ok) return setFilterMsg("저장됐어요. 1분 안에 알림에 반영돼요", true);
+    setFilterMsg(r.errors ? r.errors.join(" / ") : `저장 실패: ${r.error}`, false);
+  });
+}
+pageRenderers["page-filters"] = loadFilterPage;
+
 renderDashboard();
+refreshAlerts();
