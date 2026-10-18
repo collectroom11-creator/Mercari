@@ -1,5 +1,5 @@
 // inventory-app/main.js
-const { app, BrowserWindow, ipcMain, shell, session, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, session, nativeImage, dialog } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const {
@@ -18,6 +18,12 @@ const {
 const { addItem, updateItem, listItems, deleteItem, loadItems } = require("./store");
 const { loadSettings, saveSettings } = require("./settings");
 const { fetchMercariItem } = require("./mercari-fetch");
+const { computeShopStats, computeMonthlySales } = require("./stats");
+const { computeDiscountAlerts, discountedPrice } = require("./discounts");
+const { ledgerGet, ledgerSet, importLedgerBackup } = require("./ledger-store");
+const { parseWishlistLink, loadManual, addManual, removeManual, loadDrops } = require("./wishlist-files");
+const { loadBrandNames, matchBrand, validateFilters } = require("./filters");
+const { readRemoteFilters, saveFilters } = require("./filters-git");
 
 const DB_FILE = path.join(app.getPath("userData"), "inventory.json");
 const SETTINGS_FILE = path.join(app.getPath("userData"), "settings.json");
@@ -45,7 +51,9 @@ function createMainWindow() {
     useContentSize: true,
     show: false,
     icon: APP_ICON_PATH,
-    webPreferences: { preload: path.join(__dirname, "preload.js") },
+    // 가계부(ledger/ledger.html)는 iframe으로 띄우는데, 그 안에서도 preload의
+    // window.storage가 필요해서 하위 프레임에도 preload를 돌린다.
+    webPreferences: { preload: path.join(__dirname, "preload.js"), nodeIntegrationInSubFrames: true },
   });
   mainWindow.loadFile("index.html");
   mainWindow.once("ready-to-show", async () => {
@@ -299,6 +307,118 @@ ipcMain.handle("get-monthly-breakdown", () => {
 ipcMain.handle("get-settings", () => loadSettings(SETTINGS_FILE));
 
 ipcMain.handle("open-external", (event, url) => shell.openExternal(url));
+
+// ---- 샵 운영 툴: 대시보드 / 알림 / 찜 / 메루카리 필터 / 가계부 ----
+const DATA_DIR = app.getPath("userData");
+const LEDGER_FILE = path.join(DATA_DIR, "ledger.json");
+const ALERTS_STATE_FILE = path.join(DATA_DIR, "alerts-state.json");
+const WISHLIST_STATE_FILE = path.join(DATA_DIR, "wishlist-watch.json");
+const WISHLIST_MANUAL_FILE = path.join(DATA_DIR, "wishlist-manual.json");
+const WISHLIST_DROPS_FILE = path.join(DATA_DIR, "wishlist-drops.json");
+const REPO_DIR = path.join(__dirname, "..");
+const FACETS_BRANDS_FILE = path.join(REPO_DIR, "facets", "brands.json");
+
+function loadAlertsState() {
+  const empty = { dismissedDiscounts: {}, ackedDrops: [] };
+  if (!fs.existsSync(ALERTS_STATE_FILE)) return empty;
+  return { ...empty, ...JSON.parse(fs.readFileSync(ALERTS_STATE_FILE, "utf-8")) };
+}
+function saveAlertsState(state) {
+  fs.writeFileSync(ALERTS_STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+ipcMain.handle("get-shop-stats", () => computeShopStats(listItems(DB_FILE)));
+ipcMain.handle("get-monthly-sales", () => computeMonthlySales(listItems(DB_FILE)));
+
+ipcMain.handle("get-alerts", () => {
+  const state = loadAlertsState();
+  const acked = new Set(state.ackedDrops);
+  return {
+    discounts: computeDiscountAlerts(listItems(DB_FILE), state.dismissedDiscounts),
+    drops: loadDrops(WISHLIST_DROPS_FILE).filter((d) => !acked.has(d.dropId)).reverse(),
+  };
+});
+ipcMain.handle("apply-discount", (event, id, pct) => {
+  const item = listItems(DB_FILE).find((i) => i.id === id);
+  if (!item || !item.listedPrice) return null;
+  return updateItem(DB_FILE, id, { listPrice: discountedPrice(item.listedPrice, pct), listPriceEdited: true });
+});
+ipcMain.handle("dismiss-discount", (event, id, pct) => {
+  const state = loadAlertsState();
+  state.dismissedDiscounts[id] = pct;
+  saveAlertsState(state);
+});
+ipcMain.handle("ack-drop", (event, dropId) => {
+  const state = loadAlertsState();
+  if (!state.ackedDrops.includes(dropId)) state.ackedDrops.push(dropId);
+  saveAlertsState(state);
+});
+
+ipcMain.handle("get-wishlist", () => {
+  const state = fs.existsSync(WISHLIST_STATE_FILE)
+    ? JSON.parse(fs.readFileSync(WISHLIST_STATE_FILE, "utf-8"))
+    : { items: {} };
+  const manual = new Set(loadManual(WISHLIST_MANUAL_FILE).map((m) => m.id));
+  const rows = Object.entries(state.items).map(([id, it]) => ({ id, ...it, manual: manual.has(id) }));
+  // 직접 추가했지만 감시 스크립트가 아직 한 번도 안 돈 상품도 보여준다.
+  for (const id of manual) {
+    if (!state.items[id]) rows.push({ id, title: id, lastPrice: null, soldOut: false, checkedAt: null, manual: true });
+  }
+  return { items: rows, lastRunAt: state.lastRunAt || null, lastListSyncAt: state.lastListSyncAt || null };
+});
+ipcMain.handle("add-wishlist-link", (event, url) => {
+  const id = parseWishlistLink(url);
+  if (!id) return { ok: false, error: "메루카리 상품 링크가 아니에요(켄즈포스트 메루카리 링크나 jp.mercari.com 링크를 넣어주세요)" };
+  addManual(WISHLIST_MANUAL_FILE, id);
+  return { ok: true, id };
+});
+ipcMain.handle("remove-wishlist-link", (event, id) => removeManual(WISHLIST_MANUAL_FILE, id));
+
+let brandNamesCache = null;
+function brandNames() {
+  if (!brandNamesCache) brandNamesCache = loadBrandNames(FACETS_BRANDS_FILE);
+  return brandNamesCache;
+}
+ipcMain.handle("get-filters", () => {
+  try {
+    return { ok: true, filters: readRemoteFilters(REPO_DIR) };
+  } catch (e) {
+    return { ok: false, error: String(e.stderr || e.message) };
+  }
+});
+ipcMain.handle("match-brand", (event, input) => matchBrand(input, brandNames()));
+ipcMain.handle("save-filters", (event, filters) => {
+  const errors = validateFilters(filters, brandNames());
+  if (errors.length) return { ok: false, errors };
+  return saveFilters(REPO_DIR, filters);
+});
+
+ipcMain.on("ledger-get", (event, key) => {
+  try {
+    event.returnValue = { ok: true, result: ledgerGet(LEDGER_FILE, key) };
+  } catch (e) {
+    event.returnValue = { ok: false, error: e.message };
+  }
+});
+ipcMain.on("ledger-set", (event, key, value) => {
+  ledgerSet(LEDGER_FILE, key, value);
+  event.returnValue = true;
+});
+ipcMain.handle("ledger-import", async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: "가계부 백업 파일 선택",
+    defaultPath: app.getPath("downloads"),
+    filters: [{ name: "가계부 백업", extensions: ["json"] }],
+    properties: ["openFile"],
+  });
+  if (canceled || !filePaths[0]) return { ok: false, canceled: true };
+  try {
+    const backup = JSON.parse(fs.readFileSync(filePaths[0], "utf-8"));
+    return { ok: true, ...importLedgerBackup(LEDGER_FILE, backup) };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
 
 app.whenReady().then(() => {
   // 패키징 없이 "electron ."으로 그냥 실행하면 macOS가 Info.plist의 아이콘을 못 읽어서

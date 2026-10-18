@@ -53,6 +53,16 @@ test("saveFilters: 원격이 앞서도 성공, 커밋에는 filters.json만, 다
   assert.equal(JSON.parse(git(remote, "show", "main:filters.json")).brands[0].name, "Hugo Boss");
 });
 
+test("saveFilters: main 브랜치가 아니면 아무것도 하지 않고 실패", () => {
+  const { remote, b } = setup();
+  git(b, "checkout", "-q", "-b", "feature");
+  const before = git(remote, "rev-parse", "main");
+  const r = saveFilters(b, { brands: [{ name: "Hugo Boss", priceMax: 30000 }], excludeKeywords: [], brandExcludeKeywords: {} });
+  assert.equal(r.ok, false);
+  assert.equal(git(remote, "rev-parse", "main"), before);
+  assert.equal(git(b, "status", "--porcelain"), "");
+});
+
 test("saveFilters: 바뀐 게 없으면 커밋하지 않고 ok + unchanged", () => {
   const { remote, b } = setup();
   const before = git(remote, "rev-parse", "main");

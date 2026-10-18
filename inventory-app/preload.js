@@ -16,4 +16,30 @@ contextBridge.exposeInMainWorld("api", {
   getSettings: () => ipcRenderer.invoke("get-settings"),
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   onLoginSuccess: (callback) => ipcRenderer.on("login-success", () => callback()),
+  getShopStats: () => ipcRenderer.invoke("get-shop-stats"),
+  getMonthlySales: () => ipcRenderer.invoke("get-monthly-sales"),
+  getAlerts: () => ipcRenderer.invoke("get-alerts"),
+  applyDiscount: (id, pct) => ipcRenderer.invoke("apply-discount", id, pct),
+  dismissDiscount: (id, pct) => ipcRenderer.invoke("dismiss-discount", id, pct),
+  ackDrop: (dropId) => ipcRenderer.invoke("ack-drop", dropId),
+  getWishlist: () => ipcRenderer.invoke("get-wishlist"),
+  addWishlistLink: (url) => ipcRenderer.invoke("add-wishlist-link", url),
+  removeWishlistLink: (id) => ipcRenderer.invoke("remove-wishlist-link", id),
+  getFilters: () => ipcRenderer.invoke("get-filters"),
+  matchBrand: (input) => ipcRenderer.invoke("match-brand", input),
+  saveFilters: (filters) => ipcRenderer.invoke("save-filters", filters),
+  ledgerImport: () => ipcRenderer.invoke("ledger-import"),
+});
+
+// 가계부(iframe) 저장소 - Claude.ai의 window.storage와 같은 모양: get은 {value}를
+// 돌려주고 키가 없으면 throw, set(key, value).
+contextBridge.exposeInMainWorld("storage", {
+  get: async (key) => {
+    const r = ipcRenderer.sendSync("ledger-get", key);
+    if (!r.ok) throw new Error(r.error);
+    return r.result;
+  },
+  set: async (key, value) => {
+    ipcRenderer.sendSync("ledger-set", key, value);
+  },
 });

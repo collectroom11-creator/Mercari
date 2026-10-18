@@ -20,6 +20,9 @@ function readRemoteFilters(repoDir) {
 
 function saveFilters(repoDir, filters) {
   try {
+    // 다른 브랜치(작업용 worktree 등)에서 rebase+push하면 그 브랜치 커밋이 통째로 main에 올라간다.
+    const branch = git(repoDir, "rev-parse", "--abbrev-ref", "HEAD");
+    if (branch !== "main") return { ok: false, error: `main 브랜치에서만 저장할 수 있어요(현재: ${branch})` };
     git(repoDir, "pull", "-q", "--rebase", "--autostash", "origin", "main");
     const filePath = path.join(repoDir, FILE);
     const current = JSON.parse(fs.readFileSync(filePath, "utf-8"));
