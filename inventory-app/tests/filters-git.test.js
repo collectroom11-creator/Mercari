@@ -53,6 +53,20 @@ test("saveFilters: 원격이 앞서도 성공, 커밋에는 filters.json만, 다
   assert.equal(JSON.parse(git(remote, "show", "main:filters.json")).brands[0].name, "Hugo Boss");
 });
 
+test("saveFilters: rebase 충돌이 나면 실패를 돌려주고 저장소를 rebase 도중 상태로 남기지 않는다", () => {
+  const { a, b } = setup();
+  fs.writeFileSync(path.join(a, "filters.json"), JSON.stringify({ brands: [], excludeKeywords: ["remote"], brandExcludeKeywords: {} }));
+  git(a, "commit", "-q", "-am", "remote filters");
+  git(a, "push", "-q", "origin", "main");
+  fs.writeFileSync(path.join(b, "filters.json"), JSON.stringify({ brands: [], excludeKeywords: ["local"], brandExcludeKeywords: {} }));
+  git(b, "commit", "-q", "-am", "local filters");
+
+  const r = saveFilters(b, { brands: [], excludeKeywords: ["new"], brandExcludeKeywords: {} });
+  assert.equal(r.ok, false);
+  assert.equal(fs.existsSync(path.join(b, ".git", "rebase-merge")) || fs.existsSync(path.join(b, ".git", "rebase-apply")), false);
+  assert.equal(git(b, "rev-parse", "--abbrev-ref", "HEAD"), "main");
+});
+
 test("saveFilters: main 브랜치가 아니면 아무것도 하지 않고 실패", () => {
   const { remote, b } = setup();
   git(b, "checkout", "-q", "-b", "feature");

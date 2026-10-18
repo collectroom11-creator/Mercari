@@ -42,6 +42,12 @@ function saveFilters(repoDir, filters) {
     }
     return { ok: false, error: `push 실패: ${lastError.stderr || lastError.message}` };
   } catch (e) {
+    // rebase 충돌로 실패하면 저장소가 rebase 도중 상태로 남아 사용자의 다른 작업까지 막힌다 - 되돌려 둔다.
+    try {
+      git(repoDir, "rebase", "--abort");
+    } catch {
+      // rebase 중이 아니었으면 할 일 없음
+    }
     return { ok: false, error: String(e.stderr || e.message) };
   }
 }
