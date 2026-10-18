@@ -7,16 +7,43 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">재고 가계부</div>
+    <div class="topbar-left">
+      <div class="brand">COLLECTROOM</div>
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="inventory">재고관리</button>
+        <button class="view-tab" data-view="ledger">가계부</button>
+      </div>
+    </div>
     <div class="topbar-right">
       <div id="fxRateChip" class="fx-rate-chip" hidden></div>
       <button id="loginBtn" class="btn-ghost">켄즈포스트 로그인</button>
     </div>
   </header>
 
-  <section id="tab-list" class="panel active">
-    <div id="overviewBody" class="dashboard-row"></div>
+  <div id="view-inventory" class="app-shell">
+  <nav class="side-nav">
+    <button class="side-link active" data-page="page-dashboard">대시보드</button>
+    <button class="side-link" data-page="tab-list">재고 입력</button>
+    <button class="side-link" data-page="page-wishlist">찜 목록</button>
+    <button class="side-link" data-page="page-filters">메루카리 필터</button>
+    <div class="side-spacer"></div>
+    <button id="alertsBtn" class="alerts-btn">🔔 알림 <span id="alertsBadge" class="alerts-badge" hidden>0</span></button>
+  </nav>
 
+  <main class="side-main">
+  <section id="page-dashboard" class="page active">
+    <div id="statCards" class="stat-grid"></div>
+    <div class="card chart-card">
+      <div class="chart-title">월별 매출 · 순이익</div>
+      <div id="salesChart" class="sales-chart"></div>
+      <div class="chart-legend"><span class="legend-dot legend-revenue"></span>매출 <span class="legend-dot legend-profit"></span>순이익</div>
+    </div>
+  </section>
+
+  <section id="page-wishlist" class="page"></section>
+  <section id="page-filters" class="page"></section>
+
+  <section id="tab-list" class="page panel">
     <div class="card add-card">
       <div class="add-row">
         <input id="urlInput" placeholder="켄즈포스트 상품 링크를 붙여넣으세요" disabled>
@@ -83,6 +110,18 @@
       </table>
     </div>
   </section>
+  </main>
+
+  <div id="alertsPopup" class="alerts-popup" hidden></div>
+  </div>
+
+  <div id="view-ledger" class="ledger-view" hidden>
+    <div class="ledger-toolbar">
+      <span id="ledgerImportResult" class="hint-inline"></span>
+      <button id="ledgerImportBtn" class="btn-ghost btn-sm">백업 불러오기</button>
+    </div>
+    <iframe id="ledgerFrame" class="ledger-frame" src="ledger/ledger.html"></iframe>
+  </div>
 
   <div id="monthlyModal" class="modal-overlay">
     <div class="modal-card">
@@ -106,6 +145,7 @@
     </div>
   </div>
 
+  <script src="shop.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

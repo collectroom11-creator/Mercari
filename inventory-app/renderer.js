@@ -319,58 +319,12 @@ function effectiveListPrice(item) {
   return item.listPrice ?? item.targetPrice;
 }
 
-async function renderOverview() {
-  // 링크를 새로 불러올 때마다 캐시된 환율이 최신으로 바뀔 수 있으니, 목록을
-  // 다시 그릴 때마다 상단 환율 표시도 같이 새로고침한다.
-  await loadCurrentSettings();
-  const [d, allItems] = await Promise.all([
-    window.api.getDashboard(),
-    window.api.listItems(),
-  ]);
-  // 배송전/업로드전/판매중 전부 "아직 안 팔린" 재고다.
-  const stockItems = allItems.filter((i) => i.status !== "판매완료" && i.status !== "개인구매");
-
-  // 개별 항목 마진율의 단순평균이 아니라, 판매가 합계와 원가 합계로 낸 전체 마진율.
-  const withMargin = stockItems.filter((i) => effectiveListPrice(i) > 0);
-  const totalListPrice = withMargin.reduce((sum, i) => sum + effectiveListPrice(i), 0);
-  const totalCostForMargin = withMargin.reduce((sum, i) => sum + i.costKrw, 0);
-  const avgMarginPct = totalListPrice > 0
-    ? Math.round(((totalListPrice - totalCostForMargin) / totalListPrice) * 100)
-    : 0;
-
-  const profitClass = d.monthProfit >= 0 ? "stat-value-lg positive" : "stat-value-lg negative";
-
-  document.getElementById("overviewBody").innerHTML = `
-    <div class="stat-card stat-card-big">
-      <div class="stat-label">이번달 순이익</div>
-      <div class="${profitClass}">${d.monthProfit.toLocaleString()}원</div>
-      <div class="stat-sub-row">
-        <div class="stat-sub-item">
-          <div class="stat-sub-label">매출</div>
-          <div class="stat-sub-value">${d.monthRevenue.toLocaleString()}원</div>
-        </div>
-        <div class="stat-sub-item">
-          <div class="stat-sub-label">매출원가</div>
-          <div class="stat-sub-value">${d.monthCogs.toLocaleString()}원</div>
-        </div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">현재 재고</div>
-      <div class="stat-value">${d.stockCostTotal.toLocaleString()}원</div>
-      <div class="stat-sub">이번달 회전율 ${d.turnoverPct}%</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">평균 마진율</div>
-      <div class="stat-value">${avgMarginPct}%</div>
-    </div>
-  `;
-}
-
 const STATUS_ORDER = { "배송전": 0, "재고": 0, "업로드전": 1, "판매중": 2, "개인구매": 3, "판매완료": 4 };
 
 async function renderList() {
-  renderOverview();
+  // 상단 환율 표시는 목록을 다시 그릴 때마다 새로고침한다(링크를 불러오면 캐시된 환율이 바뀐다).
+  loadCurrentSettings();
+  refreshShopPanels();
   const status = document.getElementById("statusFilter").value;
   const items = await window.api.listItems(status ? { status } : undefined);
   // 먼저 상태별로 묶고(배송전 -> 업로드전 -> 판매중 -> 판매완료), 같은 상태 안에서는
