@@ -11,6 +11,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { parseWishlistHtml } = require("./wishlist");
 const { fetchMercariItem } = require("./mercari-fetch");
+const { loadManual, appendDrop, mergeWishlist } = require("./wishlist-files");
 
 const DATA_DIR = path.join(app.getPath("appData"), "inventory-app");
 const STATE_FILE = path.join(DATA_DIR, "wishlist-watch.json");
@@ -19,6 +20,9 @@ const KENZ_PARTITION = "persist:kenzpost";
 const WISHLIST_URL = "https://kenzpost.com/user/mypage/one?o=-1";
 // 웹훅 주소는 저장소 밖(앱 데이터 폴더)에 둔다: {"discountWebhookUrl": "https://discord.com/api/webhooks/..."}
 const CONFIG_FILE = path.join(DATA_DIR, "wishlist-watch-config.json");
+// 재고 앱에서 직접 추가한 상품, 앱 알림 팝업용 가격 인하 기록 (wishlist-files.js 참고)
+const MANUAL_FILE = path.join(DATA_DIR, "wishlist-manual.json");
+const DROPS_FILE = path.join(DATA_DIR, "wishlist-drops.json");
 
 // 재고관리 앱이 켜져 있을 수 있어서 앱 프로필을 직접 쓰지 않고, 로그인 쿠키가 든
 // 켄즈포스트 파티션만 복사해서 쓴다.
@@ -99,17 +103,9 @@ async function run() {
     log(`관심상품 읽기 실패: ${e.message}`);
     return null;
   });
+  // 관심상품에서 뺀 건 감시 중단, 단 앱에서 직접 추가한 상품은 유지
+  state.items = mergeWishlist(state.items, wishlist, loadManual(MANUAL_FILE).map((m) => m.id));
   if (wishlist) {
-    const ids = new Set(wishlist.map((i) => i.id));
-    for (const id of Object.keys(state.items)) {
-      if (!ids.has(id)) delete state.items[id]; // 관심상품에서 뺀 건 감시 중단
-    }
-    for (const w of wishlist) {
-      if (!state.items[w.id]) {
-        // 담을 당시 가격이 0으로 기록된 상품도 있어서, 그땐 첫 확인 가격을 기준으로 삼는다.
-        state.items[w.id] = { title: w.title, lastPrice: w.listedPrice || null, soldOut: false };
-      }
-    }
     state.lastListSyncAt = new Date().toISOString();
     log(`관심상품 ${wishlist.length}개 동기화`);
   } else {
@@ -137,11 +133,10 @@ async function run() {
         color: 0xe74c3c,
       };
       if (mercari.imageUrl) embed.image = { url: mercari.imageUrl };
-      const sent = webhookUrl ? await sendDiscord(webhookUrl, embed) : false;
-      if (!sent) {
-        if (!webhookUrl) log(`웹훅 주소 없음 - 다음에 다시 시도: ${mercari.title}`);
-        continue; // 기준가를 그대로 둬서 다음 실행 때 다시 보낸다
-      }
+      // 웹훅이 있는데 전송이 실패했을 때만 기준가를 그대로 둬서 다음 실행 때 다시 보낸다.
+      // 웹훅이 없으면 앱 알림만 남기고 넘어간다.
+      if (webhookUrl && !(await sendDiscord(webhookUrl, embed))) continue;
+      appendDrop(DROPS_FILE, { id, title: mercari.title, oldPrice: item.lastPrice, newPrice: price, imageUrl: mercari.imageUrl });
       log(`알림: ${mercari.title} ¥${item.lastPrice}→¥${price}`);
     }
     item.lastPrice = price;
