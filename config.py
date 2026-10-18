@@ -1,121 +1,23 @@
 """
 검색 필터 설정. 실제 배포 전 아래 값을 채워넣으세요.
 """
+import json
+from pathlib import Path
+
+# 앱(재고관리 툴의 "메루카리 필터" 탭)에서 편집하는 값은 filters.json에 있다.
+# 브랜드 이름은 facets 폴더 브랜드 JSON의 name과 정확히 일치해야 매칭된다
+# (예: "D&G ／ Dolce＆Gabbana", "TAKAHIROMIYASHITATheSoloist.", "ripvanwinkle").
+_FILTERS = json.loads((Path(__file__).parent / "filters.json").read_text(encoding="utf-8"))
 
 # 알림받고 싶은 브랜드의 "표시 이름" 목록.
 # facets 폴더의 브랜드 JSON에 있는 name과 정확히 일치(우선), 없으면 부분 일치(폴백)하는 걸 찾는다.
-TARGET_BRANDS = [
-    "Dior Homme",
-    "Giorgio Armani",
-    "EMPORIO ARMANI",
-    "ARMANI COLLEZIONI",
-    "ARMANI JEANS",
-    "ARMANI",
-    "Maison Margiela",
-    "Maison Martin Margiela",
-    "Ann Demeulemeester",
-    "JEAN PAUL GAULTIER",
-    "Jean Paul GAULTIER HOMME",
-    "SAINT LAURENT PARIS",
-    "Saint Laurent",
-    "Helmut Lang",
-    "Hysteric Glamour",
-    "Dries Van Noten",
-    "Neil Barrett",
-    "Undercover",
-    "Gucci",
-    "Vivienne Westwood",
-    "Givenchy",
-    "Stone Island",
-    "Junya Watanabe",
-    "Celine",
-    # 메루카리 브랜드 태그가 D&G와 한 항목으로 합쳐져 있어서 표시 이름을 그대로 써야 매칭된다.
-    "D&G ／ Dolce＆Gabbana",
-    "Kris Van Assche",
-    "Dirk Bikkembergs",
-    "Yohji Yamamoto",
-    "Issey Miyake",
-    "wjk",
-    # 메루카리 브랜드 태그 표기가 이렇게 붙어 있어서(공백/마침표 포함) 그대로 써야 매칭된다.
-    "TAKAHIROMIYASHITATheSoloist.",
-    "John Galliano",
-    # "Black Barrett"가 아니라 메루카리 브랜드 태그명 그대로 써야 매칭된다.
-    "BLACKBARRETT by NEIL BARRETT",
-    "LAD MUSICIAN",
-    "junhashimoto",
-    "TORNADO MART",
-    "ATTACHMENT",
-    # "Rip Van Winkle Japan"이 아니라 메루카리 브랜드 태그명(공백 없이 붙여쓴 표기) 그대로 써야 매칭된다.
-    "ripvanwinkle",
-    "PRADA",
-    "PRADA SPORT",
-    "Hugo Boss",
-    "MARITHE + FRANCOIS GIRBAUD",
-    "COMME des GARCONS HOMME PLUS",
-    "COMME des GARCONS HOMME",
-    "AZbyjunhashimoto",
-    "Alexander Wang",
-    "McQ Alexander McQueen",
-    "McQ",
-    "ALEXANDER McQUEEN",
-]
+TARGET_BRANDS = [b["name"] for b in _FILTERS["brands"]]
 
 # 기본 가격 상한(엔). TARGET_BRANDS 중 BRAND_PRICE_OVERRIDES에 없는 브랜드는 이 값을 쓴다.
 PRICE_MAX = 20000
 
 # 브랜드별로 다른 가격 상한을 쓰고 싶을 때만 채운다.
-BRAND_PRICE_OVERRIDES = {
-    # "Supreme": 0,
-    "Helmut Lang": 30000,
-    "Hysteric Glamour": 30000,
-    "Dior Homme": 30000,
-    "Giorgio Armani": 30000,
-    "EMPORIO ARMANI": 30000,
-    "ARMANI COLLEZIONI": 30000,
-    "ARMANI JEANS": 30000,
-    "ARMANI": 30000,
-    "Maison Margiela": 30000,
-    "Maison Martin Margiela": 30000,
-    "Ann Demeulemeester": 30000,
-    "JEAN PAUL GAULTIER": 30000,
-    "Jean Paul GAULTIER HOMME": 30000,
-    "SAINT LAURENT PARIS": 30000,
-    "Saint Laurent": 30000,
-    "Dries Van Noten": 30000,
-    "Neil Barrett": 30000,
-    "Undercover": 30000,
-    "Gucci": 30000,
-    "Vivienne Westwood": 30000,
-    "Givenchy": 30000,
-    "Stone Island": 30000,
-    "Junya Watanabe": 30000,
-    "Celine": 30000,
-    "D&G ／ Dolce＆Gabbana": 30000,
-    "Kris Van Assche": 30000,
-    "Dirk Bikkembergs": 30000,
-    "Yohji Yamamoto": 30000,
-    "Issey Miyake": 30000,
-    "wjk": 30000,
-    "TAKAHIROMIYASHITATheSoloist.": 30000,
-    "John Galliano": 30000,
-    "BLACKBARRETT by NEIL BARRETT": 30000,
-    "LAD MUSICIAN": 30000,
-    "junhashimoto": 30000,
-    "TORNADO MART": 30000,
-    "ATTACHMENT": 30000,
-    "ripvanwinkle": 30000,
-    "PRADA": 30000,
-    "PRADA SPORT": 30000,
-    "Hugo Boss": 30000,
-    "MARITHE + FRANCOIS GIRBAUD": 30000,
-    "COMME des GARCONS HOMME PLUS": 30000,
-    "COMME des GARCONS HOMME": 30000,
-    "AZbyjunhashimoto": 30000,
-    "Alexander Wang": 30000,
-    "McQ Alexander McQueen": 30000,
-    "McQ": 30000,
-    "ALEXANDER McQUEEN": 30000,
-}
+BRAND_PRICE_OVERRIDES = {b["name"]: b["priceMax"] for b in _FILTERS["brands"]}
 
 # 브랜드+가격상한만으로는 부족하고, 제목에 특정 키워드 중 하나라도 있어야만
 # 알림하고 싶을 때 채운다.
@@ -148,18 +50,8 @@ BRAND_CATEGORY_EXCLUDE_OVERRIDES = {
 }
 
 # 상품명에 이 키워드 중 하나라도 포함되면 알림에서 제외한다(모든 브랜드 공통).
-EXCLUDE_KEYWORDS = [
-    "ネクタイ",
-    "スカーフ",
-    "香水",
-    "時計",
-    "下着",
-    "財布",  # 지갑
-]
+EXCLUDE_KEYWORDS = _FILTERS["excludeKeywords"]
 
 # 특정 브랜드에서만 이 키워드가 제목에 있으면 제외한다(EXCLUDE_KEYWORDS와 별개로
 # 추가 적용됨, 다른 브랜드에는 영향 없음). 상품 상세조회로 얻은 실제 브랜드명 기준으로 판단한다.
-BRAND_EXCLUDE_KEYWORDS_OVERRIDES = {
-    "Hysteric Glamour": ["Tシャツ", "T-Shirt", "Tshirt", "ティーシャツ"],
-    "PRADA": ["バッグ", "かばん", "鞄", "Bag"],
-}
+BRAND_EXCLUDE_KEYWORDS_OVERRIDES = _FILTERS["brandExcludeKeywords"]

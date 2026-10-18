@@ -1,0 +1,222 @@
+{
+  "brands": [
+    {
+      "name": "Dior Homme",
+      "priceMax": 30000
+    },
+    {
+      "name": "Giorgio Armani",
+      "priceMax": 30000
+    },
+    {
+      "name": "EMPORIO ARMANI",
+      "priceMax": 30000
+    },
+    {
+      "name": "ARMANI COLLEZIONI",
+      "priceMax": 30000
+    },
+    {
+      "name": "ARMANI JEANS",
+      "priceMax": 30000
+    },
+    {
+      "name": "ARMANI",
+      "priceMax": 30000
+    },
+    {
+      "name": "Maison Margiela",
+      "priceMax": 30000
+    },
+    {
+      "name": "Maison Martin Margiela",
+      "priceMax": 30000
+    },
+    {
+      "name": "Ann Demeulemeester",
+      "priceMax": 30000
+    },
+    {
+      "name": "JEAN PAUL GAULTIER",
+      "priceMax": 30000
+    },
+    {
+      "name": "Jean Paul GAULTIER HOMME",
+      "priceMax": 30000
+    },
+    {
+      "name": "SAINT LAURENT PARIS",
+      "priceMax": 30000
+    },
+    {
+      "name": "Saint Laurent",
+      "priceMax": 30000
+    },
+    {
+      "name": "Helmut Lang",
+      "priceMax": 30000
+    },
+    {
+      "name": "Hysteric Glamour",
+      "priceMax": 30000
+    },
+    {
+      "name": "Dries Van Noten",
+      "priceMax": 30000
+    },
+    {
+      "name": "Neil Barrett",
+      "priceMax": 30000
+    },
+    {
+      "name": "Undercover",
+      "priceMax": 30000
+    },
+    {
+      "name": "Gucci",
+      "priceMax": 30000
+    },
+    {
+      "name": "Vivienne Westwood",
+      "priceMax": 30000
+    },
+    {
+      "name": "Givenchy",
+      "priceMax": 30000
+    },
+    {
+      "name": "Stone Island",
+      "priceMax": 30000
+    },
+    {
+      "name": "Junya Watanabe",
+      "priceMax": 30000
+    },
+    {
+      "name": "Celine",
+      "priceMax": 30000
+    },
+    {
+      "name": "D&G ／ Dolce＆Gabbana",
+      "priceMax": 30000
+    },
+    {
+      "name": "Kris Van Assche",
+      "priceMax": 30000
+    },
+    {
+      "name": "Dirk Bikkembergs",
+      "priceMax": 30000
+    },
+    {
+      "name": "Yohji Yamamoto",
+      "priceMax": 30000
+    },
+    {
+      "name": "Issey Miyake",
+      "priceMax": 30000
+    },
+    {
+      "name": "wjk",
+      "priceMax": 30000
+    },
+    {
+      "name": "TAKAHIROMIYASHITATheSoloist.",
+      "priceMax": 30000
+    },
+    {
+      "name": "John Galliano",
+      "priceMax": 30000
+    },
+    {
+      "name": "BLACKBARRETT by NEIL BARRETT",
+      "priceMax": 30000
+    },
+    {
+      "name": "LAD MUSICIAN",
+      "priceMax": 30000
+    },
+    {
+      "name": "junhashimoto",
+      "priceMax": 30000
+    },
+    {
+      "name": "TORNADO MART",
+      "priceMax": 30000
+    },
+    {
+      "name": "ATTACHMENT",
+      "priceMax": 30000
+    },
+    {
+      "name": "ripvanwinkle",
+      "priceMax": 30000
+    },
+    {
+      "name": "PRADA",
+      "priceMax": 30000
+    },
+    {
+      "name": "PRADA SPORT",
+      "priceMax": 30000
+    },
+    {
+      "name": "Hugo Boss",
+      "priceMax": 30000
+    },
+    {
+      "name": "MARITHE + FRANCOIS GIRBAUD",
+      "priceMax": 30000
+    },
+    {
+      "name": "COMME des GARCONS HOMME PLUS",
+      "priceMax": 30000
+    },
+    {
+      "name": "COMME des GARCONS HOMME",
+      "priceMax": 30000
+    },
+    {
+      "name": "AZbyjunhashimoto",
+      "priceMax": 30000
+    },
+    {
+      "name": "Alexander Wang",
+      "priceMax": 30000
+    },
+    {
+      "name": "McQ Alexander McQueen",
+      "priceMax": 30000
+    },
+    {
+      "name": "McQ",
+      "priceMax": 30000
+    },
+    {
+      "name": "ALEXANDER McQUEEN",
+      "priceMax": 30000
+    }
+  ],
+  "excludeKeywords": [
+    "ネクタイ",
+    "スカーフ",
+    "香水",
+    "時計",
+    "下着",
+    "財布"
+  ],
+  "brandExcludeKeywords": {
+    "Hysteric Glamour": [
+      "Tシャツ",
+      "T-Shirt",
+      "Tshirt",
+      "ティーシャツ"
+    ],
+    "PRADA": [
+      "バッグ",
+      "かばん",
+      "鞄",
+      "Bag"
+    ]
+  }
+}
