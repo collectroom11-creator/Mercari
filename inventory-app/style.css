@@ -1,9 +1,548 @@
-body { font-family: -apple-system, sans-serif; margin: 0; padding: 16px; }
-nav { display: flex; gap: 8px; margin-bottom: 16px; }
-.tab { padding: 6px 12px; cursor: pointer; }
-.tab.active { font-weight: bold; border-bottom: 2px solid #333; }
+:root {
+  --bg: #F2F4F6;
+  --card: #FFFFFF;
+  --primary: #3182F6;
+  --primary-hover: #1B64DA;
+  --text: #191F28;
+  --text-secondary: #8B95A1;
+  --border: #E5E8EB;
+  --positive: #12B564;
+  --negative: #F04452;
+  --stock-bg: #EEF1F4;
+  --stock-text: #4E5968;
+  --done-bg: #E7F6EE;
+  --done-text: #12B564;
+  --personal-bg: #F3ECFB;
+  --personal-text: #8B5CF6;
+}
+
+* { box-sizing: border-box; }
+
+input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+button, .item-thumb-clickable, .group-header {
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+body {
+  margin: 0;
+  max-width: 1360px;
+  padding: 24px 28px 48px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  font-size: 14px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.brand {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fx-rate-chip {
+  background: #E7F0FF;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 .panel { display: none; }
 .panel.active { display: block; }
-form label { display: block; margin: 8px 0; }
-table { border-collapse: collapse; width: 100%; margin-top: 12px; }
-th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  margin-bottom: 16px;
+}
+
+.add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.add-row input {
+  flex: 1;
+}
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.hint:empty {
+  margin: 0;
+}
+
+input, select {
+  background: var(--bg);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text);
+  font-family: inherit;
+}
+
+/* 브라우저 기본 드롭다운 화살표는 오른쪽 여백 없이 테두리에 바짝 붙어서 나온다.
+   appearance:none으로 없애고 직접 그린 화살표를 여유 있게 배치한다. */
+select {
+  appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238B95A1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--card);
+}
+
+input:disabled {
+  color: var(--text-secondary);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:not(:disabled):hover { background: var(--primary-hover); }
+
+.btn-primary:disabled {
+  background: var(--border);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-ghost:not(:disabled):hover { background: var(--bg); }
+
+.btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-sm { padding: 7px 12px; font-size: 12px; min-width: 78px; }
+
+.manual-form {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.field-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.manual-image-preview {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.list-toolbar {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.bulk-discount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint-inline {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.table-wrap {
+  background: var(--card);
+  border-radius: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.item-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.item-table th {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.item-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  text-align: center;
+}
+
+.item-table tr:last-child td {
+  border-bottom: none;
+}
+
+.item-table tbody tr td {
+  transition: background-color 0.1s ease;
+}
+
+.item-table tbody tr:hover td {
+  background: var(--bg);
+}
+
+.group-header-row td {
+  background: var(--bg);
+  padding: 10px 12px;
+  border-left: 3px solid var(--primary);
+}
+
+/* td 자체의 display를 바꾸면(예: flex) 브라우저가 표 레이아웃 계산에서
+   colspan을 무시해버리는 문제가 있어서, td는 table-cell로 그대로 두고 안에
+   flex 컨테이너(.group-header-inner)를 하나 더 둔다. */
+.group-header {
+  text-align: left;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.group-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+/* 클릭해서 접었다 펼 수 있다는 걸 hover로도 알 수 있게 */
+.group-header:hover .group-header-inner {
+  background: rgba(49, 130, 246, 0.08);
+}
+
+.group-chevron {
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.group-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.group-count {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.col-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.col-title {
+  text-align: left;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.col-check { width: 28px; }
+.col-thumb { width: 56px; }
+.col-actions { width: 95px; white-space: nowrap; }
+.col-del { width: 32px; }
+
+.item-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--bg);
+}
+
+.item-thumb-clickable {
+  cursor: pointer;
+}
+
+.item-thumb-clickable:hover {
+  opacity: 0.8;
+}
+
+.badge {
+  display: inline-block;
+  min-width: 54px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.badge-stock { background: var(--stock-bg); color: var(--stock-text); }
+.badge-done { background: var(--done-bg); color: var(--done-text); }
+.badge-personal { background: var(--personal-bg); color: var(--personal-text); }
+.badge-touploaded { background: #FFF6E5; color: #C77C00; }
+.badge-selling { background: #E7F0FF; color: var(--primary); }
+
+.status-days {
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* 판매중 상태로 오래 머물수록(14/30/60일) 눈에 띄게 경고색을 올린다. */
+.status-days.tier-warn {
+  color: #C77C00;
+  font-weight: 700;
+}
+
+.status-days.tier-danger {
+  color: #E8590C;
+  font-weight: 700;
+}
+
+.status-days.tier-critical {
+  color: var(--negative);
+  font-weight: 700;
+}
+
+.discount-badge {
+  margin-top: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--negative);
+}
+
+.btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.btn-delete:hover {
+  color: var(--negative);
+  background: rgba(240, 68, 82, 0.08);
+}
+
+.input-sm {
+  padding: 7px 8px;
+  font-size: 13px;
+  width: 85px;
+}
+
+.input-date {
+  width: 105px;
+  padding: 6px 4px;
+  font-size: 12px;
+}
+
+.empty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 40px 0;
+}
+
+.dashboard-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.stat-value.positive { color: var(--positive); }
+.stat-value.negative { color: var(--negative); }
+
+.stat-card-big {
+  flex: 1.5;
+  padding: 20px 24px;
+}
+
+.stat-value-lg {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.stat-value-lg.positive { color: var(--positive); }
+.stat-value-lg.negative { color: var(--negative); }
+
+.positive { color: var(--positive); }
+.negative { color: var(--negative); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+/* [hidden] 속성만 믿지 않고 open 클래스로 명시적으로 켜고 끈다 - 브라우저 엔진마다
+   [hidden]와 display:flex 중 뭐가 이기는지가 달라서 안 닫히는 문제가 있었다. */
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  width: min(480px, 90vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.stat-sub-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.stat-sub-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.stat-sub-value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.stat-sub {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* 창이 아주 좁아지면(예: 작은 화면) 대시보드 카드가 옆으로 찌그러지는 대신
+   세로로 쌓이게 한다. */
+@media (max-width: 720px) {
+  .dashboard-row {
+    flex-direction: column;
+  }
+}
