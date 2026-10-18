@@ -1,0 +1,52 @@
+// 대시보드용 매출/순이익/회전율 계산. pricing.js의 computeDashboard는 재고 회계
+// (월초재고+매입-월말재고) 방식이라 월별 정리 화면에 그대로 두고, 여기서는 사용자가
+// 정한 단순한 정의를 쓴다: 순이익 = 실제 판매가 - 원가, 회전율 = 이번 달 판매 원가 /
+// (이번 달 판매 원가 + 지금 판매중 원가). 필요한 값이 없는 상품은 0으로 치지 않고 뺀다.
+
+function monthKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function soldRecords(items) {
+  return items
+    .filter((i) => i.status === "판매완료" && i.soldAt && i.actualPrice != null)
+    .map((i) => ({ month: monthKey(new Date(i.soldAt)), revenue: i.actualPrice, cost: i.costKrw }));
+}
+
+function computeShopStats(items, { now = new Date() } = {}) {
+  const thisMonth = monthKey(now);
+  const monthSold = soldRecords(items).filter((r) => r.month === thisMonth);
+  const monthRevenue = monthSold.reduce((s, r) => s + r.revenue, 0);
+  const monthSoldCost = monthSold.reduce((s, r) => s + r.cost, 0);
+  const listedCost = items.filter((i) => i.status === "판매중").reduce((s, i) => s + i.costKrw, 0);
+  const base = monthSoldCost + listedCost;
+  return {
+    monthRevenue,
+    monthProfit: monthRevenue - monthSoldCost,
+    turnoverPct: monthSoldCost > 0 ? Math.round((monthSoldCost / base) * 100) : 0,
+    listedCost,
+  };
+}
+
+function computeMonthlySales(items, { now = new Date() } = {}) {
+  const records = soldRecords(items);
+  if (records.length === 0) return [];
+  const byMonth = new Map();
+  for (const r of records) {
+    const m = byMonth.get(r.month) || { revenue: 0, profit: 0 };
+    m.revenue += r.revenue;
+    m.profit += r.revenue - r.cost;
+    byMonth.set(r.month, m);
+  }
+  const first = [...byMonth.keys()].sort()[0];
+  const [y, mo] = first.split("-").map(Number);
+  const result = [];
+  for (let d = new Date(y, mo - 1, 1); monthKey(d) <= monthKey(now); d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+    const key = monthKey(d);
+    const m = byMonth.get(key) || { revenue: 0, profit: 0 };
+    result.push({ month: key, revenue: m.revenue, profit: m.profit });
+  }
+  return result;
+}
+
+module.exports = { computeShopStats, computeMonthlySales };
