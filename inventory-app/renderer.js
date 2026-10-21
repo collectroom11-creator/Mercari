@@ -205,63 +205,6 @@ document.getElementById("saveForm").addEventListener("submit", async (e) => {
   renderList();
 });
 
-document.getElementById("statusFilter").addEventListener("change", renderList);
-
-// 접힌 상태 구간 목록 - 다시 그려져도(항목 추가/수정 등) 접은 상태가 유지되도록
-// 모듈 전역에 둔다.
-const collapsedStatuses = new Set();
-
-// 체크박스로 재고를 여러 개 골라서 한 번에 판매가를 % 할인할 수 있게 한다.
-// 판매완료된 항목은 다시 가격 매길 필요가 없으니 선택 대상에서 뺀다.
-const selectedIds = new Set();
-const selectAllCheckbox = document.getElementById("selectAllCheckbox");
-const selectedCountEl = document.getElementById("selectedCount");
-const discount5Btn = document.getElementById("discount5Btn");
-const discount10Btn = document.getElementById("discount10Btn");
-const discount20Btn = document.getElementById("discount20Btn");
-
-function updateSelectionUi() {
-  selectedCountEl.textContent = `${selectedIds.size}개 선택됨`;
-  discount5Btn.disabled = selectedIds.size === 0;
-  discount10Btn.disabled = selectedIds.size === 0;
-  discount20Btn.disabled = selectedIds.size === 0;
-}
-
-selectAllCheckbox.addEventListener("change", () => {
-  document.querySelectorAll(".row-select").forEach((cb) => {
-    cb.checked = selectAllCheckbox.checked;
-    if (selectAllCheckbox.checked) selectedIds.add(cb.dataset.id);
-    else selectedIds.delete(cb.dataset.id);
-  });
-  updateSelectionUi();
-});
-
-async function applyBulkDiscount(pct) {
-  if (selectedIds.size === 0) return;
-  const items = await window.api.listItems();
-  const targets = items.filter((i) => selectedIds.has(i.id) && i.status !== "판매완료");
-  for (const item of targets) {
-    const base = effectiveListPrice(item);
-    if (!base) continue;
-    const newPrice = Math.round(base * (1 - pct));
-    await window.api.updateItem(item.id, { listPrice: newPrice, listPriceEdited: true });
-  }
-  selectedIds.clear();
-  renderList();
-}
-
-discount5Btn.addEventListener("click", () => applyBulkDiscount(0.05));
-discount10Btn.addEventListener("click", () => applyBulkDiscount(0.10));
-discount20Btn.addEventListener("click", () => applyBulkDiscount(0.20));
-
-function statusBadgeClass(status) {
-  if (status === "판매완료") return "badge badge-done";
-  if (status === "개인구매") return "badge badge-personal";
-  if (status === "판매중") return "badge badge-selling";
-  if (status === "업로드전") return "badge badge-touploaded";
-  return "badge badge-stock"; // 배송전(과거 '재고' 포함)
-}
-
 function daysBetween(fromStr, toStr) {
   const diffMs = new Date(toStr).getTime() - new Date(fromStr).getTime();
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
@@ -271,355 +214,200 @@ function daysSince(dateStr) {
   return daysBetween(dateStr, new Date());
 }
 
-// <input type="date">에 넣을 "YYYY-MM-DD" - UTC 기준으로 변환하면 시간대에 따라
-// 하루 밀려 보일 수 있어서 로컬 날짜 그대로 뽑는다.
-function toDateInputValue(isoString) {
-  if (!isoString) return "";
-  const d = new Date(isoString);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function effectiveListPrice(item) {
   // listPrice가 없는(과거) 항목은 추천 판매가를 대신 쓴다.
   return item.listPrice ?? item.targetPrice;
 }
 
-const STATUS_ORDER = { "배송전": 0, "재고": 0, "업로드전": 1, "판매중": 2, "개인구매": 3, "판매완료": 4 };
+// 재고 입력 탭: 상태별 박스 4개를 가로로 놓고 박스 안에서만 스크롤한다.
+// "재고"는 단계 구분이 생기기 전에 등록된 항목의 상태값이라 판매중과 같이 취급한다.
+// 개인구매는 사업 재고가 아니라서 보드에 올리지 않는다.
+const BOARD_COLUMNS = [
+  { title: "배송전", statuses: ["배송전"] },
+  { title: "업로드전", statuses: ["업로드전"] },
+  { title: "판매중", statuses: ["판매중", "재고"] },
+  { title: "판매완료", statuses: ["판매완료"] },
+];
+
+// › 버튼을 누르면 한 단계씩만 앞으로 진행한다.
+async function advanceStatus(item) {
+  const now = new Date().toISOString();
+  if (item.status === "배송전") {
+    await window.api.updateItem(item.id, { status: "업로드전", statusChangedAt: now });
+  } else if (item.status === "업로드전") {
+    // listedAt은 "업로드 후 며칠째/며칠만에 판매" 계산용, listedPrice는 이후 할인율의 기준가.
+    await window.api.updateItem(item.id, {
+      status: "판매중",
+      statusChangedAt: now,
+      listedAt: now,
+      listedPrice: effectiveListPrice(item),
+    });
+  } else if (item.status === "판매중" || item.status === "재고") {
+    // 지금 판매가 칸의 값을 그대로 실제판매가로 기록한다.
+    const actual = effectiveListPrice(item);
+    if (!actual) return;
+    await window.api.updateItem(item.id, { status: "판매완료", actualPrice: actual, soldAt: now, statusChangedAt: now });
+  }
+  renderList();
+}
+
+function daysLabel(item) {
+  if (item.status === "판매완료") {
+    return item.listedAt && item.soldAt ? { text: `${daysBetween(item.listedAt, item.soldAt)}일만에 판매`, warn: false } : null;
+  }
+  const since = item.listedAt ?? item.statusChangedAt ?? item.createdAt;
+  const days = daysSince(since);
+  // 판매중으로 2주 넘게 머물면 눈에 띄게 표시한다.
+  return { text: `${days}일째`, warn: !!item.listedAt && days >= 14 };
+}
+
+function buildCard(item) {
+  const sold = item.status === "판매완료";
+  const card = document.createElement("div");
+  card.className = "kcard";
+  card.title = item.title;
+
+  const photo = document.createElement("div");
+  photo.className = "kphoto";
+  if (item.imageUrl) photo.style.backgroundImage = `url("${item.imageUrl}")`;
+  if (item.sourceUrl) {
+    photo.classList.add("clickable");
+    photo.addEventListener("click", () => window.api.openExternal(item.sourceUrl));
+  }
+
+  const label = daysLabel(item);
+  if (label) {
+    const days = document.createElement("span");
+    days.className = `kdays${label.warn ? " warn" : ""}`;
+    days.textContent = label.text;
+    photo.appendChild(days);
+  }
+
+  const del = document.createElement("button");
+  del.className = "kdel";
+  del.textContent = "✕";
+  del.title = "삭제";
+  del.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!confirm(`"${item.title}" 항목을 삭제할까요?`)) return;
+    await window.api.deleteItem(item.id);
+    renderList();
+  });
+  photo.appendChild(del);
+
+  if (!sold) {
+    const adv = document.createElement("button");
+    adv.className = "kadv";
+    adv.textContent = "›";
+    adv.title = "다음 단계로";
+    adv.addEventListener("click", (e) => {
+      e.stopPropagation();
+      advanceStatus(item);
+    });
+    photo.appendChild(adv);
+  }
+  card.appendChild(photo);
+
+  const nums = document.createElement("div");
+  nums.className = "knums";
+  const price = sold ? item.actualPrice : effectiveListPrice(item);
+  const marginOf = (p) => (p && item.costKrw ? `${Math.round(((p - item.costKrw) / p) * 100)}%` : "-");
+
+  const costLabel = document.createElement("span");
+  costLabel.textContent = "원가";
+  const cost = document.createElement("b");
+  cost.textContent = item.costKrw.toLocaleString();
+  nums.append(costLabel, cost);
+
+  if (item.localShippingJpy) {
+    const ship = document.createElement("span");
+    ship.className = "kship";
+    ship.textContent = `현지배송비 ¥${item.localShippingJpy.toLocaleString()} 포함`;
+    nums.appendChild(ship);
+  }
+
+  const priceLabel = document.createElement("span");
+  priceLabel.textContent = "판매가";
+  nums.appendChild(priceLabel);
+  const margin = document.createElement("b");
+  margin.className = "kmargin";
+  margin.textContent = marginOf(price);
+
+  if (sold) {
+    const p = document.createElement("b");
+    p.textContent = price ? price.toLocaleString() : "-";
+    nums.appendChild(p);
+  } else {
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "kprice";
+    input.value = item.listPrice ?? "";
+    // 값을 지워도 추천가가 플레이스홀더로 남는다.
+    input.placeholder = item.targetPrice ?? "";
+    input.addEventListener("input", () => (margin.textContent = marginOf(Number(input.value) || item.targetPrice)));
+    input.addEventListener("change", async () => {
+      const value = Number(input.value);
+      if (!value) return;
+      await window.api.updateItem(item.id, { listPrice: value, listPriceEdited: true });
+      renderList();
+    });
+    nums.appendChild(input);
+  }
+
+  const marginLabel = document.createElement("span");
+  marginLabel.textContent = "마진";
+  nums.append(marginLabel, margin);
+  card.appendChild(nums);
+
+  // 현지배송비는 드물게만 쓰여서 평소엔 숨기고, 원가를 누르면 입력칸을 연다.
+  if (!sold) {
+    cost.classList.add("clickable");
+    cost.title = "눌러서 현지배송비 입력";
+    const pop = document.createElement("div");
+    pop.className = "kshippop";
+    pop.hidden = true;
+    pop.innerHTML = `현지배송비 ¥<input type="number" value="${item.localShippingJpy ?? 0}">`;
+    const shipInput = pop.querySelector("input");
+    shipInput.addEventListener("change", async () => {
+      await window.api.updateLocalShipping(item.id, Number(shipInput.value) || 0);
+      renderList();
+    });
+    cost.addEventListener("click", () => {
+      pop.hidden = !pop.hidden;
+      if (!pop.hidden) shipInput.focus();
+    });
+    card.appendChild(pop);
+  }
+  return card;
+}
 
 async function renderList() {
   // 상단 환율 표시는 목록을 다시 그릴 때마다 새로고침한다(링크를 불러오면 캐시된 환율이 바뀐다).
   loadCurrentSettings();
   refreshShopPanels();
-  const status = document.getElementById("statusFilter").value;
-  const items = await window.api.listItems(status ? { status } : undefined);
-  // 먼저 상태별로 묶고(배송전 -> 업로드전 -> 판매중 -> 판매완료), 같은 상태 안에서는
-  // 최신 등록순(방금 추가한 게 위로).
-  items.sort((a, b) => {
-    const statusDiff = (STATUS_ORDER[a.status] ?? 5) - (STATUS_ORDER[b.status] ?? 5);
-    if (statusDiff !== 0) return statusDiff;
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  });
-  const tbody = document.getElementById("itemTableBody");
-  tbody.innerHTML = "";
+  const items = await window.api.listItems();
+  const board = document.getElementById("kanban");
+  board.innerHTML = "";
 
-  if (items.length === 0) {
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = 11;
-    td.className = "empty";
-    td.textContent = "아직 등록된 항목이 없어요. 위에 링크를 붙여넣어 보세요.";
-    tr.appendChild(td);
-    tbody.appendChild(tr);
-    return;
+  for (const col of BOARD_COLUMNS) {
+    const colItems = items
+      .filter((i) => col.statuses.includes(i.status))
+      // 판매완료는 최근 판매순, 나머지는 최근 등록순
+      .sort((a, b) =>
+        col.title === "판매완료"
+          ? new Date(b.soldAt || 0) - new Date(a.soldAt || 0)
+          : new Date(b.createdAt) - new Date(a.createdAt)
+      );
+    const colEl = document.createElement("section");
+    colEl.className = "kcol";
+    colEl.innerHTML = `<div class="kcol-head">${col.title}<span class="kcount">${colItems.length}</span></div>`;
+    const list = document.createElement("div");
+    list.className = "klist";
+    if (colItems.length === 0) list.innerHTML = `<div class="kempty">없음</div>`;
+    for (const item of colItems) list.appendChild(buildCard(item));
+    colEl.appendChild(list);
+    board.appendChild(colEl);
   }
-
-  // 다시 그리면서 화면에서 사라지는 항목(필터로 걸러지거나 삭제된 것)의 선택은 지운다.
-  const visibleIds = new Set(items.map((i) => i.id));
-  for (const id of selectedIds) {
-    if (!visibleIds.has(id)) selectedIds.delete(id);
-  }
-
-  function buildItemRow(item) {
-    const tr = document.createElement("tr");
-
-    const checkTd = document.createElement("td");
-    checkTd.className = "col-check";
-    if (item.status !== "판매완료") {
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.className = "row-select";
-      checkbox.dataset.id = item.id;
-      checkbox.checked = selectedIds.has(item.id);
-      checkbox.addEventListener("change", () => {
-        if (checkbox.checked) selectedIds.add(item.id);
-        else selectedIds.delete(item.id);
-        selectAllCheckbox.checked =
-          document.querySelectorAll(".row-select").length > 0 &&
-          document.querySelectorAll(".row-select:checked").length === document.querySelectorAll(".row-select").length;
-        updateSelectionUi();
-      });
-      checkTd.appendChild(checkbox);
-    }
-    tr.appendChild(checkTd);
-
-    const thumbTd = document.createElement("td");
-    if (item.imageUrl) {
-      const thumb = document.createElement("img");
-      thumb.className = "item-thumb";
-      thumb.src = item.imageUrl;
-      thumb.alt = item.title;
-      thumb.title = item.title; // 상품명 칼럼이 없어진 대신 마우스 올리면 이름을 볼 수 있게
-      if (item.sourceUrl) {
-        thumb.classList.add("item-thumb-clickable");
-        thumb.addEventListener("click", () => window.api.openExternal(item.sourceUrl));
-      }
-      thumbTd.appendChild(thumb);
-    }
-    tr.appendChild(thumbTd);
-
-    const titleTd = document.createElement("td");
-    titleTd.className = "col-title";
-    titleTd.textContent = item.title;
-    titleTd.title = item.title;
-    tr.appendChild(titleTd);
-
-    const costTd = document.createElement("td");
-    costTd.className = "col-num";
-    costTd.textContent = `${item.costKrw.toLocaleString()}₩`;
-    tr.appendChild(costTd);
-
-    const localShipTd = document.createElement("td");
-    localShipTd.className = "col-num";
-    if (item.status !== "판매완료") {
-      const localShipInput = document.createElement("input");
-      localShipInput.type = "number";
-      localShipInput.className = "input-sm input-num";
-      localShipInput.value = item.localShippingJpy ?? 0;
-      localShipInput.addEventListener("change", async () => {
-        const value = Number(localShipInput.value) || 0;
-        await window.api.updateLocalShipping(item.id, value);
-        renderList();
-      });
-      localShipTd.appendChild(localShipInput);
-    } else {
-      localShipTd.textContent = (item.localShippingJpy ?? 0).toLocaleString();
-    }
-    tr.appendChild(localShipTd);
-
-    const marginTd = document.createElement("td");
-    marginTd.className = "col-num";
-    function renderMarginFor(price) {
-      const margin = price && item.costKrw
-        ? Math.round(((price - item.costKrw) / price) * 100)
-        : null;
-      marginTd.textContent = margin == null ? "-" : `${margin}%`;
-    }
-
-    const listPriceTd = document.createElement("td");
-    listPriceTd.className = "col-num";
-    // 지금 판매가가 "판매중으로 바뀐 시점의 판매가"보다 얼마나 낮은지를 할인율로
-    // 보여준다 - 아직 판매중이 된 적 없으면(listedPrice 없음) 기준이 없으니 안 보여준다.
-    function renderDiscountFor(price, discountEl) {
-      const baseline = item.listedPrice;
-      if (baseline && price && price < baseline) {
-        const pct = Math.round((1 - price / baseline) * 100);
-        discountEl.textContent = `-${pct}%`;
-        discountEl.hidden = false;
-      } else {
-        discountEl.hidden = true;
-      }
-    }
-    if (item.status !== "판매완료") {
-      const listPriceInput = document.createElement("input");
-      listPriceInput.type = "number";
-      listPriceInput.className = "input-sm input-num";
-      listPriceInput.value = item.listPrice ?? "";
-      // 값을 지워도 추천가가 플레이스홀더로 뒤에 남아있게 한다.
-      listPriceInput.placeholder = item.targetPrice ?? "";
-      const discountEl = document.createElement("div");
-      discountEl.className = "discount-badge";
-      // 지운 채로 두면(입력값 없음) 플레이스홀더로 보이는 추천가 기준으로 마진율을 보여준다.
-      listPriceInput.addEventListener("input", () => {
-        const typed = Number(listPriceInput.value);
-        renderMarginFor(typed || item.targetPrice);
-        renderDiscountFor(typed || null, discountEl);
-      });
-      listPriceInput.addEventListener("change", async () => {
-        const value = Number(listPriceInput.value);
-        if (!value) return;
-        await window.api.updateItem(item.id, { listPrice: value, listPriceEdited: true });
-        renderList();
-      });
-      listPriceTd.appendChild(listPriceInput);
-      renderDiscountFor(item.listPrice, discountEl);
-      listPriceTd.appendChild(discountEl);
-    } else {
-      listPriceTd.textContent = effectiveListPrice(item)
-        ? effectiveListPrice(item).toLocaleString()
-        : "-";
-    }
-    tr.appendChild(listPriceTd);
-
-    renderMarginFor(effectiveListPrice(item));
-    tr.appendChild(marginTd);
-
-    const statusTd = document.createElement("td");
-    const badge = document.createElement("span");
-    badge.className = statusBadgeClass(item.status);
-    badge.textContent = item.status;
-    statusTd.appendChild(badge);
-    // 업로드(판매중 전환) 전에는 업로드일 칸이 비어있으니, 그 상태로 며칠째인지는
-    // 여기(상태) 밑에 대신 보여준다.
-    if (!item.listedAt) {
-      const days = daysSince(item.statusChangedAt ?? item.createdAt);
-      const daysEl = document.createElement("div");
-      daysEl.className = "status-days";
-      daysEl.textContent = `${days}일째`;
-      statusTd.appendChild(daysEl);
-    }
-    tr.appendChild(statusTd);
-
-    // 업로드일: 아직 업로드(판매중 전환) 전이면 기입할 값이 없으니 아예 비워둔다 -
-    // "업로드완료" 버튼을 누르는 순간 자동으로 채워지고, 그 뒤로는 여기서 직접
-    // 고칠 수 있다.
-    const listedAtTd = document.createElement("td");
-    listedAtTd.className = "col-num";
-    if (item.listedAt) {
-      const listedAtInput = document.createElement("input");
-      listedAtInput.type = "date";
-      listedAtInput.className = "input-sm input-date";
-      listedAtInput.value = toDateInputValue(item.listedAt);
-      listedAtInput.addEventListener("change", async () => {
-        const [y, m, d] = listedAtInput.value.split("-").map(Number);
-        if (!y || !m || !d) return;
-        // 정오로 저장해서 시간대 경계 때문에 하루 밀리거나 당겨지는 걸 피한다.
-        await window.api.updateItem(item.id, { listedAt: new Date(y, m - 1, d, 12, 0, 0).toISOString() });
-        renderList();
-      });
-      listedAtTd.appendChild(listedAtInput);
-
-      const daysEl = document.createElement("div");
-      daysEl.className = "status-days";
-      if (item.status === "판매완료") {
-        if (item.soldAt) {
-          const days = daysBetween(item.listedAt, item.soldAt);
-          daysEl.textContent = `업로드 후 ${days}일만에 판매`;
-          listedAtTd.appendChild(daysEl);
-        }
-      } else {
-        const days = daysSince(item.listedAt);
-        // 판매중으로 오래 머물수록(14/30/60일) 눈에 띄게 경고색을 올린다.
-        if (days >= 60) daysEl.classList.add("tier-critical");
-        else if (days >= 30) daysEl.classList.add("tier-danger");
-        else if (days >= 14) daysEl.classList.add("tier-warn");
-        daysEl.textContent = `${days}일째`;
-        listedAtTd.appendChild(daysEl);
-      }
-    } else {
-      listedAtTd.textContent = "-";
-    }
-    tr.appendChild(listedAtTd);
-
-    // 상태는 자유롭게 고르는 게 아니라, 배송전 -> 업로드전 -> 판매중 -> 판매완료
-    // 순서대로 버튼 하나씩 눌러서 한 단계씩만 앞으로 진행한다.
-    const actionsTd = document.createElement("td");
-    actionsTd.className = "col-actions";
-    const advanceBtn = document.createElement("button");
-    advanceBtn.className = "btn-primary btn-sm";
-    if (item.status === "배송전") {
-      advanceBtn.textContent = "입고완료";
-      advanceBtn.addEventListener("click", async () => {
-        await window.api.updateItem(item.id, { status: "업로드전", statusChangedAt: new Date().toISOString() });
-        renderList();
-      });
-      actionsTd.appendChild(advanceBtn);
-    } else if (item.status === "업로드전") {
-      advanceBtn.textContent = "업로드완료";
-      advanceBtn.addEventListener("click", async () => {
-        const now = new Date().toISOString();
-        // listedAt은 나중에 판매완료됐을 때 "업로드 후 며칠만에 팔렸는지" 계산용.
-        // listedPrice는 이 시점의 판매가를 기록해서, 이후 할인율은 추천가가 아니라
-        // 이 값 대비로 계산한다.
-        await window.api.updateItem(item.id, {
-          status: "판매중",
-          statusChangedAt: now,
-          listedAt: now,
-          listedPrice: effectiveListPrice(item),
-        });
-        renderList();
-      });
-      actionsTd.appendChild(advanceBtn);
-    } else if (item.status === "판매중" || item.status === "재고") {
-      // "재고"는 이 단계 구분이 생기기 전(과거)에 등록된 항목의 상태값 - 판매중과
-      // 동일하게 취급해서 판매완료 버튼을 보여준다.
-      advanceBtn.textContent = "판매완료";
-      advanceBtn.addEventListener("click", async () => {
-        // 지금 "판매가" 칸에 있는 값을 그대로 실제판매가로 기록한다 -
-        // 이미 실시간으로 관리되는 값이라 판매 처리할 때 다시 물어볼 필요가 없다.
-        const actual = effectiveListPrice(item);
-        if (!actual) return;
-        await window.api.updateItem(item.id, {
-          status: "판매완료",
-          actualPrice: actual,
-          soldAt: new Date().toISOString(),
-          statusChangedAt: new Date().toISOString(),
-        });
-        renderList();
-      });
-      actionsTd.appendChild(advanceBtn);
-    }
-    tr.appendChild(actionsTd);
-
-    const delTd = document.createElement("td");
-    const deleteBtn = document.createElement("button");
-    deleteBtn.className = "btn-delete";
-    deleteBtn.innerHTML =
-      '<svg width="15" height="15" viewBox="0 0 15 15" fill="none">' +
-      '<path d="M2.5 4H12.5M5.5 4V2.5C5.5 2.22386 5.72386 2 6 2H9C9.27614 2 9.5 2.22386 9.5 2.5V4M6.5 7V10.5M8.5 7V10.5M3.5 4L4 12C4 12.5523 4.44772 13 5 13H10C10.5523 13 11 12.5523 11 12L11.5 4" ' +
-      'stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    deleteBtn.title = "삭제";
-    deleteBtn.addEventListener("click", async () => {
-      if (!confirm(`"${item.title}" 항목을 삭제할까요?`)) return;
-      await window.api.deleteItem(item.id);
-      renderList();
-    });
-    delTd.appendChild(deleteBtn);
-    tr.appendChild(delTd);
-
-    return tr;
-  }
-
-  // 상태별로 묶어서 접었다 펼 수 있는 구간으로 보여준다. items가 이미 상태순으로
-  // 정렬돼 있어서, 순서대로 훑으며 상태가 바뀔 때마다 새 그룹을 시작하면 된다.
-  const groups = [];
-  for (const item of items) {
-    const last = groups[groups.length - 1];
-    if (last && last.status === item.status) {
-      last.items.push(item);
-    } else {
-      groups.push({ status: item.status, items: [item] });
-    }
-  }
-
-  for (const group of groups) {
-    const isCollapsed = collapsedStatuses.has(group.status);
-
-    const headerTr = document.createElement("tr");
-    headerTr.className = "group-header-row";
-    const headerTd = document.createElement("td");
-    headerTd.colSpan = 11;
-    headerTd.className = "group-header";
-    headerTd.innerHTML = `
-      <div class="group-header-inner">
-        <svg class="group-chevron${isCollapsed ? " collapsed" : ""}" width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span>${group.status}</span>
-        <span class="group-count">${group.items.length}</span>
-      </div>
-    `;
-    headerTd.addEventListener("click", () => {
-      if (collapsedStatuses.has(group.status)) collapsedStatuses.delete(group.status);
-      else collapsedStatuses.add(group.status);
-      renderList();
-    });
-    headerTr.appendChild(headerTd);
-    tbody.appendChild(headerTr);
-
-    if (!isCollapsed) {
-      for (const item of group.items) {
-        tbody.appendChild(buildItemRow(item));
-      }
-    }
-  }
-
-  selectAllCheckbox.checked =
-    document.querySelectorAll(".row-select").length > 0 &&
-    document.querySelectorAll(".row-select:checked").length === document.querySelectorAll(".row-select").length;
-  updateSelectionUi();
 }
 
 const monthlyViewBtn = document.getElementById("monthlyViewBtn");

@@ -74,45 +74,12 @@
     </div>
 
     <div class="list-toolbar">
-      <select id="statusFilter">
-        <option value="">전체</option>
-        <option value="배송전">배송전</option>
-        <option value="업로드전">업로드전</option>
-        <option value="판매중">판매중</option>
-        <option value="판매완료">판매완료</option>
-      </select>
-
       <div class="toolbar-right">
-        <div class="bulk-discount">
-          <span id="selectedCount" class="hint-inline">0개 선택됨</span>
-          <button id="discount5Btn" class="btn-ghost btn-sm" disabled>5% 할인</button>
-          <button id="discount10Btn" class="btn-ghost btn-sm" disabled>10% 할인</button>
-          <button id="discount20Btn" class="btn-ghost btn-sm" disabled>20% 할인</button>
-        </div>
         <button id="monthlyViewBtn" class="btn-ghost btn-sm">월별 정리</button>
       </div>
     </div>
 
-    <div class="table-wrap">
-      <table class="item-table">
-        <thead>
-          <tr>
-            <th class="col-check"><input type="checkbox" id="selectAllCheckbox"></th>
-            <th class="col-thumb"></th>
-            <th class="col-title">상품명</th>
-            <th class="col-num">원가</th>
-            <th class="col-num">현지배송비</th>
-            <th class="col-num">판매가</th>
-            <th class="col-num">마진율</th>
-            <th>상태</th>
-            <th>업로드일</th>
-            <th class="col-actions">판매 처리</th>
-            <th class="col-del"></th>
-          </tr>
-        </thead>
-        <tbody id="itemTableBody"></tbody>
-      </table>
-    </div>
+    <div id="kanban" class="kanban"></div>
   </section>
   </main>
 
