@@ -90,7 +90,7 @@ async function renderDashboard() {
   renderLineChart(document.getElementById("profitChart"), months, "profit", cssVar("--positive"));
 }
 
-// 재고 지표 3개. 재고원가는 목표(설정 stockTargetKrw, 기본 600만) 대비 모자람/넘침과 단계별 구성을 같이 보여준다.
+// 재고 지표 3개(셋 다 숫자 · 막대 · 보조 줄로 높이를 맞춘다). 재고원가는 목표(설정 stockTargetKrw, 기본 600만) 대비 모자람/넘침과 단계별 구성을 같이 보여준다.
 function renderKpis(s) {
   const target = s.stockTargetKrw;
   const gap = s.stockCost - target;
@@ -111,11 +111,13 @@ function renderKpis(s) {
     <div class="kpi">
       <div class="kpi-label">평균 마진율</div>
       <div class="kpi-value">${margin}</div>
+      <div class="target-bar"><span style="width:${Math.max(0, Math.min(100, s.avgMarginPct ?? 0))}%;background:var(--accent)"></span></div>
       <div class="kpi-sub">판매 <b>${s.soldAvgMarginPct ?? "-"}%</b> · 재고 <b>${s.stockAvgMarginPct ?? "-"}%</b></div>
     </div>
     <div class="kpi">
       <div class="kpi-label">회전율 · 이번 달</div>
       <div class="kpi-value">${bigNum(s.turnoverPct, "%")}</div>
+      <div class="target-bar"><span style="width:${Math.max(0, Math.min(100, s.turnoverPct))}%;background:var(--accent)"></span></div>
       <div class="kpi-sub">판매중 원가 <b>${shortWon(s.listedCost)}</b></div>
     </div>`;
 }
