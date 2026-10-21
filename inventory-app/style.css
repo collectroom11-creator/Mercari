@@ -63,7 +63,6 @@ html, body {
   color: var(--label);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", sans-serif;
   font-size: 13px;
-  -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
