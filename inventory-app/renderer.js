@@ -293,7 +293,7 @@ function buildCard(item) {
     await window.api.deleteItem(item.id);
     renderList();
   });
-  photo.appendChild(del);
+  card.appendChild(del); // 카드 오른쪽 위 구석
 
   if (!sold) {
     const adv = document.createElement("button");

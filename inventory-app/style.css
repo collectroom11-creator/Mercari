@@ -630,25 +630,27 @@ input:disabled {
 .kcol { display: flex; flex-direction: column; min-height: 0; background: var(--card); border-radius: 16px; padding: 10px; }
 .kcol-head { display: flex; align-items: center; gap: 6px; font-weight: 700; margin: 2px 4px 10px; }
 .kcount { background: var(--bg); color: var(--stock-text); border-radius: 10px; padding: 0 8px; font-size: 12px; font-weight: 600; }
-.klist { overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); grid-auto-rows: max-content; gap: 8px; align-content: start; padding-right: 2px; }
+.klist { overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; gap: 6px; align-content: start; padding-right: 2px; }
 .kempty { color: var(--text-secondary); font-size: 13px; padding: 12px 4px; }
-.kcard { border: 1px solid #EEF1F4; border-radius: 10px; overflow: hidden; background: var(--card); }
-.kphoto { position: relative; aspect-ratio: 3 / 4; background: var(--stock-bg) center / cover no-repeat; }
+/* 가로로 긴 카드: 왼쪽 작은 사진 + 오른쪽 숫자. 버튼은 카드에 마우스를 올렸을 때만 보인다. */
+.kcard { position: relative; display: flex; flex-wrap: wrap; border: 1px solid #EEF1F4; border-radius: 10px; overflow: hidden; background: var(--card); }
+.kphoto { position: relative; width: 60px; height: 80px; flex-shrink: 0; background: var(--stock-bg) center / cover no-repeat; }
 .kphoto.clickable { cursor: pointer; }
-.kdays { position: absolute; left: 6px; top: 6px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 11px; border-radius: 6px; padding: 2px 6px; white-space: nowrap; }
+.kdays { position: absolute; left: 3px; top: 3px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 10px; border-radius: 5px; padding: 1px 5px; white-space: nowrap; }
 .kdays.warn { background: var(--negative); }
-.kdel { position: absolute; right: 4px; top: 4px; border: 0; background: transparent; color: #fff; text-shadow: 0 0 3px rgba(0, 0, 0, 0.6); font-size: 12px; cursor: pointer; opacity: 0; padding: 2px 4px; }
-.kcard:hover .kdel { opacity: 0.7; }
+.kdel { position: absolute; right: 1px; top: 1px; background: var(--card); border-radius: 4px; border: 0; background: transparent; color: var(--text-secondary); font-size: 11px; cursor: pointer; opacity: 0; padding: 2px 4px; z-index: 1; }
+.kcard:hover .kdel { opacity: 0.6; }
 .kdel:hover { opacity: 1 !important; }
-.kadv { position: absolute; right: 6px; bottom: 6px; width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--primary); color: #fff; font-size: 20px; line-height: 28px; padding: 0; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); }
+.kadv { position: absolute; right: 3px; bottom: 3px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: var(--primary); color: #fff; font-size: 16px; line-height: 22px; padding: 0; cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); opacity: 0; }
+.kcard:hover .kadv { opacity: 1; }
 .kadv:hover { background: var(--primary-hover); }
-.knums { padding: 6px 8px; font-size: 11px; color: var(--stock-text); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 6px; align-items: center; }
-.knums b { color: var(--text); font-size: 12px; text-align: right; }
+.knums { flex: 1; min-width: 0; padding: 5px 7px; font-size: 10px; color: var(--stock-text); display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 2px 4px; align-items: center; }
+.knums b { color: var(--text); font-size: 12px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .knums b.clickable { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
 .kmargin { color: var(--positive) !important; }
 .kship { grid-column: 1 / 3; color: #C77C00; font-size: 10px; text-align: right; white-space: nowrap; margin-top: -2px; }
-.kprice { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; font: inherit; font-size: 12px; font-weight: 700; text-align: right; }
-.kshippop { margin: 0 8px 8px; background: var(--text); color: #fff; border-radius: 8px; padding: 6px 8px; font-size: 11px; white-space: nowrap; }
+.kprice { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; padding: 1px 4px; font: inherit; font-size: 12px; font-weight: 700; text-align: right; }
+.kshippop { flex-basis: 100%; margin: 0 8px 8px; background: var(--text); color: #fff; border-radius: 8px; padding: 6px 8px; font-size: 11px; white-space: nowrap; }
 .kshippop[hidden] { display: none; }
 .kshippop input { width: 70px; border: 0; border-radius: 4px; padding: 2px 4px; margin-left: 4px; }
 
@@ -657,3 +659,4 @@ input:disabled {
 .line-value { font-size: 12px; font-weight: 700; fill: var(--text); }
 .line-value.neg { fill: var(--negative); }
 .line-label { font-size: 11px; fill: var(--text-secondary); }
+.kprice::-webkit-inner-spin-button, .kprice::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
