@@ -71,12 +71,17 @@ function createMainWindow() {
   mainWindow.once("ready-to-show", async () => {
     // 실제로 렌더링된 폭을 직접 확인해서, 디스플레이 배율 때문에 목표보다
     // 좁게 나왔으면 그 배율만큼 보정해서 다시 맞춘다.
+    // 최소 크기도 항상 이 배율로 바꿔서 건다 - 창 크기(포인트)와 페이지 크기(CSS px)가 달라서,
+    // 그대로 걸면 실제 페이지는 최소값보다 작아져서 요소가 잘렸다.
     try {
       const actualWidth = await mainWindow.webContents.executeJavaScript("window.innerWidth");
-      if (actualWidth > 0 && actualWidth < TARGET_WIDTH) {
-        const scale = TARGET_WIDTH / actualWidth;
-        mainWindow.setContentSize(Math.round(TARGET_WIDTH * scale), Math.round(TARGET_HEIGHT * scale));
-        mainWindow.setMinimumSize(Math.round(MIN_CONTENT_WIDTH * scale), Math.round(MIN_CONTENT_HEIGHT * scale));
+      if (actualWidth > 0) {
+        const [contentW] = mainWindow.getContentSize();
+        const scale = contentW / actualWidth; // 페이지 1px당 창 포인트
+        if (actualWidth < TARGET_WIDTH) {
+          mainWindow.setContentSize(Math.round(TARGET_WIDTH * scale), Math.round(TARGET_HEIGHT * scale));
+        }
+        mainWindow.setMinimumSize(Math.ceil(MIN_CONTENT_WIDTH * scale) + 2, Math.ceil(MIN_CONTENT_HEIGHT * scale) + 2);
       }
     } catch (e) {
       // 보정 실패해도 기본 크기로는 뜨니 무시한다.
