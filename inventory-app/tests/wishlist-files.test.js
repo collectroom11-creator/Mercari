@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const {
-  parseWishlistLink, loadManual, addManual, removeManual, appendDrop, loadDrops, mergeWishlist,
+  parseWishlistLink, loadManual, addManual, removeManual, appendDrop, loadDrops, mergeWishlist, loadHidden, hideItem,
 } = require("../wishlist-files");
 
 const tmp = (name) => path.join(fs.mkdtempSync(path.join(os.tmpdir(), "wish-")), name);
@@ -43,6 +43,22 @@ test("mergeWishlist: 켄즈 목록이 null(로그아웃)이면 아무것도 지�
 test("mergeWishlist: 켄즈에서 새로 담은 상품은 담을 당시 가격이 기준가", () => {
   const out = mergeWishlist({}, [{ id: "m5", title: "t", listedPrice: 8800 }], []);
   assert.deepEqual(out.m5, { title: "t", lastPrice: 8800, soldOut: false });
+});
+
+test("hideItem/loadHidden: 숨긴 id가 쌓이고 중복은 무시", () => {
+  const f = tmp("hidden.json");
+  assert.deepEqual(loadHidden(f), []);
+  hideItem(f, "m1");
+  hideItem(f, "m1");
+  hideItem(f, "m2");
+  assert.deepEqual(loadHidden(f), ["m1", "m2"]);
+});
+
+test("mergeWishlist: 숨긴 상품은 켄즈 목록에 있어도, 직접 추가했어도 빠진다", () => {
+  const out = mergeWishlist({ m1: { title: "a", lastPrice: 1, soldOut: false } }, [{ id: "m1", title: "a", listedPrice: 1 }, { id: "m3", title: "c", listedPrice: 3 }], ["m2"], ["m1", "m2"]);
+  assert.equal(out.m1, undefined);
+  assert.equal(out.m2, undefined);
+  assert.ok(out.m3);
 });
 
 test("appendDrop/loadDrops: 기록이 쌓이고 at과 dropId가 붙는다", () => {

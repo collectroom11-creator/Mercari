@@ -301,7 +301,7 @@ async function renderWishlist() {
       <div class="wtile ${w.soldOut ? "dimmed" : ""}" title="${escapeHtml(w.title)}" data-open="${w.id}">
         <div class="wphoto" style="background-image:url('${mercariPhoto(w.id)}')">
           ${w.soldOut ? '<span class="wtag">품절</span>' : w.manual ? '<span class="wtag">직접 추가</span>' : ""}
-          ${w.manual ? `<button class="wremove" data-remove="${w.id}" title="삭제">✕</button>` : ""}
+          <button class="wremove" data-remove="${w.id}" title="찜 목록에서 삭제">✕</button>
         </div>
         <div class="wprice">${w.lastPrice != null ? yen(w.lastPrice) : "-"}</div>
         <div class="wtime">${fmt(w.checkedAt)}</div>
@@ -334,6 +334,7 @@ async function renderWishlist() {
   page.querySelectorAll("[data-remove]").forEach((b) =>
     b.addEventListener("click", async (e) => {
       e.stopPropagation();
+      if (!confirm("찜 목록에서 삭제할까요? 가격 확인도 멈춰요.")) return;
       await window.api.removeWishlistLink(b.dataset.remove);
       renderWishlist();
     })

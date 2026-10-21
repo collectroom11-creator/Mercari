@@ -21,7 +21,7 @@ const { fetchMercariItem } = require("./mercari-fetch");
 const { computeShopStats, computeMonthlySales } = require("./stats");
 const { computeDiscountAlerts, discountedPrice } = require("./discounts");
 const { ledgerGet, ledgerSet, importLedgerBackup } = require("./ledger-store");
-const { parseWishlistLink, loadManual, addManual, removeManual, loadDrops } = require("./wishlist-files");
+const { parseWishlistLink, loadManual, addManual, removeManual, loadDrops, loadHidden, hideItem } = require("./wishlist-files");
 const { loadBrandNames, matchBrand, validateFilters } = require("./filters");
 const { readRemoteFilters, saveFilters } = require("./filters-git");
 
@@ -332,6 +332,7 @@ const ALERTS_STATE_FILE = path.join(DATA_DIR, "alerts-state.json");
 const WISHLIST_STATE_FILE = path.join(DATA_DIR, "wishlist-watch.json");
 const WISHLIST_MANUAL_FILE = path.join(DATA_DIR, "wishlist-manual.json");
 const WISHLIST_DROPS_FILE = path.join(DATA_DIR, "wishlist-drops.json");
+const WISHLIST_HIDDEN_FILE = path.join(DATA_DIR, "wishlist-hidden.json");
 const REPO_DIR = path.join(__dirname, "..");
 const FACETS_BRANDS_FILE = path.join(REPO_DIR, "facets", "brands.json");
 
@@ -377,10 +378,13 @@ ipcMain.handle("get-wishlist", () => {
     ? JSON.parse(fs.readFileSync(WISHLIST_STATE_FILE, "utf-8"))
     : { items: {} };
   const manual = new Set(loadManual(WISHLIST_MANUAL_FILE).map((m) => m.id));
-  const rows = Object.entries(state.items).map(([id, it]) => ({ id, ...it, manual: manual.has(id) }));
+  const hidden = new Set(loadHidden(WISHLIST_HIDDEN_FILE));
+  const rows = Object.entries(state.items)
+    .filter(([id]) => !hidden.has(id))
+    .map(([id, it]) => ({ id, ...it, manual: manual.has(id) }));
   // 직접 추가했지만 감시 스크립트가 아직 한 번도 안 돈 상품도 보여준다.
   for (const id of manual) {
-    if (!state.items[id]) rows.push({ id, title: id, lastPrice: null, soldOut: false, checkedAt: null, manual: true });
+    if (!state.items[id] && !hidden.has(id)) rows.push({ id, title: id, lastPrice: null, soldOut: false, checkedAt: null, manual: true });
   }
   return { items: rows, lastRunAt: state.lastRunAt || null, lastListSyncAt: state.lastListSyncAt || null };
 });
@@ -388,9 +392,16 @@ ipcMain.handle("add-wishlist-link", (event, url) => {
   const id = parseWishlistLink(url);
   if (!id) return { ok: false, error: "메루카리 상품 링크가 아니에요(켄즈포스트 메루카리 링크나 jp.mercari.com 링크를 넣어주세요)" };
   addManual(WISHLIST_MANUAL_FILE, id);
+  // 예전에 삭제했던 상품을 다시 추가하면 숨김을 푼다
+  const hiddenList = loadHidden(WISHLIST_HIDDEN_FILE).filter((h) => h !== id);
+  fs.writeFileSync(WISHLIST_HIDDEN_FILE, JSON.stringify(hiddenList, null, 2));
   return { ok: true, id };
 });
-ipcMain.handle("remove-wishlist-link", (event, id) => removeManual(WISHLIST_MANUAL_FILE, id));
+// 찜 삭제: 직접 추가한 건 목록에서 빼고, 켄즈포스트에서 온 건 다시 동기화돼도 안 보이게 숨긴다.
+ipcMain.handle("remove-wishlist-link", (event, id) => {
+  removeManual(WISHLIST_MANUAL_FILE, id);
+  hideItem(WISHLIST_HIDDEN_FILE, id);
+});
 
 let brandNamesCache = null;
 function brandNames() {

@@ -11,7 +11,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { parseWishlistHtml } = require("./wishlist");
 const { fetchMercariItem } = require("./mercari-fetch");
-const { loadManual, appendDrop, mergeWishlist } = require("./wishlist-files");
+const { loadManual, appendDrop, mergeWishlist, loadHidden } = require("./wishlist-files");
 
 const DATA_DIR = path.join(app.getPath("appData"), "inventory-app");
 const STATE_FILE = path.join(DATA_DIR, "wishlist-watch.json");
@@ -23,6 +23,7 @@ const CONFIG_FILE = path.join(DATA_DIR, "wishlist-watch-config.json");
 // 재고 앱에서 직접 추가한 상품, 앱 알림 팝업용 가격 인하 기록 (wishlist-files.js 참고)
 const MANUAL_FILE = path.join(DATA_DIR, "wishlist-manual.json");
 const DROPS_FILE = path.join(DATA_DIR, "wishlist-drops.json");
+const HIDDEN_FILE = path.join(DATA_DIR, "wishlist-hidden.json"); // 앱에서 삭제한 상품
 
 // 재고관리 앱이 켜져 있을 수 있어서 앱 프로필을 직접 쓰지 않고, 로그인 쿠키가 든
 // 켄즈포스트 파티션만 복사해서 쓴다.
@@ -104,7 +105,7 @@ async function run() {
     return null;
   });
   // 관심상품에서 뺀 건 감시 중단, 단 앱에서 직접 추가한 상품은 유지
-  state.items = mergeWishlist(state.items, wishlist, loadManual(MANUAL_FILE).map((m) => m.id));
+  state.items = mergeWishlist(state.items, wishlist, loadManual(MANUAL_FILE).map((m) => m.id), loadHidden(HIDDEN_FILE));
   if (wishlist) {
     state.lastListSyncAt = new Date().toISOString();
     log(`관심상품 ${wishlist.length}개 동기화`);
