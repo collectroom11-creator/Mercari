@@ -1,40 +1,39 @@
-// 샵 운영 툴 화면: 상단 재고관리/가계부 전환, 왼쪽 메뉴, 대시보드, 가계부 탭.
-// 기존 재고 입력 화면은 renderer.js가 그대로 담당한다.
+// 샵 운영 툴 화면: 왼쪽 사이드바 메뉴, 대시보드, 알림, 찜 목록, 메루카리 필터, 가계부.
+// 재고 입력 보드는 renderer.js가 담당한다.
 
 const won = (n) => `${Math.round(n).toLocaleString()}원`;
 const escapeHtml = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-// ---- 상단 탭 / 왼쪽 메뉴 ----
-document.querySelectorAll(".view-tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".view-tab").forEach((t) => t.classList.toggle("active", t === tab));
-    const ledger = tab.dataset.view === "ledger";
-    document.getElementById("view-inventory").hidden = ledger;
-    document.getElementById("view-ledger").hidden = !ledger;
-  });
-});
-
+// ---- 왼쪽 사이드바 메뉴 ----
 const pageRenderers = {};
 
 function showPage(pageId) {
-  document.querySelectorAll(".side-link").forEach((l) => l.classList.toggle("active", l.dataset.page === pageId));
-  document.querySelectorAll("#view-inventory .page").forEach((p) => p.classList.toggle("active", p.id === pageId));
+  const links = document.querySelectorAll(".side-link[data-page]");
+  links.forEach((l) => l.classList.toggle("active", l.dataset.page === pageId));
+  document.querySelectorAll(".content-body .page").forEach((p) => p.classList.toggle("active", p.id === pageId));
+  const link = [...links].find((l) => l.dataset.page === pageId);
+  document.getElementById("pageTitle").textContent = link ? link.textContent.trim() : "";
   if (pageRenderers[pageId]) pageRenderers[pageId]();
 }
 
-document.querySelectorAll(".side-link").forEach((link) => {
+document.querySelectorAll(".side-link[data-page]").forEach((link) => {
   link.addEventListener("click", () => showPage(link.dataset.page));
 });
+
+// 큰 숫자: 숫자는 크고 얇게, 단위(원, %)는 작은 회색으로 따로 붙인다.
+const bigNum = (n, unit) => `${Math.round(n).toLocaleString()}<small>${unit}</small>`;
+// 차트 색은 다크 모드에 따라 바뀌는 CSS 변수를 그대로 쓴다.
+const cssVar = (name) => `var(${name})`;
 
 // ---- 대시보드 ----
 async function renderDashboard() {
   const [s, months] = await Promise.all([window.api.getShopStats(), window.api.getMonthlySales()]);
   const cards = [
-    ["이번 달 매출", won(s.monthRevenue), "", ""],
-    ["이번 달 순이익", won(s.monthProfit), s.monthProfit >= 0 ? "positive" : "negative", ""],
-    ["회전율 (업로드 기준)", `${s.turnoverPct}%`, "", `판매중 재고원가 ${won(s.listedCost)}`],
-    ["재고원가 합계", won(s.stockCost), "", "배송전 · 업로드전 · 판매중"],
+    ["이번 달 매출", bigNum(s.monthRevenue, "원"), "", ""],
+    ["이번 달 순이익", bigNum(s.monthProfit, "원"), s.monthProfit >= 0 ? "positive" : "negative", ""],
+    ["회전율 (업로드 기준)", bigNum(s.turnoverPct, "%"), "", `판매중 재고원가 ${won(s.listedCost)}`],
+    ["재고원가 합계", bigNum(s.stockCost, "원"), "", "배송전 · 업로드전 · 판매중"],
   ];
   document.getElementById("statCards").innerHTML = cards
     .map(([label, value, cls, sub]) => `
@@ -45,8 +44,8 @@ async function renderDashboard() {
       </div>`)
     .join("");
 
-  renderLineChart(document.getElementById("revenueChart"), months, "revenue", "#3182F6");
-  renderLineChart(document.getElementById("profitChart"), months, "profit", "#12B564");
+  renderLineChart(document.getElementById("revenueChart"), months, "revenue", cssVar("--accent"));
+  renderLineChart(document.getElementById("profitChart"), months, "profit", cssVar("--positive"));
 }
 
 // 만 원 단위로 짧게: 584000 → "58.4만"
@@ -68,15 +67,15 @@ function renderLineChart(el, months, key, color) {
   const x = (i) => (months.length === 1 ? W / 2 : padX + (i * (W - padX * 2)) / (months.length - 1));
   const y = (v) => padTop + ((max - v) / range) * (H - padTop - padBottom);
   const points = values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
-  const zeroLine = min < 0 ? `<line x1="${padX}" x2="${W - padX}" y1="${y(0)}" y2="${y(0)}" stroke="#E5E8EB" stroke-dasharray="3 3"/>` : "";
+  const zeroLine = min < 0 ? `<line x1="${padX}" x2="${W - padX}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--separator)" stroke-dasharray="3 3"/>` : "";
   el.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" class="line-svg" role="img">
-      <line x1="${padX}" x2="${W - padX}" y1="${H - padBottom}" y2="${H - padBottom}" stroke="#E5E8EB"/>
+      <line x1="${padX}" x2="${W - padX}" y1="${H - padBottom}" y2="${H - padBottom}" style="stroke:var(--separator)"/>
       ${zeroLine}
-      <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <polyline points="${points}" fill="none" style="stroke:${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       ${values.map((v, i) => `
-        <circle cx="${x(i)}" cy="${y(v)}" r="4" fill="#fff" stroke="${v < 0 ? "#F04452" : color}" stroke-width="2.5"/>
-        <text x="${x(i)}" y="${y(v) - 10}" text-anchor="middle" class="line-value ${v < 0 ? "neg" : ""}">${shortWon(v)}</text>
+        <circle cx="${x(i)}" cy="${y(v)}" r="3.5" style="fill:var(--content-bg);stroke:${v < 0 ? "var(--negative)" : color}" stroke-width="2"/>
+        ${v !== 0 ? `<text x="${x(i)}" y="${y(v) - 10}" text-anchor="middle" class="line-value ${v < 0 ? "neg" : ""}">${shortWon(v)}</text>` : ""}
         <text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="line-label">${Number(months[i].month.slice(5))}월</text>`).join("")}
     </svg>`;
 }

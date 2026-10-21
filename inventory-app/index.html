@@ -2,102 +2,120 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="style.css">
   <title>재고 관리</title>
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-left">
-      <div class="brand">COLLECTROOM</div>
-      <div class="view-tabs">
-        <button class="view-tab active" data-view="inventory">재고관리</button>
-        <button class="view-tab" data-view="ledger">가계부</button>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <div id="fxRateChip" class="fx-rate-chip" hidden></div>
-    </div>
-  </header>
+  <div class="window">
+    <!-- 맥 기본 앱처럼 반투명 사이드바(창 vibrancy가 비쳐 보인다). 맨 위는 신호등 버튼 자리. -->
+    <aside class="sidebar">
+      <div class="sidebar-titlebar"></div>
+      <nav class="side-nav">
+        <div class="side-section">재고관리</div>
+        <button class="side-link active" data-page="page-dashboard">
+          <svg viewBox="0 0 16 16"><rect x="2" y="9" width="3" height="5" rx="1"/><rect x="6.5" y="5" width="3" height="9" rx="1"/><rect x="11" y="2" width="3" height="12" rx="1"/></svg>
+          대시보드
+        </button>
+        <button class="side-link" data-page="tab-list">
+          <svg viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+          재고 입력
+        </button>
+        <button class="side-link" data-page="page-wishlist">
+          <svg viewBox="0 0 16 16"><path d="M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.3C14 10 8 13.5 8 13.5Z"/></svg>
+          찜 목록
+        </button>
+        <button class="side-link" data-page="page-filters">
+          <svg viewBox="0 0 16 16"><path d="M2 3h12l-4.5 5.5V13l-3-1.5V8.5Z"/></svg>
+          메루카리 필터
+        </button>
+        <div class="side-section">기록</div>
+        <button class="side-link" data-page="page-ledger">
+          <svg viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3"/></svg>
+          가계부
+        </button>
+        <div class="side-spacer"></div>
+        <button id="alertsBtn" class="side-link">
+          <svg viewBox="0 0 16 16"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1.5H3Z"/><path d="M6.5 14a1.5 1.5 0 0 0 3 0"/></svg>
+          알림
+          <span id="alertsBadge" class="side-badge" hidden>0</span>
+        </button>
+      </nav>
+    </aside>
 
-  <div id="view-inventory" class="app-shell">
-  <nav class="side-nav">
-    <button class="side-link active" data-page="page-dashboard">대시보드</button>
-    <button class="side-link" data-page="tab-list">재고 입력</button>
-    <button class="side-link" data-page="page-wishlist">찜 목록</button>
-    <button class="side-link" data-page="page-filters">메루카리 필터</button>
-    <div class="side-spacer"></div>
-    <button id="alertsBtn" class="alerts-btn">🔔 알림 <span id="alertsBadge" class="alerts-badge" hidden>0</span></button>
-  </nav>
-
-  <main class="side-main">
-  <section id="page-dashboard" class="page active">
-    <div id="statCards" class="stat-grid"></div>
-    <div class="chart-grid">
-      <div class="card chart-card">
-        <div class="chart-title">월별 매출</div>
-        <div id="revenueChart" class="line-chart"></div>
-      </div>
-      <div class="card chart-card">
-        <div class="chart-title">월별 순이익</div>
-        <div id="profitChart" class="line-chart"></div>
-      </div>
-    </div>
-  </section>
-
-  <section id="page-wishlist" class="page"></section>
-  <section id="page-filters" class="page"></section>
-
-  <section id="tab-list" class="page panel">
-    <div class="add-card">
-      <div class="add-row">
-        <input id="urlInput" placeholder="켄즈포스트 상품 링크를 붙여넣으세요">
-        <button id="fetchBtn" class="btn-primary">추가</button>
-      </div>
-      <p id="fetchResult" class="hint"></p>
-
-      <form id="saveForm" class="manual-form" hidden>
-        <div class="field-grid">
-          <label>상품명<input id="titleField"></label>
-          <label>엔화가격<input id="jpyField" type="number"></label>
-          <label>환율(100엔)<input id="fxField" type="number"></label>
-          <label>원가(원)<input id="costField" type="number" disabled></label>
-          <label>판매가(원)<input id="targetField" type="number"></label>
-          <label>
-            사진
-            <input id="manualImageField" type="file" accept="image/*">
-            <img id="manualImagePreview" class="manual-image-preview" hidden>
-          </label>
+    <main class="content">
+      <header class="toolbar">
+        <h1 id="pageTitle" class="toolbar-title">대시보드</h1>
+        <div class="toolbar-right">
+          <div id="fxRateChip" class="fx-rate-chip" hidden></div>
         </div>
-        <button type="submit" class="btn-primary">재고로 추가</button>
-      </form>
-    </div>
+      </header>
 
-    <div class="list-toolbar">
-      <div class="toolbar-right">
-        <button id="monthlyViewBtn" class="btn-ghost btn-sm">월별 정리</button>
+      <div class="content-body">
+        <section id="page-dashboard" class="page active">
+          <div id="statCards" class="stat-grid"></div>
+          <div class="chart-grid">
+            <div class="group chart-card">
+              <div class="chart-title">월별 매출</div>
+              <div id="revenueChart" class="line-chart"></div>
+            </div>
+            <div class="group chart-card">
+              <div class="chart-title">월별 순이익</div>
+              <div id="profitChart" class="line-chart"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-list" class="page">
+          <div class="add-card">
+            <div class="add-row">
+              <input id="urlInput" placeholder="켄즈포스트 상품 링크를 붙여넣으세요">
+              <button id="fetchBtn" class="btn-primary">추가</button>
+              <button id="monthlyViewBtn" class="btn-ghost">월별 정리</button>
+            </div>
+            <p id="fetchResult" class="hint"></p>
+
+            <form id="saveForm" class="manual-form group" hidden>
+              <div class="field-grid">
+                <label>상품명<input id="titleField"></label>
+                <label>엔화가격<input id="jpyField" type="number"></label>
+                <label>환율(100엔)<input id="fxField" type="number"></label>
+                <label>원가(원)<input id="costField" type="number" disabled></label>
+                <label>판매가(원)<input id="targetField" type="number"></label>
+                <label>
+                  사진
+                  <input id="manualImageField" type="file" accept="image/*">
+                  <img id="manualImagePreview" class="manual-image-preview" hidden>
+                </label>
+              </div>
+              <button type="submit" class="btn-primary">재고로 추가</button>
+            </form>
+          </div>
+
+          <div id="kanban" class="kanban"></div>
+        </section>
+
+        <section id="page-wishlist" class="page"></section>
+        <section id="page-filters" class="page"></section>
+
+        <section id="page-ledger" class="page ledger-view">
+          <div class="ledger-toolbar">
+            <span id="ledgerImportResult" class="hint-inline"></span>
+            <button id="ledgerImportBtn" class="btn-ghost">백업 불러오기</button>
+          </div>
+          <iframe id="ledgerFrame" class="ledger-frame" src="ledger/ledger.html"></iframe>
+        </section>
       </div>
-    </div>
-
-    <div id="kanban" class="kanban"></div>
-  </section>
-  </main>
+    </main>
+  </div>
 
   <div id="alertsPopup" class="alerts-popup" hidden></div>
-  </div>
-
-  <div id="view-ledger" class="ledger-view" hidden>
-    <div class="ledger-toolbar">
-      <span id="ledgerImportResult" class="hint-inline"></span>
-      <button id="ledgerImportBtn" class="btn-ghost btn-sm">백업 불러오기</button>
-    </div>
-    <iframe id="ledgerFrame" class="ledger-frame" src="ledger/ledger.html"></iframe>
-  </div>
 
   <div id="monthlyModal" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
         <div class="modal-title">월별 정리</div>
-        <button id="closeMonthlyModal" class="btn-ghost btn-sm">닫기</button>
+        <button id="closeMonthlyModal" class="btn-ghost">닫기</button>
       </div>
       <div class="table-wrap">
         <table class="item-table">

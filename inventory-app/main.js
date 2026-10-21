@@ -41,11 +41,11 @@ function createMainWindow() {
   // 좁게 나온다(예: 1040을 줬는데 실제로는 949) - 그래서 970px 미만으로 착각해서
   // 대시보드가 위로 올라가는 좁은 레이아웃이 매번 뜨는 문제였다. 배율을 감안해서
   // 실제 렌더링 폭이 넉넉히 970을 넘도록 여유있게 크게 잡는다.
-  const TARGET_WIDTH = 1120;
-  const TARGET_HEIGHT = 720;
-  // 재고 입력 보드(열 4개 × 최소 210px) + 왼쪽 메뉴 + 여백이 1,076px라서, 그보다
+  const TARGET_WIDTH = 1140;
+  const TARGET_HEIGHT = 740;
+  // 재고 입력 보드(열 4개 × 최소 210px) + 사이드바(210) + 여백(40)이 1,090px라서, 그보다
   // 좁아져서 가로 스크롤바가 생기지 않게 창을 이 이상 못 줄이게 한다.
-  const MIN_CONTENT_WIDTH = 1080;
+  const MIN_CONTENT_WIDTH = 1100;
   mainWindow = new BrowserWindow({
     width: TARGET_WIDTH,
     height: TARGET_HEIGHT,
@@ -53,6 +53,13 @@ function createMainWindow() {
     useContentSize: true,
     show: false,
     icon: APP_ICON_PATH,
+    // 맥 기본 앱처럼: 제목줄을 숨기고 신호등 버튼을 사이드바 위에 겹쳐 두고,
+    // 사이드바 뒤로 바탕화면이 비치는 반투명 효과(vibrancy)를 쓴다.
+    titleBarStyle: "hiddenInset",
+    trafficLightPosition: { x: 18, y: 18 },
+    vibrancy: "sidebar",
+    visualEffectState: "followWindow",
+    backgroundColor: "#00000000",
     // 가계부(ledger/ledger.html)는 iframe으로 띄우는데, 그 안에서도 preload의
     // window.storage가 필요해서 하위 프레임에도 preload를 돌린다.
     webPreferences: { preload: path.join(__dirname, "preload.js"), nodeIntegrationInSubFrames: true },
