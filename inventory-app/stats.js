@@ -33,9 +33,11 @@ function computeShopStats(items, { now = new Date() } = {}) {
   };
 }
 
-function computeMonthlySales(items, { now = new Date() } = {}) {
+// lastMonths를 주면 판매 기록과 상관없이 이번 달까지 최근 N개월(빈 달은 0)을,
+// 안 주면 첫 판매월부터 이번 달까지를 돌려준다.
+function computeMonthlySales(items, { now = new Date(), lastMonths = null } = {}) {
   const records = soldRecords(items);
-  if (records.length === 0) return [];
+  if (records.length === 0 && !lastMonths) return [];
   const byMonth = new Map();
   for (const r of records) {
     const m = byMonth.get(r.month) || { revenue: 0, profit: 0 };
@@ -43,10 +45,11 @@ function computeMonthlySales(items, { now = new Date() } = {}) {
     m.profit += r.revenue - r.cost;
     byMonth.set(r.month, m);
   }
-  const first = [...byMonth.keys()].sort()[0];
-  const [y, mo] = first.split("-").map(Number);
+  const start = lastMonths
+    ? new Date(now.getFullYear(), now.getMonth() - (lastMonths - 1), 1)
+    : (([y, mo]) => new Date(y, mo - 1, 1))([...byMonth.keys()].sort()[0].split("-").map(Number));
   const result = [];
-  for (let d = new Date(y, mo - 1, 1); monthKey(d) <= monthKey(now); d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+  for (let d = start; monthKey(d) <= monthKey(now); d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
     const key = monthKey(d);
     const m = byMonth.get(key) || { revenue: 0, profit: 0 };
     result.push({ month: key, revenue: m.revenue, profit: m.profit });

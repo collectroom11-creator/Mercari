@@ -328,7 +328,8 @@ function saveAlertsState(state) {
 }
 
 ipcMain.handle("get-shop-stats", () => computeShopStats(listItems(DB_FILE)));
-ipcMain.handle("get-monthly-sales", () => computeMonthlySales(listItems(DB_FILE)));
+// 대시보드 그래프는 최근 6개월 고정
+ipcMain.handle("get-monthly-sales", () => computeMonthlySales(listItems(DB_FILE), { lastMonths: 6 }));
 
 ipcMain.handle("get-alerts", () => {
   const state = loadAlertsState();

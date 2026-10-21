@@ -49,6 +49,22 @@ test("computeMonthlySales: 중간에 판매 없는 달은 0으로 채운다", ()
   ]);
 });
 
+test("computeMonthlySales: lastMonths 6이면 이번 달까지 최근 6개월만, 판매 없는 달은 0", () => {
+  const list = [sold(1000, 2000, new Date(2026, 0, 3)), sold(1000, 3000, new Date(2026, 9, 3))];
+  assert.deepEqual(computeMonthlySales(list, { now, lastMonths: 6 }).map((m) => [m.month, m.revenue]), [
+    ["2026-05", 0],
+    ["2026-06", 0],
+    ["2026-07", 0],
+    ["2026-08", 0],
+    ["2026-09", 0],
+    ["2026-10", 3000],
+  ]);
+});
+
+test("computeMonthlySales: lastMonths 6이면 판매 기록이 없어도 6개월을 0으로 채운다", () => {
+  assert.equal(computeMonthlySales([], { now, lastMonths: 6 }).length, 6);
+});
+
 test("판매 기록이 없으면 회전율 0, 월별은 빈 배열", () => {
   const list = [{ status: "판매중", costKrw: 5000 }];
   assert.equal(computeShopStats(list, { now }).turnoverPct, 0);
