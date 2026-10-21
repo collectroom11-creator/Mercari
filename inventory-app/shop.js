@@ -61,12 +61,10 @@ const cssVar = (name) => `var(${name})`;
 async function renderDashboard() {
   const [s, months] = await Promise.all([window.api.getShopStats(), window.api.getMonthlySales()]);
   // 타일마다 큰 숫자 하나 + 작은 보조 한 줄(재고 카드와 같은 위계). 라벨은 맨 위 작은 회색.
-  const marginPct = s.monthRevenue > 0 ? Math.round((s.monthProfit / s.monthRevenue) * 100) : null;
   const cards = [
     ["이번 달 매출", bigNum(s.monthRevenue, "원"), "", `판매 ${s.monthSoldCount}건`],
-    ["이번 달 순이익", bigNum(s.monthProfit, "원"), s.monthProfit >= 0 ? "positive" : "negative", marginPct == null ? "" : `순이익률 ${marginPct}%`],
+    ["이번 달 순이익", bigNum(s.monthProfit, "원"), s.monthProfit >= 0 ? "positive" : "negative", `회전율 ${s.turnoverPct}%`],
     ["평균 마진율", s.avgMarginPct == null ? "-" : bigNum(s.avgMarginPct, "%"), "", [s.soldAvgMarginPct, s.stockAvgMarginPct].some((v) => v != null) ? `판매 ${s.soldAvgMarginPct ?? "-"}% · 재고 ${s.stockAvgMarginPct ?? "-"}%` : ""],
-    ["회전율", bigNum(s.turnoverPct, "%"), "", `판매중 원가 ${shortWon(s.listedCost)}`],
     ["재고원가 합계", bigNum(s.stockCost, "원"), "", "배송전 · 업로드전 · 판매중"],
   ];
   document.getElementById("statCards").innerHTML = cards
