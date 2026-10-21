@@ -20,7 +20,7 @@ const { loadSettings, saveSettings } = require("./settings");
 const { fetchMercariItem } = require("./mercari-fetch");
 const { computeShopStats, computeMonthlySales } = require("./stats");
 const { computeDiscountAlerts, discountedPrice } = require("./discounts");
-const { ledgerGet, ledgerSet, importLedgerBackup } = require("./ledger-store");
+const { ledgerGet, ledgerSet, importLedgerBackup, exportLedgerBackup } = require("./ledger-store");
 const { parseWishlistLink, loadManual, addManual, removeManual, loadDrops, loadHidden, hideItem } = require("./wishlist-files");
 const { loadBrandNames, matchBrand, validateFilters } = require("./filters");
 const { readRemoteFilters, saveFilters } = require("./filters-git");
@@ -444,6 +444,24 @@ ipcMain.handle("ledger-import", async () => {
   try {
     const backup = JSON.parse(fs.readFileSync(filePaths[0], "utf-8"));
     return { ok: true, ...importLedgerBackup(LEDGER_FILE, backup) };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle("ledger-export", async () => {
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+    title: "가계부 백업 내보내기",
+    defaultPath: path.join(app.getPath("downloads"), `가계부_백업_${today}.json`),
+    filters: [{ name: "가계부 백업", extensions: ["json"] }],
+  });
+  if (canceled || !filePath) return { ok: false, canceled: true };
+  try {
+    const backup = exportLedgerBackup(LEDGER_FILE);
+    fs.writeFileSync(filePath, JSON.stringify(backup, null, 2));
+    return { ok: true, transactionCount: backup.transactions.length, fileName: path.basename(filePath) };
   } catch (e) {
     return { ok: false, error: e.message };
   }

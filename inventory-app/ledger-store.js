@@ -51,4 +51,15 @@ function importLedgerBackup(filePath, backup) {
   return { transactionCount: backup.transactions.length };
 }
 
-module.exports = { ledgerGet, ledgerSet, importLedgerBackup };
+// 불러오기(importLedgerBackup)가 받는 형식 그대로 내보낸다.
+function exportLedgerBackup(filePath, now = new Date()) {
+  const data = readAll(filePath);
+  const backup = { version: 1, exportedAt: now.toISOString() };
+  for (const [field, key] of Object.entries(DATA_KEYS)) {
+    backup[field] = key in data ? JSON.parse(data[key]) : null;
+  }
+  if (!Array.isArray(backup.transactions)) backup.transactions = [];
+  return backup;
+}
+
+module.exports = { ledgerGet, ledgerSet, importLedgerBackup, exportLedgerBackup };

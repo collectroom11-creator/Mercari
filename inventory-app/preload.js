@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld("api", {
   matchBrand: (input) => ipcRenderer.invoke("match-brand", input),
   saveFilters: (filters) => ipcRenderer.invoke("save-filters", filters),
   ledgerImport: () => ipcRenderer.invoke("ledger-import"),
+  ledgerExport: () => ipcRenderer.invoke("ledger-export"),
 });
 
 // 가계부(iframe) 저장소 - Claude.ai의 window.storage와 같은 모양: get은 {value}를

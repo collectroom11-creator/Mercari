@@ -199,6 +199,13 @@ document.getElementById("ledgerImportBtn").addEventListener("click", async () =>
   document.getElementById("ledgerFrame").contentWindow.location.reload();
 });
 
+document.getElementById("ledgerExportBtn").addEventListener("click", async () => {
+  const result = document.getElementById("ledgerImportResult");
+  const r = await window.api.ledgerExport();
+  if (r.canceled) return;
+  result.textContent = r.ok ? `거래 ${r.transactionCount.toLocaleString()}건을 ${r.fileName}에 저장했어요` : `내보내기 실패: ${r.error}`;
+});
+
 // ---- 알림 팝업 (할인 필요 + 찜 가격 인하) ----
 const alertsBtn = document.getElementById("alertsBtn");
 const alertsPopup = document.getElementById("alertsPopup");
