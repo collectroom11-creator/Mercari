@@ -282,7 +282,6 @@ function buildCard(item) {
   const marginOf = (p) => (p && item.costKrw ? `${Math.round(((p - item.costKrw) / p) * 100)}%` : "-");
   const setMargin = (p) => {
     margin.textContent = marginOf(p);
-    margin.classList.toggle("neg", !!p && p < item.costKrw);
   };
 
   // 1줄: 판매가(+ 오른쪽 위 경과일)
