@@ -67,20 +67,32 @@
 
       <div class="content-body">
         <section id="page-dashboard" class="page active">
-          <div id="stockMix" class="group stock-mix"></div>
-          <div id="statCards" class="stat-grid"></div>
-          <div class="chart-grid">
-            <div class="group chart-card">
-              <div class="chart-head"><span class="chart-title">월별 매출</span><span id="revenueNow" class="chart-now"></span></div>
+          <!-- 1. 이번 달 성과: 큰 숫자 + 최근 6개월 추이 -->
+          <div class="dash-hero">
+            <div class="hero">
+              <div class="hero-label">이번 달 매출</div>
+              <div id="revenueHero" class="hero-value"></div>
+              <div id="revenueSub" class="hero-sub"></div>
               <div id="revenueChart" class="line-chart"></div>
             </div>
-            <div class="group chart-card">
-              <div class="chart-head"><span class="chart-title">월별 순이익</span><span id="profitNow" class="chart-now"></span></div>
+            <div class="hero">
+              <div class="hero-label">이번 달 순이익</div>
+              <div id="profitHero" class="hero-value"></div>
+              <div id="profitSub" class="hero-sub"></div>
               <div id="profitChart" class="line-chart"></div>
             </div>
           </div>
+          <!-- 2. 재고 상태: 재고원가(목표 대비) / 평균 마진율 / 회전율 -->
+          <div id="dashKpis" class="dash-kpis"></div>
+          <!-- 3. 지금 재고의 브랜드 구성 -->
           <section class="brand-mix">
-            <div class="chart-head"><span class="chart-title">브랜드 비율</span><span class="chart-now">상품 수 기준 · 개인구매 제외</span></div>
+            <div class="chart-head">
+              <span class="chart-title">브랜드 비율</span>
+              <div class="seg" id="brandMixMode">
+                <button type="button" class="active" data-mode="count">상품 수</button>
+                <button type="button" data-mode="cost">재고원가</button>
+              </div>
+            </div>
             <div id="brandMix" class="brand-body"></div>
           </section>
         </section>

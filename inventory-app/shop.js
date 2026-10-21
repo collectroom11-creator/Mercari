@@ -58,69 +58,93 @@ const bigNum = (n, unit) => `${Math.round(n).toLocaleString()}<small>${unit}</sm
 const cssVar = (name) => `var(${name})`;
 
 // ---- 대시보드 ----
+const STATUS_COLORS = { 배송전: "var(--tertiary)", 업로드전: "var(--warning)", 판매중: "var(--accent)" };
+let brandMixData = null;
+let brandMixMode = "count";
+
 async function renderDashboard() {
-  const [s, months] = await Promise.all([window.api.getShopStats(), window.api.getMonthlySales()]);
-  // 타일마다 큰 숫자 하나 + 작은 보조 한 줄(재고 카드와 같은 위계). 라벨은 맨 위 작은 회색.
-  const cards = [
-    ["이번 달 매출", bigNum(s.monthRevenue, "원"), "", `판매 ${s.monthSoldCount}건`],
-    ["이번 달 순이익", bigNum(s.monthProfit, "원"), s.monthProfit >= 0 ? "positive" : "negative", `회전율 ${s.turnoverPct}%`],
-    ["평균 마진율", s.avgMarginPct == null ? "-" : bigNum(s.avgMarginPct, "%"), "", [s.soldAvgMarginPct, s.stockAvgMarginPct].some((v) => v != null) ? `판매 ${s.soldAvgMarginPct ?? "-"}% · 재고 ${s.stockAvgMarginPct ?? "-"}%` : ""],
-    ["재고원가 합계", bigNum(s.stockCost, "원"), "", "배송전 · 업로드전 · 판매중"],
-  ];
-  document.getElementById("statCards").innerHTML = cards
-    .map(([label, value, cls, sub]) => `
-      <div class="stat-card">
-        <div class="stat-label">${label}</div>
-        <div class="stat-value ${cls}">${value}</div>
-        <div class="stat-sub">${sub || "&nbsp;"}</div>
-      </div>`)
-    .join("");
+  const [s, months, mix] = await Promise.all([window.api.getShopStats(), window.api.getMonthlySales(), window.api.getBrandMix()]);
+  const cur = months[months.length - 1] || { revenue: 0, profit: 0 };
+  const prev = months[months.length - 2];
+  // 지난달 대비: 화살표 + 차이. 지난달이 0이면 비교하지 않는다.
+  const vsPrev = (key) => {
+    if (!prev) return "";
+    const diff = cur[key] - prev[key];
+    if (diff === 0) return " · 지난달과 같음";
+    return ` · 지난달보다 <span class="${diff > 0 ? "up" : "down"}">${diff > 0 ? "▲" : "▼"} ${shortWon(Math.abs(diff))}</span>`;
+  };
+  const marginPct = s.monthRevenue > 0 ? Math.round((s.monthProfit / s.monthRevenue) * 100) : null;
 
-  // 차트 제목 오른쪽에 이번 달 값을 작게
-  const last = months[months.length - 1];
-  document.getElementById("revenueNow").textContent = last ? `이번 달 ${shortWon(last.revenue)}` : "";
-  document.getElementById("profitNow").textContent = last ? `이번 달 ${shortWon(last.profit)}` : "";
+  document.getElementById("revenueHero").innerHTML = bigNum(s.monthRevenue, "원");
+  document.getElementById("revenueSub").innerHTML = `판매 <b>${s.monthSoldCount}건</b>${vsPrev("revenue")}`;
+  const profitHero = document.getElementById("profitHero");
+  profitHero.innerHTML = bigNum(s.monthProfit, "원");
+  profitHero.classList.toggle("negative", s.monthProfit < 0);
+  document.getElementById("profitSub").innerHTML = `${marginPct == null ? "" : `순이익률 <b>${marginPct}%</b>`}${vsPrev("profit")}`;
 
-  renderStockMix(await window.api.listItems());
-  renderBrandMix(await window.api.getBrandMix());
+  renderKpis(s);
+  brandMixData = mix;
+  renderBrandMix();
 
   renderLineChart(document.getElementById("revenueChart"), months, "revenue", cssVar("--accent"));
   renderLineChart(document.getElementById("profitChart"), months, "profit", cssVar("--positive"));
 }
 
-// 대시보드 아래쪽: 재고 현황 막대 + 최근 판매 / 오래 머문 상품 목록(재고 보드와 같은 행 스타일)
-function renderStockMix(items) {
-  const groups = [
-    { name: "배송전", color: "var(--tertiary)", match: (i) => i.status === "배송전" },
-    { name: "업로드전", color: "var(--warning)", match: (i) => i.status === "업로드전" },
-    { name: "판매중", color: "var(--accent)", match: (i) => i.status === "판매중" || i.status === "재고" },
-  ].map((g) => {
-    const list = items.filter(g.match);
-    return { ...g, count: list.length, cost: list.reduce((s, i) => s + i.costKrw, 0) };
-  });
-  const total = groups.reduce((s, g) => s + g.cost, 0) || 1;
-  document.getElementById("stockMix").innerHTML = `
-    <div class="chart-head"><span class="chart-title">재고 현황</span><span class="chart-now">원가 기준</span></div>
-    <div class="mix-bar">${groups.map((g) => `<span style="width:${(g.cost / total) * 100}%;background:${g.color}"></span>`).join("")}</div>
-    <div class="mix-legend">${groups.map((g) => `
-      <div><span class="mix-dot" style="background:${g.color}"></span>${g.name} <b>${g.count}개</b> <span class="muted">${shortWon(g.cost)}</span></div>`).join("")}
+// 재고 지표 3개. 재고원가는 목표(설정 stockTargetKrw, 기본 600만) 대비 모자람/넘침과 단계별 구성을 같이 보여준다.
+function renderKpis(s) {
+  const target = s.stockTargetKrw;
+  const gap = s.stockCost - target;
+  const scale = Math.max(target, s.stockCost) || 1;
+  const segs = s.stockByStatus.map((g) => `<span style="width:${(g.cost / scale) * 100}%;background:${STATUS_COLORS[g.status]}"></span>`).join("");
+  const targetLine = s.stockCost > target ? `<i class="target-line" style="left:${(target / scale) * 100}%"></i>` : "";
+  const margin = s.avgMarginPct == null ? "-" : bigNum(s.avgMarginPct, "%");
+  document.getElementById("dashKpis").innerHTML = `
+    <div class="kpi">
+      <div class="kpi-head"><span class="kpi-label">재고원가 · 목표 ${shortWon(target)}</span>
+        <span class="kpi-target ${gap < 0 ? "short" : "over"}">${gap < 0 ? `${shortWon(-gap)} 부족` : gap === 0 ? "목표 달성" : `${shortWon(gap)} 초과`}</span></div>
+      <div class="kpi-value">${bigNum(s.stockCost, "원")}</div>
+      <div class="target-bar">${segs}${targetLine}</div>
+      <div class="mix-legend">${s.stockByStatus.map((g) => `
+        <span><span class="mix-dot" style="background:${STATUS_COLORS[g.status]}"></span>${g.status}<b>${g.count}개 · ${shortWon(g.cost)}</b></span>`).join("")}
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">평균 마진율</div>
+      <div class="kpi-value">${margin}</div>
+      <div class="kpi-sub">판매 <b>${s.soldAvgMarginPct ?? "-"}%</b> · 재고 <b>${s.stockAvgMarginPct ?? "-"}%</b></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">회전율 · 이번 달</div>
+      <div class="kpi-value">${bigNum(s.turnoverPct, "%")}</div>
+      <div class="kpi-sub">판매중 원가 <b>${shortWon(s.listedCost)}</b></div>
     </div>`;
 }
 
-// 브랜드 비율 도넛 + 오른쪽 표. 조각이나 표 줄에 올리면 그 브랜드만 진하게, 가운데에 이름과 개수.
-function renderBrandMix(mix) {
+// 브랜드 비율 도넛 + 오른쪽 표 (상품 수 / 재고원가 전환). 조각이나 표 줄에 올리면 그 브랜드만 진하게.
+document.querySelectorAll("#brandMixMode button").forEach((b) =>
+  b.addEventListener("click", () => {
+    brandMixMode = b.dataset.mode;
+    document.querySelectorAll("#brandMixMode button").forEach((x) => x.classList.toggle("active", x === b));
+    renderBrandMix();
+  })
+);
+
+function renderBrandMix() {
   const box = document.getElementById("brandMix");
-  if (!mix.total) {
-    box.innerHTML = `<div class="empty">상품이 없어요</div>`;
+  const mix = brandMixData && brandMixData[brandMixMode];
+  if (!mix || !mix.total) {
+    box.innerHTML = `<div class="empty">재고가 없어요</div>`;
     return;
   }
+  const byCost = brandMixMode === "cost";
+  const fmt = (v) => (byCost ? shortWon(v) : `${v}개`);
   const color = (s, i) => (s.name === "기타" ? "var(--brand-other)" : `var(--brand-${i + 1})`);
-  const pct = (n) => Math.round((n / mix.total) * 100);
+  const pct = (v) => Math.round((v / mix.total) * 100);
   const R = 84, r = 56, C = 84;
   const pt = (rad, a) => [C + rad * Math.sin(a), C - rad * Math.cos(a)];
   let a0 = 0;
   const paths = mix.slices.map((s, i) => {
-    const a1 = a0 + (s.count / mix.total) * Math.PI * 2;
+    const a1 = a0 + (s.value / mix.total) * Math.PI * 2;
     const end = a1 - a0 >= Math.PI * 2 ? a1 - 1e-4 : a1;
     const large = end - a0 > Math.PI ? 1 : 0;
     const [x0, y0] = pt(R, a0), [x1, y1] = pt(R, end), [x2, y2] = pt(r, end), [x3, y3] = pt(r, a0);
@@ -128,15 +152,16 @@ function renderBrandMix(mix) {
     a0 = a1;
     return `<path d="${d}" fill="${color(s, i)}" data-i="${i}"></path>`;
   });
+  const totalLabel = byCost ? "지금 재고원가" : "지금 재고";
   const center = (num, sub) => `<text x="${C}" y="${C + 2}" text-anchor="middle" class="donut-center-num">${num}</text><text x="${C}" y="${C + 22}" text-anchor="middle" class="donut-center-sub">${sub}</text>`;
   box.innerHTML = `
-    <svg class="donut" viewBox="0 0 168 168">${paths.join("")}<g id="donutCenter">${center(mix.total, "전체 상품")}</g></svg>
+    <svg class="donut" viewBox="0 0 168 168">${paths.join("")}<g id="donutCenter">${center(fmt(mix.total), totalLabel)}</g></svg>
     <div class="brand-legend">${mix.slices.map((s, i) => `
       <div class="brand-row" data-i="${i}">
         <span class="mix-dot" style="background:${color(s, i)}"></span>
         <span class="brand-name">${escapeHtml(s.name)}</span>
-        <span class="brand-count">${s.count}개</span>
-        <span class="brand-pct">${pct(s.count)}%</span>
+        <span class="brand-count">${fmt(s.value)}</span>
+        <span class="brand-pct">${pct(s.value)}%</span>
       </div>`).join("")}
     </div>`;
   const centerEl = box.querySelector("#donutCenter");
@@ -144,7 +169,7 @@ function renderBrandMix(mix) {
     box.classList.toggle("focus", i != null);
     box.querySelectorAll("[data-i]").forEach((el) => el.classList.toggle("on", el.dataset.i === String(i)));
     const s = mix.slices[i];
-    centerEl.innerHTML = s ? center(`${pct(s.count)}%`, `${escapeHtml(s.name)} ${s.count}개`) : center(mix.total, "전체 상품");
+    centerEl.innerHTML = s ? center(`${pct(s.value)}%`, `${escapeHtml(s.name)} ${fmt(s.value)}`) : center(fmt(mix.total), totalLabel);
   };
   box.querySelectorAll("[data-i]").forEach((el) => {
     el.addEventListener("mouseenter", () => focus(Number(el.dataset.i)));
@@ -187,7 +212,7 @@ function renderLineChart(el, months, key, color) {
       ${values.map((v, i) => `
         <circle cx="${x(i)}" cy="${y(v)}" r="2.8" style="fill:${v < 0 ? "var(--negative)" : color}"/>
         ${v !== 0 ? `<text x="${x(i)}" y="${y(v) - 10}" text-anchor="middle" class="line-value ${v < 0 ? "neg" : ""}">${shortWon(v)}</text>` : ""}
-        <text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="line-label">${Number(months[i].month.slice(5))}월</text>`).join("")}
+        <text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="line-label${i === months.length - 1 ? " now" : ""}">${Number(months[i].month.slice(5))}월</text>`).join("")}
     </svg>`;
 }
 pageRenderers["page-dashboard"] = renderDashboard;

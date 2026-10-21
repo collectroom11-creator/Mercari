@@ -94,3 +94,17 @@ test("computeShopStats: 마진을 계산할 상품이 없으면 평균 마진율
   assert.equal(s.avgMarginPct, null);
   assert.equal(s.soldAvgMarginPct, null);
 });
+
+test("computeShopStats: 재고 단계별 원가와 개수 (재고 상태는 판매중으로)", () => {
+  const list = [
+    { status: "배송전", costKrw: 100 }, { status: "배송전", costKrw: 50 },
+    { status: "업로드전", costKrw: 30 },
+    { status: "판매중", costKrw: 20 }, { status: "재고", costKrw: 5 },
+    { status: "판매완료", costKrw: 999, actualPrice: 1, soldAt: new Date(2026, 9, 1).toISOString() },
+  ];
+  assert.deepEqual(computeShopStats(list, { now }).stockByStatus, [
+    { status: "배송전", count: 2, cost: 150 },
+    { status: "업로드전", count: 1, cost: 30 },
+    { status: "판매중", count: 2, cost: 25 },
+  ]);
+});

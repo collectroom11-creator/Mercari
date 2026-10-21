@@ -42,22 +42,27 @@ function detectBrand(title) {
   return hit ? hit.name : null;
 }
 
-// 개수 기준 브랜드 비율. 개인구매는 사업 재고가 아니라 뺀다. 많은 순으로 top개까지,
-// 나머지와 브랜드를 못 찾은 상품은 '기타' 한 조각으로.
-function computeBrandMix(items, { top = 7 } = {}) {
-  const counts = new Map();
-  let other = 0;
-  const list = items.filter((i) => i.status !== "개인구매");
+// 지금 가진 재고(판매완료·개인구매 제외)의 브랜드 비율. by: "count"(상품 수) 또는 "cost"(원가 합).
+// 큰 순으로 top개까지, 나머지와 브랜드를 못 찾은 상품은 '기타' 한 조각으로.
+function computeBrandMix(items, { top = 7, by = "count" } = {}) {
+  const groups = new Map();
+  const other = { name: "기타", value: 0, count: 0 };
+  const list = items.filter((i) => i.status !== "판매완료" && i.status !== "개인구매");
   for (const i of list) {
-    const b = detectBrand(i.title);
-    if (b) counts.set(b, (counts.get(b) || 0) + 1);
-    else other += 1;
+    const name = detectBrand(i.title);
+    const g = name ? groups.get(name) || { name, value: 0, count: 0 } : other;
+    g.value += by === "cost" ? i.costKrw : 1;
+    g.count += 1;
+    if (name) groups.set(name, g);
   }
-  const sorted = [...counts].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  const sorted = [...groups.values()].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
   const slices = sorted.slice(0, top);
-  other += sorted.slice(top).reduce((s, b) => s + b.count, 0);
-  if (other > 0) slices.push({ name: "기타", count: other });
-  return { total: list.length, slices };
+  for (const g of sorted.slice(top)) {
+    other.value += g.value;
+    other.count += g.count;
+  }
+  if (other.count > 0) slices.push(other);
+  return { total: slices.reduce((s, g) => s + g.value, 0), slices };
 }
 
 module.exports = { detectBrand, computeBrandMix };

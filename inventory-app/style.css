@@ -166,30 +166,56 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .page-title { font-size: 13px; font-weight: 600; margin: 0 0 10px; }
 
 /* ---- 대시보드 ---- */
-/* 숫자 타일: 재고 카드처럼 따로 떨어진 둥근 회색 타일 */
-.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
-.stat-card { padding: 14px 16px 13px; background: var(--group-bg); border-radius: 12px; min-width: 0; }
-.stat-label { font-size: 12px; font-weight: 500; color: var(--secondary); margin-bottom: 6px; }
-/* 큰 숫자: 얇고 크게(주식, 계산기 앱 느낌), 단위는 작은 회색 */
-.stat-value {
+/* 상자 없이 흰 바닥에 바로 놓고, 구역은 얇은 선과 여백으로만 나눈다.
+   1) 이번 달 매출/순이익: 큰 숫자 + 6개월 추이  2) 재고 지표  3) 브랜드 비율 */
+#page-dashboard.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.dash-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; flex-shrink: 0; padding-top: 2px; }
+.hero { min-width: 0; }
+.hero-label, .kpi-label { font-size: 12px; font-weight: 500; color: var(--secondary); }
+/* 큰 숫자: 숫자는 크게, 단위(원, %)는 작은 회색 */
+.hero-value, .kpi-value {
   font-family: "SF Pro Display", -apple-system, system-ui, sans-serif;
-  font-size: 24px; font-weight: 600; letter-spacing: -0.4px; line-height: 1.15;
-  font-variant-numeric: tabular-nums; white-space: nowrap;
+  font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.15;
 }
-.stat-value small { font-size: 13px; font-weight: 500; color: var(--secondary); margin-left: 2px; letter-spacing: 0; }
-.stat-value.positive { color: var(--positive); }
-.stat-value.negative { color: var(--negative); }
-.stat-sub { margin-top: 4px; font-size: 12px; color: var(--secondary); white-space: nowrap; }
-
-.chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.chart-card { padding: 14px 16px 10px; }
-.chart-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
-.chart-now { font-size: 12px; color: var(--secondary); font-variant-numeric: tabular-nums; }
-.chart-title { font-size: 13px; font-weight: 600; }
-.line-svg { width: 100%; height: auto; display: block; }
+.hero-value { font-size: 30px; letter-spacing: -0.6px; margin-top: 2px; }
+.kpi-value { font-size: 22px; letter-spacing: -0.4px; margin-top: 3px; }
+.hero-value small, .kpi-value small { font-size: 13px; font-weight: 500; color: var(--secondary); margin-left: 2px; letter-spacing: 0; }
+.hero-value.negative { color: var(--negative); }
+.hero-sub, .kpi-sub { margin-top: 3px; font-size: 12px; color: var(--secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hero-sub b, .kpi-sub b { font-weight: 600; color: var(--label); }
+.up { color: var(--positive); }
+.down { color: var(--negative); }
+.line-chart { margin-top: 4px; }
+.line-svg { width: 100%; height: auto; display: block; max-height: 150px; }
 .line-value { font-size: 11px; font-weight: 600; fill: var(--label); }
 .line-value.neg { fill: var(--negative); }
 .line-label { font-size: 11px; font-weight: 500; fill: var(--secondary); }
+.line-label.now { fill: var(--label); font-weight: 600; }
+
+/* 재고 지표: 재고원가(목표 막대 포함)가 넓게, 마진율·회전율은 좁게 */
+.dash-kpis { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); flex-shrink: 0; padding: 14px 0; margin-top: 10px; border-top: 1px solid var(--separator); }
+.kpi { min-width: 0; padding: 0 20px; border-left: 1px solid var(--separator); }
+.kpi:first-child { padding-left: 0; border-left: 0; }
+.kpi-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.kpi-target { font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kpi-target.short { color: var(--warning); }
+.kpi-target.over { color: var(--positive); }
+/* 목표 막대: 회색 바탕이 목표 600만, 단계별로 쌓인다. 목표를 넘으면 바탕 대신 목표선 표시 */
+.target-bar { position: relative; display: flex; gap: 2px; height: 8px; margin: 8px 0 6px; border-radius: 4px; overflow: hidden; background: var(--fill); }
+.target-bar span { display: block; min-width: 2px; }
+.target-line { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--label); border-radius: 1px; }
+.mix-legend { display: flex; gap: 14px; font-size: 12px; color: var(--secondary); white-space: nowrap; }
+.mix-legend b { color: var(--label); font-weight: 600; margin-left: 3px; }
+.mix-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+
+.chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.chart-now { font-size: 12px; color: var(--secondary); font-variant-numeric: tabular-nums; }
+.chart-title { font-size: 13px; font-weight: 600; }
+/* 작은 세그먼트 컨트롤 */
+.seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 7px; background: var(--field-bg); }
+.seg button { border: 0; background: none; border-radius: 5px; padding: 2px 10px; font-size: 12px; font-weight: 500; color: var(--label); cursor: default; }
+.seg button.active { background: var(--content-bg); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); }
+@media (prefers-color-scheme: dark) { .seg button.active { background: #636366; box-shadow: none; } }
 
 /* ---- 재고 입력: 링크 추가 + 상태별 보드 ---- */
 #tab-list.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
@@ -342,14 +368,6 @@ body.sidebar-hidden .toolbar { padding-left: 84px; }
 body.sidebar-hidden .toolbar-alerts { display: flex; }
 body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 
-/* ---- 대시보드: 재고 현황 + 목록 ---- */
-.stock-mix { padding: 14px 16px; margin-top: 10px; }
-.mix-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 6px 0 10px; background: var(--fill); }
-.mix-bar span { display: block; min-width: 2px; }
-.mix-legend { display: flex; gap: 20px; font-size: 12px; color: var(--secondary); flex-wrap: wrap; }
-.mix-legend b { color: var(--label); font-weight: 600; margin: 0 2px; }
-.mix-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
-
 /* ---- 찜 목록: 사진 격자 ---- */
 .wish-add { margin-bottom: 14px; }
 .wgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 14px 12px; }
@@ -381,21 +399,7 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 .bkw-name { font-weight: 600; margin-bottom: 6px; }
 .bkw .inline-row { margin-top: 2px; }
 
-/* ---- 대시보드: 창 높이에 맞춰 늘고, 페이지 자체는 스크롤하지 않는다 ---- */
-#page-dashboard.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-#page-dashboard .stat-grid, #page-dashboard .chart-grid, #page-dashboard .stock-mix { flex-shrink: 0; }
 #page-dashboard .brand-mix { flex: 1 0 auto; padding-top: 14px; border-top: 1px solid var(--separator); }
-/* 창이 넓어져도 그래프가 위아래로 계속 커지지 않게 */
-#page-dashboard .line-svg { max-height: 165px; }
-
-/* ---- 대시보드: 상자 없이 흰 바닥에 바로 놓고, 구역은 얇은 선과 여백으로만 나눈다 ---- */
-#page-dashboard .group, #page-dashboard .stat-card { background: transparent; border-radius: 0; }
-#page-dashboard .stat-grid { gap: 0; margin: 0; padding: 14px 0 4px; }
-#page-dashboard .stat-card { padding: 2px 16px; border-left: 1px solid var(--separator); }
-#page-dashboard .stat-card:first-child { padding-left: 0; border-left: 0; }
-#page-dashboard .chart-grid { gap: 32px; padding: 14px 0 6px; }
-#page-dashboard .chart-card { padding: 0; }
-#page-dashboard .stock-mix { margin: 0; padding: 4px 0 10px; }
 
 /* 브랜드 비율 도넛: 색은 순서대로 고정(색맹 구분 검증된 팔레트), 기타는 회색 */
 :root { --brand-1: #2a78d6; --brand-2: #eb6834; --brand-3: #1baf7a; --brand-4: #eda100; --brand-5: #e87ba4; --brand-6: #008300; --brand-7: #6250d6; --brand-other: #c7c7cc; }
@@ -412,6 +416,6 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 .brand-row:nth-child(4n), .brand-row:last-child { border-bottom: 0; }
 .brand-row .mix-dot { margin-right: 0; flex-shrink: 0; }
 .brand-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.brand-count { color: var(--secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.brand-count { color: var(--secondary); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
 .brand-pct { width: 36px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .brand-body.focus .donut path:not(.on), .brand-body.focus .brand-row:not(.on) { opacity: 0.3; }

@@ -346,8 +346,14 @@ function saveAlertsState(state) {
   fs.writeFileSync(ALERTS_STATE_FILE, JSON.stringify(state, null, 2));
 }
 
-ipcMain.handle("get-shop-stats", () => computeShopStats(listItems(DB_FILE)));
-ipcMain.handle("get-brand-mix", () => computeBrandMix(listItems(DB_FILE)));
+ipcMain.handle("get-shop-stats", () => ({
+  ...computeShopStats(listItems(DB_FILE)),
+  stockTargetKrw: loadSettings(SETTINGS_FILE).stockTargetKrw,
+}));
+ipcMain.handle("get-brand-mix", () => {
+  const items = listItems(DB_FILE);
+  return { count: computeBrandMix(items), cost: computeBrandMix(items, { by: "cost" }) };
+});
 // 대시보드 그래프는 최근 6개월 고정
 ipcMain.handle("get-monthly-sales", () => computeMonthlySales(listItems(DB_FILE), { lastMonths: 6 }));
 

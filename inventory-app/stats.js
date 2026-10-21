@@ -35,6 +35,11 @@ function computeShopStats(items, { now = new Date() } = {}) {
     .filter((i) => i.status !== "판매완료" && i.status !== "개인구매")
     .reduce((s, i) => s + i.costKrw, 0);
   const base = monthSoldCost + listedCost;
+  // "재고"는 단계 구분이 생기기 전 상태값이라 판매중으로 친다.
+  const stockByStatus = ["배송전", "업로드전", "판매중"].map((status) => {
+    const list = items.filter((i) => (i.status === "재고" ? "판매중" : i.status) === status);
+    return { status, count: list.length, cost: list.reduce((s, i) => s + i.costKrw, 0) };
+  });
   const rates = marginRates(items);
   return {
     monthRevenue,
@@ -46,6 +51,7 @@ function computeShopStats(items, { now = new Date() } = {}) {
     avgMarginPct: avgPct(rates),
     soldAvgMarginPct: avgPct(rates.filter((r) => r.sold)),
     stockAvgMarginPct: avgPct(rates.filter((r) => !r.sold)),
+    stockByStatus,
   };
 }
 
