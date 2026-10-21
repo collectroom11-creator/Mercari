@@ -248,7 +248,8 @@ async function advanceStatus(item) {
 
 function daysLabel(item) {
   if (item.status === "판매완료") {
-    return item.listedAt && item.soldAt ? { text: `${daysBetween(item.listedAt, item.soldAt)}일만에 판매`, warn: false } : null;
+    // 판매완료 열에 있으니 "N일만에 판매" 대신 짧게 "N일"만(작은 사진 밖으로 넘치지 않게).
+    return item.listedAt && item.soldAt ? { text: `${daysBetween(item.listedAt, item.soldAt)}일`, warn: false } : null;
   }
   const since = item.listedAt ?? item.statusChangedAt ?? item.createdAt;
   const days = daysSince(since);
