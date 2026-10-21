@@ -189,7 +189,8 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 /* 그래프는 칸 크기를 재서 그 픽셀 크기 그대로 그린다(늘려서 찌그러지지 않게). svg는 칸 크기에 영향을 안 주도록 띄운다 */
 .line-chart { position: relative; flex: 1 1 auto; min-height: 130px; max-height: 280px; margin-top: 4px; }
 .line-svg { position: absolute; inset: 0; display: block; }
-.line-value { font-size: 11px; font-weight: 600; fill: var(--label); }
+/* 값 글씨 뒤에 바탕색 테두리를 둘러서 선과 겹쳐도 읽히게 */
+.line-value { font-size: 11px; font-weight: 600; fill: var(--label); paint-order: stroke; stroke: var(--content-bg); stroke-width: 5px; stroke-linejoin: round; }
 .line-value.neg { fill: var(--negative); }
 .line-label { font-size: 11px; font-weight: 500; fill: var(--secondary); }
 .line-label.now { fill: var(--label); font-weight: 600; }
