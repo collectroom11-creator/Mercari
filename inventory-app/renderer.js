@@ -249,12 +249,14 @@ async function advanceStatus(item) {
 function daysLabel(item) {
   if (item.status === "판매완료") {
     // 좁은 카드에 맞게 짧게 "N일"(업로드 후 며칠 만에 팔렸는지)
-    return item.listedAt && item.soldAt ? { text: `${daysBetween(item.listedAt, item.soldAt)}일`, warn: false } : null;
+    if (!item.listedAt || !item.soldAt) return null;
+    const d = daysBetween(item.listedAt, item.soldAt);
+    return { text: d === 0 ? "당일" : `${d}일`, warn: false };
   }
   const since = item.listedAt ?? item.statusChangedAt ?? item.createdAt;
   const days = daysSince(since);
-  // 판매중으로 2주 넘게 머물면 눈에 띄게 표시한다.
-  return { text: `${days}일째`, warn: !!item.listedAt && days >= 14 };
+  // "0일째"는 어색해서 오늘 들어온 건 "오늘". 판매중으로 2주 넘게 머물면 눈에 띄게 표시한다.
+  return { text: days === 0 ? "오늘" : `${days}일째`, warn: !!item.listedAt && days >= 14 };
 }
 
 // 재고 카드: 왼쪽 작은 정사각 사진, 오른쪽에 판매가(크게, 바로 수정) / 원가 · 마진(작게).
