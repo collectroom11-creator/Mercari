@@ -24,6 +24,10 @@ test("computeShopStats: 10월 매출/순이익/회전율/판매중 원가", () =
   assert.equal(s.turnoverPct, Math.round((355545 / (355545 + 110000)) * 100));
 });
 
+test("computeShopStats: 이번 달 판매 건수 (actualPrice 없는 건 제외)", () => {
+  assert.equal(computeShopStats(items, { now }).monthSoldCount, 3);
+});
+
 test("computeShopStats: 재고원가 합 = 안 팔린 상품(배송전/업로드전/판매중) 원가, 개인구매 제외", () => {
   const list = [
     ...items,

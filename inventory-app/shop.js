@@ -44,10 +44,12 @@ const cssVar = (name) => `var(${name})`;
 // ---- 대시보드 ----
 async function renderDashboard() {
   const [s, months] = await Promise.all([window.api.getShopStats(), window.api.getMonthlySales()]);
+  // 타일마다 큰 숫자 하나 + 작은 보조 한 줄(재고 카드와 같은 위계). 라벨은 맨 위 작은 회색.
+  const marginPct = s.monthRevenue > 0 ? Math.round((s.monthProfit / s.monthRevenue) * 100) : null;
   const cards = [
-    ["이번 달 매출", bigNum(s.monthRevenue, "원"), "", ""],
-    ["이번 달 순이익", bigNum(s.monthProfit, "원"), s.monthProfit >= 0 ? "positive" : "negative", ""],
-    ["회전율 (업로드 기준)", bigNum(s.turnoverPct, "%"), "", `판매중 재고원가 ${won(s.listedCost)}`],
+    ["이번 달 매출", bigNum(s.monthRevenue, "원"), "", `판매 ${s.monthSoldCount}건`],
+    ["이번 달 순이익", bigNum(s.monthProfit, "원"), s.monthProfit >= 0 ? "positive" : "negative", marginPct == null ? "" : `순이익률 ${marginPct}%`],
+    ["회전율", bigNum(s.turnoverPct, "%"), "", `판매중 재고원가 ${won(s.listedCost)}`],
     ["재고원가 합계", bigNum(s.stockCost, "원"), "", "배송전 · 업로드전 · 판매중"],
   ];
   document.getElementById("statCards").innerHTML = cards
@@ -55,9 +57,14 @@ async function renderDashboard() {
       <div class="stat-card">
         <div class="stat-label">${label}</div>
         <div class="stat-value ${cls}">${value}</div>
-        ${sub ? `<div class="stat-sub">${sub}</div>` : ""}
+        <div class="stat-sub">${sub || "&nbsp;"}</div>
       </div>`)
     .join("");
+
+  // 차트 제목 오른쪽에 이번 달 값을 작게
+  const last = months[months.length - 1];
+  document.getElementById("revenueNow").textContent = last ? `이번 달 ${shortWon(last.revenue)}` : "";
+  document.getElementById("profitNow").textContent = last ? `이번 달 ${shortWon(last.profit)}` : "";
 
   renderLineChart(document.getElementById("revenueChart"), months, "revenue", cssVar("--accent"));
   renderLineChart(document.getElementById("profitChart"), months, "profit", cssVar("--positive"));
@@ -74,7 +81,7 @@ function renderLineChart(el, months, key, color) {
     el.innerHTML = `<div class="empty">아직 판매 기록이 없어요</div>`;
     return;
   }
-  const W = 420, H = 180, padX = 36, padTop = 28, padBottom = 28;
+  const W = 420, H = 160, padX = 30, padTop = 26, padBottom = 26;
   const values = months.map((m) => m[key]);
   const max = Math.max(0, ...values);
   const min = Math.min(0, ...values);

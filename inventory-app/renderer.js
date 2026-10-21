@@ -357,7 +357,8 @@ function buildCard(item) {
   if (!sold) {
     const adv = document.createElement("button");
     adv.className = "kadv";
-    adv.textContent = "›";
+    // 글자 "›"는 기준선 때문에 원 안에서 가운데가 안 맞아서 SVG 화살표를 쓴다.
+    adv.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     adv.title = "다음 단계로";
     adv.addEventListener("click", (e) => {
       e.stopPropagation();

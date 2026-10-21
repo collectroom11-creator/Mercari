@@ -30,6 +30,7 @@ function computeShopStats(items, { now = new Date() } = {}) {
     turnoverPct: monthSoldCost > 0 ? Math.round((monthSoldCost / base) * 100) : 0,
     listedCost,
     stockCost,
+    monthSoldCount: monthSold.length,
   };
 }
 

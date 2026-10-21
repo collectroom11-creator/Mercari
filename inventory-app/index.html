@@ -58,11 +58,11 @@
           <div id="statCards" class="stat-grid"></div>
           <div class="chart-grid">
             <div class="group chart-card">
-              <div class="chart-title">월별 매출</div>
+              <div class="chart-head"><span class="chart-title">월별 매출</span><span id="revenueNow" class="chart-now"></span></div>
               <div id="revenueChart" class="line-chart"></div>
             </div>
             <div class="group chart-card">
-              <div class="chart-title">월별 순이익</div>
+              <div class="chart-head"><span class="chart-title">월별 순이익</span><span id="profitNow" class="chart-now"></span></div>
               <div id="profitChart" class="line-chart"></div>
             </div>
           </div>
@@ -72,7 +72,7 @@
           <div class="add-card">
             <div class="add-row">
               <input id="urlInput" placeholder="켄즈포스트 상품 링크를 붙여넣으세요">
-              <button id="fetchBtn" class="btn-primary">추가</button>
+              <button id="fetchBtn" class="round-go" title="추가" aria-label="추가"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             </div>
             <p id="fetchResult" class="hint"></p>
 
