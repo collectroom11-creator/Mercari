@@ -58,6 +58,8 @@
           <div id="fxRateChip" class="fx-rate-chip" hidden></div>
           <!-- 지금 보고 있는 페이지에만 보이는 툴바 버튼 (data-for = 페이지 id) -->
           <button id="monthlyViewBtn" class="btn-ghost btn-sm page-action" data-for="tab-list" hidden>월별 정리</button>
+          <span id="ledgerImportResult" class="hint-inline page-action" data-for="page-ledger" hidden></span>
+          <button id="ledgerImportBtn" class="btn-ghost btn-sm page-action" data-for="page-ledger" hidden>백업 불러오기</button>
           <button id="filterSaveBtn" class="btn-primary btn-sm page-action" data-for="page-filters" hidden>저장</button>
         </div>
       </header>
@@ -120,10 +122,6 @@
         <section id="page-filters" class="page"></section>
 
         <section id="page-ledger" class="page ledger-view">
-          <div class="ledger-toolbar">
-            <span id="ledgerImportResult" class="hint-inline"></span>
-            <button id="ledgerImportBtn" class="btn-ghost">백업 불러오기</button>
-          </div>
           <iframe id="ledgerFrame" class="ledger-frame" src="ledger/ledger.html"></iframe>
         </section>
       </div>
