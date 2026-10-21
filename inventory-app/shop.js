@@ -86,9 +86,18 @@ async function renderDashboard() {
   brandMixData = mix;
   renderBrandMix();
 
-  renderLineChart(document.getElementById("revenueChart"), months, "revenue", cssVar("--accent"));
-  renderLineChart(document.getElementById("profitChart"), months, "profit", cssVar("--positive"));
+  dashMonths = months;
+  drawDashCharts();
 }
+
+// 창 크기가 바뀌면 그래프 칸 크기에 맞춰 다시 그린다
+let dashMonths = null;
+function drawDashCharts() {
+  if (!dashMonths) return;
+  renderLineChart(document.getElementById("revenueChart"), dashMonths, "revenue", cssVar("--accent"));
+  renderLineChart(document.getElementById("profitChart"), dashMonths, "profit", cssVar("--positive"));
+}
+new ResizeObserver(drawDashCharts).observe(document.getElementById("revenueChart"));
 
 // 재고 지표 3개. 재고원가는 목표(설정 stockTargetKrw, 기본 600만) 대비 모자람/넘침과 단계별 구성을 같이 보여준다.
 function renderKpis(s) {
@@ -188,7 +197,7 @@ function renderLineChart(el, months, key, color) {
     el.innerHTML = `<div class="empty">아직 판매 기록이 없어요</div>`;
     return;
   }
-  const W = 420, H = 160, padX = 30, padTop = 26, padBottom = 26;
+  const W = Math.round(el.clientWidth) || 420, H = Math.round(el.clientHeight) || 160, padX = 30, padTop = 26, padBottom = 26;
   const values = months.map((m) => m[key]);
   const max = Math.max(0, ...values);
   const min = Math.min(0, ...values);
@@ -202,7 +211,7 @@ function renderLineChart(el, months, key, color) {
   const gridYs = [padTop, (padTop + (H - padBottom)) / 2, H - padBottom];
   const gradId = `fill-${key}`;
   el.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" class="line-svg" role="img">
+    <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="line-svg" role="img">
       <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" style="stop-color:${color};stop-opacity:0.18"/><stop offset="1" style="stop-color:${color};stop-opacity:0"/>
       </linearGradient></defs>

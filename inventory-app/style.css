@@ -169,8 +169,9 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 /* 상자 없이 흰 바닥에 바로 놓고, 구역은 얇은 선과 여백으로만 나눈다.
    1) 이번 달 매출/순이익: 큰 숫자 + 6개월 추이  2) 재고 지표  3) 브랜드 비율 */
 #page-dashboard.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.dash-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; flex-shrink: 0; padding-top: 2px; }
-.hero { min-width: 0; }
+/* 남는 세로 공간은 매출/순이익 그래프가 채운다(아래에 빈 여백이 안 남게) */
+.dash-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; flex: 1 1 auto; min-height: 0; padding-top: 2px; }
+.hero { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .hero-label, .kpi-label { font-size: 12px; font-weight: 500; color: var(--secondary); }
 /* 큰 숫자: 숫자는 크게, 단위(원, %)는 작은 회색 */
 .hero-value, .kpi-value {
@@ -185,8 +186,9 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .hero-sub b, .kpi-sub b { font-weight: 600; color: var(--label); }
 .up { color: var(--positive); }
 .down { color: var(--negative); }
-.line-chart { margin-top: 4px; }
-.line-svg { width: 100%; height: auto; display: block; max-height: 150px; }
+/* 그래프는 칸 크기를 재서 그 픽셀 크기 그대로 그린다(늘려서 찌그러지지 않게). svg는 칸 크기에 영향을 안 주도록 띄운다 */
+.line-chart { position: relative; flex: 1 1 auto; min-height: 130px; margin-top: 4px; }
+.line-svg { position: absolute; inset: 0; display: block; }
 .line-value { font-size: 11px; font-weight: 600; fill: var(--label); }
 .line-value.neg { fill: var(--negative); }
 .line-label { font-size: 11px; font-weight: 500; fill: var(--secondary); }
@@ -402,7 +404,7 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 .bkw-name { font-weight: 600; margin-bottom: 6px; }
 .bkw .inline-row { margin-top: 2px; }
 
-#page-dashboard .brand-mix { flex: 1 0 auto; padding-top: 14px; border-top: 1px solid var(--separator); }
+#page-dashboard .brand-mix { flex: 0 0 auto; padding-top: 14px; border-top: 1px solid var(--separator); }
 
 /* 브랜드 비율 도넛: 색은 순서대로 고정(색맹 구분 검증된 팔레트), 기타는 회색 */
 :root { --brand-1: #2a78d6; --brand-2: #eb6834; --brand-3: #1baf7a; --brand-4: #eda100; --brand-5: #e87ba4; --brand-6: #008300; --brand-7: #6250d6; --brand-other: #c7c7cc; }
