@@ -197,9 +197,11 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .add-row { display: flex; gap: 8px; align-items: center; }
 .add-row input { flex: 1; border-radius: 100px; padding: 8px 16px; }
 /* 동그란 추가 버튼(화살표) */
-.round-go { width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--accent); color: #fff; padding: 0; cursor: default; }
-.round-go:hover { background: var(--accent-hover); }
-.round-go:disabled { background: var(--fill); color: var(--secondary); }
+/* 화면 배율이 1.095처럼 딱 안 떨어지면 버튼 상자가 37x38px처럼 잡혀 border-radius 원이
+   타원이 된다. 원은 상자 안에 radial-gradient로 그려서 늘 정원이 되게 한다. */
+.round-go { --go-bg: var(--accent); width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: radial-gradient(circle closest-side, var(--go-bg) calc(100% - 0.75px), transparent 100%); color: #fff; padding: 0; cursor: default; }
+.round-go:hover { --go-bg: var(--accent-hover); }
+.round-go:disabled { --go-bg: var(--fill); color: var(--secondary); }
 .round-go svg { width: 15px; height: 15px; }
 .manual-form { margin-top: 12px; padding: 14px 16px; }
 .field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 14px; margin-bottom: 12px; }
