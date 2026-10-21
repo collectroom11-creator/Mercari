@@ -2,6 +2,9 @@
 // 재고 입력 보드는 renderer.js가 담당한다.
 
 const won = (n) => `${Math.round(n).toLocaleString()}원`;
+// 입력칸 숫자도 화면의 다른 숫자처럼 쉼표를 찍어 보여준다(입력칸은 type=text).
+const fmtNum = (n) => (n == null || n === "" ? "" : Number(n).toLocaleString());
+const parseNum = (s) => Number(String(s).replace(/[^\d]/g, "")) || 0;
 const escapeHtml = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -20,6 +23,11 @@ function showPage(pageId) {
 document.querySelectorAll(".side-link[data-page]").forEach((link) => {
   link.addEventListener("click", () => showPage(link.dataset.page));
 });
+
+// 창이 비활성이면 사이드바 선택 표시를 회색으로(맥 기본 앱과 같은 동작)
+window.addEventListener("blur", () => document.body.classList.add("inactive"));
+window.addEventListener("focus", () => document.body.classList.remove("inactive"));
+document.body.classList.toggle("inactive", !document.hasFocus()); // 백그라운드에서 열렸을 때
 
 // 최신 macOS처럼 툴바 아래 구분선은 평소엔 없고, 본문을 스크롤했을 때만 보인다.
 const contentBody = document.querySelector(".content-body");
@@ -73,14 +81,21 @@ function renderLineChart(el, months, key, color) {
   const x = (i) => (months.length === 1 ? W / 2 : padX + (i * (W - padX * 2)) / (months.length - 1));
   const y = (v) => padTop + ((max - v) / range) * (H - padTop - padBottom);
   const points = values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
-  const zeroLine = min < 0 ? `<line x1="${padX}" x2="${W - padX}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--separator)" stroke-dasharray="3 3"/>` : "";
+  // 요즘 애플 차트처럼: 옅은 가로 안내선, 선 아래 은은한 채움, 작은 꽉 찬 점
+  const base = y(Math.max(min, 0));
+  const area = `${x(0)},${base} ${points} ${x(values.length - 1)},${base}`;
+  const gridYs = [padTop, (padTop + (H - padBottom)) / 2, H - padBottom];
+  const gradId = `fill-${key}`;
   el.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" class="line-svg" role="img">
-      <line x1="${padX}" x2="${W - padX}" y1="${H - padBottom}" y2="${H - padBottom}" style="stroke:var(--separator)"/>
-      ${zeroLine}
-      <polyline points="${points}" fill="none" style="stroke:${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" style="stop-color:${color};stop-opacity:0.18"/><stop offset="1" style="stop-color:${color};stop-opacity:0"/>
+      </linearGradient></defs>
+      ${gridYs.map((gy) => `<line x1="${padX}" x2="${W - padX}" y1="${gy}" y2="${gy}" style="stroke:var(--separator)" stroke-width="0.8"/>`).join("")}
+      <polygon points="${area}" fill="url(#${gradId})"/>
+      <polyline points="${points}" fill="none" style="stroke:${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
       ${values.map((v, i) => `
-        <circle cx="${x(i)}" cy="${y(v)}" r="3.5" style="fill:var(--content-bg);stroke:${v < 0 ? "var(--negative)" : color}" stroke-width="2"/>
+        <circle cx="${x(i)}" cy="${y(v)}" r="2.8" style="fill:${v < 0 ? "var(--negative)" : color}"/>
         ${v !== 0 ? `<text x="${x(i)}" y="${y(v) - 10}" text-anchor="middle" class="line-value ${v < 0 ? "neg" : ""}">${shortWon(v)}</text>` : ""}
         <text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="line-label">${Number(months[i].month.slice(5))}월</text>`).join("")}
     </svg>`;
@@ -111,6 +126,16 @@ const alertsBtn = document.getElementById("alertsBtn");
 const alertsPopup = document.getElementById("alertsPopup");
 const alertsBadge = document.getElementById("alertsBadge");
 const yen = (n) => `¥${Number(n).toLocaleString()}`;
+// "오늘 12:51", "어제 23:10", "10월 17일"처럼 사람이 읽기 쉬운 시각
+function friendlyTime(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const hm = d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const dayDiff = Math.round((new Date(now.toDateString()) - new Date(d.toDateString())) / 86400000);
+  if (dayDiff === 0) return `오늘 ${hm}`;
+  if (dayDiff === 1) return `어제 ${hm}`;
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
 const kenzLink = (id) => `https://kenzpost.com/mercari/bid.s/https://jp.mercari.com/item/${id}`;
 
 async function refreshAlerts() {
@@ -178,17 +203,16 @@ setInterval(refreshAlerts, 5 * 60 * 1000);
 async function renderWishlist() {
   const page = document.getElementById("page-wishlist");
   const { items, lastRunAt } = await window.api.getWishlist();
-  const fmt = (iso) => (iso ? new Date(iso).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-");
+  const fmt = (iso) => (iso ? friendlyTime(iso) : "-");
+  // 품절된 건 흐리게 맨 아래로. 출처는 대부분 켄즈포스트라 "직접 추가"만 작은 뱃지로 표시한다.
   const rows = items
     .sort((a, b) => Number(a.soldOut) - Number(b.soldOut))
     .map((w) => `
-      <tr>
-        <td class="col-title"><a href="#" data-open="${w.id}">${escapeHtml(w.title)}</a></td>
+      <tr class="${w.soldOut ? "dimmed" : ""}">
+        <td class="col-title"><a href="#" data-open="${w.id}">${escapeHtml(w.title)}</a>${w.manual ? ' <span class="badge">직접 추가</span>' : ""}${w.soldOut ? ' <span class="badge">품절</span>' : ""}</td>
         <td class="col-num">${w.lastPrice != null ? yen(w.lastPrice) : "-"}</td>
-        <td>${w.soldOut ? '<span class="badge badge-done">품절</span>' : ""}</td>
-        <td>${w.manual ? "직접 추가" : "켄즈포스트"}</td>
-        <td>${fmt(w.checkedAt)}</td>
-        <td>${w.manual ? `<button class="btn-ghost btn-sm" data-remove="${w.id}">삭제</button>` : ""}</td>
+        <td class="col-num muted">${fmt(w.checkedAt)}</td>
+        <td class="col-action">${w.manual ? `<button class="row-remove" data-remove="${w.id}" title="삭제">−</button>` : ""}</td>
       </tr>`).join("");
   page.innerHTML = `
     <div class="page-card">
@@ -198,12 +222,12 @@ async function renderWishlist() {
         <button id="wishAddBtn" class="btn-primary">추가</button>
       </div>
       <div id="wishAddMsg"></div>
-      <p class="hint">켄즈포스트 관심상품은 자동으로 들어와요. 가격 확인은 30분마다 자동으로 돌아요 (마지막 확인 ${fmt(lastRunAt)}).</p>
+      <p class="hint">켄즈포스트 관심상품은 자동으로 들어와요. 가격 확인은 30분마다 자동으로 돌아요 · 마지막 확인 ${fmt(lastRunAt)}</p>
     </div>
     <div class="page-card table-wrap">
       <table class="item-table">
-        <thead><tr><th class="col-title">상품</th><th class="col-num">현재가</th><th>상태</th><th>출처</th><th>마지막 확인</th><th></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="6" class="empty">찜 상품이 없어요</td></tr>`}</tbody>
+        <thead><tr><th class="col-title">상품</th><th class="col-num">현재가</th><th class="col-num">마지막 확인</th><th class="col-action"></th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="4" class="empty">찜 상품이 없어요</td></tr>`}</tbody>
       </table>
     </div>`;
 
@@ -260,8 +284,8 @@ function renderFilterPage(message = "") {
     .map((b, i) => `
       <tr>
         <td class="col-title">${escapeHtml(b.name)}</td>
-        <td><input class="price-input" type="number" step="1000" min="1" value="${b.priceMax}" data-price="${i}"> 엔 이하</td>
-        <td><button class="btn-ghost btn-sm" data-del-brand="${i}">삭제</button></td>
+        <td class="col-num"><input class="price-input" type="text" inputmode="numeric" value="${fmtNum(b.priceMax)}" data-price="${i}"><span class="unit">엔 이하</span></td>
+        <td class="col-action"><button class="row-remove" data-del-brand="${i}" title="삭제">−</button></td>
       </tr>`).join("");
   const brandKw = Object.entries(f.brandExcludeKeywords)
     .map(([brand, words]) => `
@@ -278,7 +302,7 @@ function renderFilterPage(message = "") {
       <div id="filterMsg">${message}</div>
       <div class="inline-row" style="margin-top:12px">
         <input id="brandInput" placeholder="브랜드 이름 (메루카리 표기로 확인해요)">
-        <input id="brandPriceInput" class="price-input" type="number" step="1000" value="30000">
+        <input id="brandPriceInput" class="price-input" type="text" inputmode="numeric" value="30,000"><span class="unit">엔 이하</span>
         <button id="brandAddBtn" class="btn-ghost">추가</button>
       </div>
       <div id="brandCandidates" class="candidate-list"></div>
@@ -306,7 +330,7 @@ function setFilterMsg(text, ok) {
 }
 
 function addBrand(name) {
-  const price = Number(document.getElementById("brandPriceInput").value);
+  const price = parseNum(document.getElementById("brandPriceInput").value);
   if (!Number.isInteger(price) || price <= 0) return setFilterMsg("가격 상한을 숫자로 넣어주세요", false);
   if (filterDraft.brands.some((b) => b.name.toLowerCase() === name.toLowerCase())) return setFilterMsg(`${name}은(는) 이미 있어요`, false);
   filterDraft.brands.push({ name, priceMax: price });
@@ -316,7 +340,10 @@ function addBrand(name) {
 function bindFilterPage() {
   const page = document.getElementById("page-filters");
   page.querySelectorAll("[data-price]").forEach((inp) =>
-    inp.addEventListener("change", () => (filterDraft.brands[Number(inp.dataset.price)].priceMax = Number(inp.value)))
+    inp.addEventListener("change", () => {
+      filterDraft.brands[Number(inp.dataset.price)].priceMax = parseNum(inp.value);
+      inp.value = fmtNum(parseNum(inp.value));
+    })
   );
   page.querySelectorAll("[data-del-brand]").forEach((b) =>
     b.addEventListener("click", () => {

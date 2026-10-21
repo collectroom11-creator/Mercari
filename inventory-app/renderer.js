@@ -335,14 +335,17 @@ function buildCard(item) {
     nums.appendChild(p);
   } else {
     const input = document.createElement("input");
-    input.type = "number";
+    // 다른 숫자처럼 쉼표를 찍어 보여주려고 number 대신 text + 숫자 키패드로 둔다.
+    input.type = "text";
+    input.inputMode = "numeric";
     input.className = "kprice";
-    input.value = item.listPrice ?? "";
+    input.value = fmtNum(item.listPrice);
     // 값을 지워도 추천가가 플레이스홀더로 남는다.
-    input.placeholder = item.targetPrice ?? "";
-    input.addEventListener("input", () => (margin.textContent = marginOf(Number(input.value) || item.targetPrice)));
+    input.placeholder = fmtNum(item.targetPrice);
+    input.addEventListener("input", () => (margin.textContent = marginOf(parseNum(input.value) || item.targetPrice)));
+    input.addEventListener("focus", () => input.select());
     input.addEventListener("change", async () => {
-      const value = Number(input.value);
+      const value = parseNum(input.value);
       if (!value) return;
       await window.api.updateItem(item.id, { listPrice: value, listPriceEdited: true });
       renderList();
@@ -362,10 +365,10 @@ function buildCard(item) {
     const pop = document.createElement("div");
     pop.className = "kshippop";
     pop.hidden = true;
-    pop.innerHTML = `현지배송비 ¥<input type="number" value="${item.localShippingJpy ?? 0}">`;
+    pop.innerHTML = `현지배송비 ¥<input type="text" inputmode="numeric" value="${fmtNum(item.localShippingJpy ?? 0)}">`;
     const shipInput = pop.querySelector("input");
     shipInput.addEventListener("change", async () => {
-      await window.api.updateLocalShipping(item.id, Number(shipInput.value) || 0);
+      await window.api.updateLocalShipping(item.id, parseNum(shipInput.value));
       renderList();
     });
     cost.addEventListener("click", () => {
