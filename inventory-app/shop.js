@@ -65,7 +65,8 @@ async function renderDashboard() {
   const cards = [
     ["이번 달 매출", bigNum(s.monthRevenue, "원"), "", `판매 ${s.monthSoldCount}건`],
     ["이번 달 순이익", bigNum(s.monthProfit, "원"), s.monthProfit >= 0 ? "positive" : "negative", marginPct == null ? "" : `순이익률 ${marginPct}%`],
-    ["회전율", bigNum(s.turnoverPct, "%"), "", `판매중 재고원가 ${won(s.listedCost)}`],
+    ["평균 마진율", s.avgMarginPct == null ? "-" : bigNum(s.avgMarginPct, "%"), "", [s.soldAvgMarginPct, s.stockAvgMarginPct].some((v) => v != null) ? `판매 ${s.soldAvgMarginPct ?? "-"}% · 재고 ${s.stockAvgMarginPct ?? "-"}%` : ""],
+    ["회전율", bigNum(s.turnoverPct, "%"), "", `판매중 원가 ${shortWon(s.listedCost)}`],
     ["재고원가 합계", bigNum(s.stockCost, "원"), "", "배송전 · 업로드전 · 판매중"],
   ];
   document.getElementById("statCards").innerHTML = cards

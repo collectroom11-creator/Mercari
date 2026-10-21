@@ -167,7 +167,7 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 
 /* ---- 대시보드 ---- */
 /* 숫자 타일: 재고 카드처럼 따로 떨어진 둥근 회색 타일 */
-.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.stat-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
 .stat-card { padding: 14px 16px 13px; background: var(--group-bg); border-radius: 12px; min-width: 0; }
 .stat-label { font-size: 12px; font-weight: 500; color: var(--secondary); margin-bottom: 6px; }
 /* 큰 숫자: 얇고 크게(주식, 계산기 앱 느낌), 단위는 작은 회색 */

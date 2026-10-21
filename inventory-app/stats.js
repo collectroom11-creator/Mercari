@@ -13,6 +13,17 @@ function soldRecords(items) {
     .map((i) => ({ month: monthKey(new Date(i.soldAt)), revenue: i.actualPrice, cost: i.costKrw }));
 }
 
+// 상품별 마진율(%) 목록. 판매완료는 실제 판매가, 나머지는 판매가(listPrice, 없으면 추천가) 기준.
+function marginRates(items) {
+  return items
+    .filter((i) => i.status !== "개인구매" && i.costKrw)
+    .map((i) => ({ sold: i.status === "판매완료", price: i.status === "판매완료" ? i.actualPrice : i.listPrice ?? i.targetPrice, cost: i.costKrw }))
+    .filter((m) => m.price > 0)
+    .map((m) => ({ sold: m.sold, pct: ((m.price - m.cost) / m.price) * 100 }));
+}
+
+const avgPct = (rates) => (rates.length ? Math.round(rates.reduce((s, r) => s + r.pct, 0) / rates.length) : null);
+
 function computeShopStats(items, { now = new Date() } = {}) {
   const thisMonth = monthKey(now);
   const monthSold = soldRecords(items).filter((r) => r.month === thisMonth);
@@ -24,6 +35,7 @@ function computeShopStats(items, { now = new Date() } = {}) {
     .filter((i) => i.status !== "판매완료" && i.status !== "개인구매")
     .reduce((s, i) => s + i.costKrw, 0);
   const base = monthSoldCost + listedCost;
+  const rates = marginRates(items);
   return {
     monthRevenue,
     monthProfit: monthRevenue - monthSoldCost,
@@ -31,6 +43,9 @@ function computeShopStats(items, { now = new Date() } = {}) {
     listedCost,
     stockCost,
     monthSoldCount: monthSold.length,
+    avgMarginPct: avgPct(rates),
+    soldAvgMarginPct: avgPct(rates.filter((r) => r.sold)),
+    stockAvgMarginPct: avgPct(rates.filter((r) => !r.sold)),
   };
 }
 

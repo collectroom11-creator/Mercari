@@ -74,3 +74,23 @@ test("판매 기록이 없으면 회전율 0, 월별은 빈 배열", () => {
   assert.equal(computeShopStats(list, { now }).turnoverPct, 0);
   assert.deepEqual(computeMonthlySales(list, { now }), []);
 });
+
+test("computeShopStats: 전체 평균 마진율 = 상품별 마진율 평균 (판매완료는 실판매가, 나머지는 판매가), 개인구매·가격 없는 상품 제외", () => {
+  const list = [
+    { status: "판매완료", costKrw: 50, actualPrice: 100, soldAt: new Date(2026, 9, 1).toISOString() }, // 50%
+    { status: "판매중", costKrw: 75, listPrice: 100, targetPrice: 999 }, // 25% (listPrice 우선)
+    { status: "배송전", costKrw: 90, targetPrice: 100 }, // 10% (listPrice 없으면 targetPrice)
+    { status: "업로드전", costKrw: 10 }, // 가격 없음 → 제외
+    { status: "개인구매", costKrw: 1, actualPrice: 100 }, // 제외
+  ];
+  const s = computeShopStats(list, { now });
+  assert.equal(s.avgMarginPct, Math.round((50 + 25 + 10) / 3));
+  assert.equal(s.soldAvgMarginPct, 50);
+  assert.equal(s.stockAvgMarginPct, Math.round((25 + 10) / 2));
+});
+
+test("computeShopStats: 마진을 계산할 상품이 없으면 평균 마진율은 null", () => {
+  const s = computeShopStats([{ status: "업로드전", costKrw: 10 }], { now });
+  assert.equal(s.avgMarginPct, null);
+  assert.equal(s.soldAvgMarginPct, null);
+});
