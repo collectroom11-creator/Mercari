@@ -296,6 +296,9 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .item-table td.col-action { width: 0; padding-left: 0; padding-right: 0; text-align: right; white-space: nowrap; }
 .row-remove { width: 0; height: 20px; margin-right: 0; border: 0; border-radius: 50%; background: var(--field-bg-hover); color: var(--secondary); font-size: 14px; line-height: 18px; padding: 0; cursor: default; opacity: 0; overflow: hidden; vertical-align: middle; transition: width .15s ease, margin .15s ease, opacity .15s ease; }
 .item-table tr:hover .row-remove { width: 20px; margin-right: 8px; opacity: 1; }
+/* '−' 글자는 폰트 기준선 때문에 원 가운데에 안 오므로, 글자는 숨기고 막대를 정중앙에 그린다 */
+.row-remove { position: relative; font-size: 0; }
+.row-remove::before { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 2px; border-radius: 1px; background: currentColor; transform: translate(-50%, -50%); }
 .row-remove:hover { background: var(--negative); color: #fff; }
 .item-table tr.dimmed td, .item-table tr.dimmed a { color: var(--secondary); }
 
