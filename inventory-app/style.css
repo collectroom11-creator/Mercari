@@ -411,7 +411,7 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 #page-dashboard .stat-card:first-child { padding-left: 0; border-left: 0; }
 #page-dashboard .chart-grid { gap: 32px; padding: 14px 0 6px; }
 #page-dashboard .chart-card { padding: 0; }
-#page-dashboard .stock-mix { margin: 0; padding: 4px 0 16px; border-bottom: 1px solid var(--separator); }
+#page-dashboard .stock-mix { margin: 0; padding: 4px 0 10px; }
 #page-dashboard .dash-lists { gap: 32px; margin: 0; padding-top: 14px; border-top: 1px solid var(--separator); }
 #page-dashboard .dash-list { padding: 0; }
 #page-dashboard .drow { margin: 0 -4px; }
