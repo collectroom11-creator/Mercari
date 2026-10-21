@@ -201,7 +201,7 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 
 .kanban { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(210px, 1fr)); overflow-x: auto; }
 /* 박스로 감싸지 않고, 열 사이를 세로선 하나로만 나눈다 */
-.kcol { display: flex; flex-direction: column; min-height: 0; padding: 0 12px; }
+.kcol { display: flex; flex-direction: column; min-height: 0; padding: 0 10px; }
 .kcol + .kcol { border-left: 1px solid var(--separator); }
 .kcol:first-child { padding-left: 0; }
 .kcol:last-child { padding-right: 0; }
@@ -210,29 +210,40 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .klist { overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; gap: 6px; align-content: start; scrollbar-width: none; }
 .klist::-webkit-scrollbar { display: none; }
 .kempty { color: var(--secondary); font-size: 12px; padding: 8px 2px; }
-/* 가로로 긴 카드: 왼쪽 작은 사진 + 오른쪽 숫자. 버튼은 카드에 마우스를 올렸을 때만 보인다. */
-.kcard { position: relative; display: flex; flex-wrap: wrap; border-radius: 10px; overflow: hidden; background: var(--group-bg); }
+/* 재고 카드: 왼쪽 작은 정사각 사진, 오른쪽 판매가(크게) / 원가 · 마진(작게). 라벨 반복 없음. */
+.kcard { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; padding: 7px 8px 7px 7px; border-radius: 10px; background: var(--group-bg); }
 .kcard:hover { background: var(--fill-hover); }
-.kphoto { position: relative; width: 60px; height: 80px; flex-shrink: 0; background: var(--fill) center / cover no-repeat; }
-.kdays { position: absolute; left: 3px; top: 3px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 10px; border-radius: 4px; padding: 1px 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.kdays.warn { background: var(--negative); }
-.kdel { position: absolute; right: 1px; top: 1px; border: 0; background: var(--group-bg); border-radius: 4px; color: var(--secondary); font-size: 11px; cursor: default; opacity: 0; padding: 2px 4px; z-index: 1; }
-.kcard:hover .kdel { opacity: 0.7; }
-.kdel:hover { opacity: 1 !important; color: var(--negative); }
-.kadv { position: absolute; right: 3px; bottom: 3px; width: 22px; height: 22px; border: 0; border-radius: 50%; background: var(--accent); color: #fff; font-size: 15px; line-height: 20px; padding: 0; cursor: default; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); opacity: 0; }
+.kphoto { width: 46px; height: 46px; flex-shrink: 0; border-radius: 7px; background: var(--fill) center / cover no-repeat; }
+.kphoto.clickable { cursor: pointer; }
+.kbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ktop { display: flex; align-items: baseline; gap: 6px; }
+.kprice-wrap { display: inline-flex; align-items: baseline; min-width: 0; }
+/* 판매가: 평소엔 글자처럼, 마우스를 올리면 옅은 칸, 누르면 입력칸 */
+/* 입력칸 폭을 숫자 길이에 맞춰서 "원"이 숫자 바로 뒤에 붙게 */
+.kprice, .kcard .kprice { field-sizing: content; width: auto; min-width: 3ch; max-width: 110px; padding: 1px 4px; margin-left: -4px; background: transparent; border-radius: 5px; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.2px; }
+.kprice::placeholder { color: var(--tertiary); font-weight: 500; }
+.kcard:hover .kprice { background: var(--field-bg); }
+.kcard .kprice:focus { background: var(--content-bg); }
+.kprice-unit { font-size: 12px; color: var(--secondary); margin-left: 1px; }
+.kprice-wrap > .kprice { margin-right: -3px; }
+.kprice-text { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.2px; }
+.kdays { margin-left: auto; font-size: 11px; color: var(--secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kdays.warn { color: var(--negative); font-weight: 600; }
+.ksub { font-size: 12px; color: var(--secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.kcost.clickable { cursor: default; border-radius: 4px; padding: 0 2px; margin: 0 -2px; }
+.kcost.clickable:hover { background: var(--field-bg-hover); color: var(--label); }
+.kmargin { color: var(--positive); font-weight: 600; }
+.kmargin.neg { color: var(--negative); }
+.kship { font-size: 11px; color: var(--warning); white-space: nowrap; }
+.kadv { position: absolute; right: 7px; bottom: 7px; width: 22px; height: 22px; border: 0; border-radius: 50%; background: var(--accent); color: #fff; font-size: 15px; line-height: 20px; padding: 0; cursor: default; opacity: 0; transition: opacity 0.12s ease; }
 .kcard:hover .kadv { opacity: 1; }
 .kadv:hover { background: var(--accent-hover); }
-.knums { flex: 1; min-width: 0; padding: 5px 7px; font-size: 11px; font-weight: 500; color: var(--secondary); display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 2px 4px; align-items: center; }
-.knums b { color: var(--label); font-size: 12px; font-weight: 600; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.knums b.clickable { cursor: default; border-radius: 4px; padding: 0 3px; margin-right: -3px; }
-.knums b.clickable:hover { background: var(--field-bg-hover); }
-.kmargin { color: var(--positive) !important; }
-.kship { grid-column: 1 / 3; color: var(--warning); font-size: 10px; text-align: right; white-space: nowrap; margin-top: -2px; }
-.kprice { width: 100%; min-width: 64px; padding: 2px 6px; font-size: 12px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; border-radius: 5px; }
-.kprice::-webkit-inner-spin-button, .kprice::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.kshippop { flex-basis: 100%; margin: 0 7px 7px; background: var(--fill); border-radius: 6px; padding: 5px 8px; font-size: 11px; white-space: nowrap; }
+.kdel { position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 9px; line-height: 18px; padding: 0; cursor: default; opacity: 0; transition: opacity 0.12s ease; }
+.kcard:hover .kdel { opacity: 1; }
+.kdel:hover { background: var(--negative); }
+.kshippop { flex-basis: 100%; margin-top: 7px; background: var(--content-bg); border-radius: 7px; padding: 5px 8px; font-size: 12px; white-space: nowrap; color: var(--secondary); }
 .kshippop[hidden] { display: none; }
-.kshippop input { width: 70px; padding: 1px 4px; margin-left: 4px; font-size: 11px; }
+.kshippop input { width: 80px; padding: 2px 6px; margin-left: 4px; font-size: 12px; text-align: right; }
 
 /* ---- 알림 팝오버 ---- */
 .alerts-popup {

@@ -248,7 +248,7 @@ async function advanceStatus(item) {
 
 function daysLabel(item) {
   if (item.status === "판매완료") {
-    // 판매완료 열에 있으니 "N일만에 판매" 대신 짧게 "N일"만(작은 사진 밖으로 넘치지 않게).
+    // 좁은 카드에 맞게 짧게 "N일"(업로드 후 며칠 만에 팔렸는지)
     return item.listedAt && item.soldAt ? { text: `${daysBetween(item.listedAt, item.soldAt)}일`, warn: false } : null;
   }
   const since = item.listedAt ?? item.statusChangedAt ?? item.createdAt;
@@ -257,6 +257,8 @@ function daysLabel(item) {
   return { text: `${days}일째`, warn: !!item.listedAt && days >= 14 };
 }
 
+// 재고 카드: 왼쪽 작은 정사각 사진, 오른쪽에 판매가(크게, 바로 수정) / 원가 · 마진(작게).
+// 라벨은 반복하지 않는다. 경과일은 오른쪽 위 작은 글씨, 버튼은 마우스를 올렸을 때만.
 function buildCard(item) {
   const sold = item.status === "판매완료";
   const card = document.createElement("div");
@@ -270,15 +272,99 @@ function buildCard(item) {
     photo.classList.add("clickable");
     photo.addEventListener("click", () => window.api.openExternal(item.sourceUrl));
   }
+  card.appendChild(photo);
 
+  const body = document.createElement("div");
+  body.className = "kbody";
+  const price = sold ? item.actualPrice : effectiveListPrice(item);
+  const marginOf = (p) => (p && item.costKrw ? `${Math.round(((p - item.costKrw) / p) * 100)}%` : "-");
+  const setMargin = (p) => {
+    margin.textContent = marginOf(p);
+    margin.classList.toggle("neg", !!p && p < item.costKrw);
+  };
+
+  // 1줄: 판매가(+ 오른쪽 위 경과일)
+  const top = document.createElement("div");
+  top.className = "ktop";
+  const margin = document.createElement("span");
+  margin.className = "kmargin";
+  setMargin(price);
+  if (sold) {
+    const p = document.createElement("span");
+    p.className = "kprice-text";
+    p.textContent = price ? price.toLocaleString() : "-";
+    const unit = document.createElement("span");
+    unit.className = "kprice-unit";
+    unit.textContent = price ? "원" : "";
+    const wrap = document.createElement("span");
+    wrap.className = "kprice-wrap";
+    wrap.append(p, unit);
+    top.appendChild(wrap);
+  } else {
+    const wrap = document.createElement("label");
+    wrap.className = "kprice-wrap";
+    const input = document.createElement("input");
+    // 평소엔 글자처럼 보이고, 마우스를 올리거나 누르면 입력칸이 된다.
+    input.type = "text";
+    input.inputMode = "numeric";
+    input.className = "kprice";
+    input.value = fmtNum(item.listPrice);
+    // 값을 지워도 추천가가 플레이스홀더로 남는다.
+    input.placeholder = fmtNum(item.targetPrice);
+    input.title = "판매가 (눌러서 수정)";
+    input.addEventListener("input", () => setMargin(parseNum(input.value) || item.targetPrice));
+    input.addEventListener("focus", () => input.select());
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
+    input.addEventListener("change", async () => {
+      const value = parseNum(input.value);
+      if (!value) return;
+      await window.api.updateItem(item.id, { listPrice: value, listPriceEdited: true });
+      renderList();
+    });
+    const unit = document.createElement("span");
+    unit.className = "kprice-unit";
+    unit.textContent = "원";
+    wrap.append(input, unit);
+    top.appendChild(wrap);
+  }
   const label = daysLabel(item);
   if (label) {
     const days = document.createElement("span");
     days.className = `kdays${label.warn ? " warn" : ""}`;
     days.textContent = label.text;
-    photo.appendChild(days);
+    top.appendChild(days);
   }
+  body.appendChild(top);
 
+  // 2줄: 원가 · 마진
+  const sub = document.createElement("div");
+  sub.className = "ksub";
+  const cost = document.createElement("span");
+  cost.className = "kcost";
+  cost.textContent = `원가 ${item.costKrw.toLocaleString()}`;
+  sub.append(cost, document.createTextNode(" · "), margin);
+  body.appendChild(sub);
+
+  if (item.localShippingJpy) {
+    const ship = document.createElement("div");
+    ship.className = "kship";
+    ship.textContent = `현지배송비 ¥${item.localShippingJpy.toLocaleString()} 포함`;
+    body.appendChild(ship);
+  }
+  card.appendChild(body);
+
+  // 마우스를 올렸을 때만 보이는 버튼: 오른쪽 아래 › (다음 단계), 사진 왼쪽 위 ✕ (삭제)
+  if (!sold) {
+    const adv = document.createElement("button");
+    adv.className = "kadv";
+    adv.textContent = "›";
+    adv.title = "다음 단계로";
+    adv.addEventListener("click", (e) => {
+      e.stopPropagation();
+      advanceStatus(item);
+    });
+    card.appendChild(adv);
+  }
   const del = document.createElement("button");
   del.className = "kdel";
   del.textContent = "✕";
@@ -289,74 +375,7 @@ function buildCard(item) {
     await window.api.deleteItem(item.id);
     renderList();
   });
-  card.appendChild(del); // 카드 오른쪽 위 구석
-
-  if (!sold) {
-    const adv = document.createElement("button");
-    adv.className = "kadv";
-    adv.textContent = "›";
-    adv.title = "다음 단계로";
-    adv.addEventListener("click", (e) => {
-      e.stopPropagation();
-      advanceStatus(item);
-    });
-    photo.appendChild(adv);
-  }
-  card.appendChild(photo);
-
-  const nums = document.createElement("div");
-  nums.className = "knums";
-  const price = sold ? item.actualPrice : effectiveListPrice(item);
-  const marginOf = (p) => (p && item.costKrw ? `${Math.round(((p - item.costKrw) / p) * 100)}%` : "-");
-
-  const costLabel = document.createElement("span");
-  costLabel.textContent = "원가";
-  const cost = document.createElement("b");
-  cost.textContent = item.costKrw.toLocaleString();
-  nums.append(costLabel, cost);
-
-  if (item.localShippingJpy) {
-    const ship = document.createElement("span");
-    ship.className = "kship";
-    ship.textContent = `현지배송비 ¥${item.localShippingJpy.toLocaleString()} 포함`;
-    nums.appendChild(ship);
-  }
-
-  const priceLabel = document.createElement("span");
-  priceLabel.textContent = "판매가";
-  nums.appendChild(priceLabel);
-  const margin = document.createElement("b");
-  margin.className = "kmargin";
-  margin.textContent = marginOf(price);
-
-  if (sold) {
-    const p = document.createElement("b");
-    p.textContent = price ? price.toLocaleString() : "-";
-    nums.appendChild(p);
-  } else {
-    const input = document.createElement("input");
-    // 다른 숫자처럼 쉼표를 찍어 보여주려고 number 대신 text + 숫자 키패드로 둔다.
-    input.type = "text";
-    input.inputMode = "numeric";
-    input.className = "kprice";
-    input.value = fmtNum(item.listPrice);
-    // 값을 지워도 추천가가 플레이스홀더로 남는다.
-    input.placeholder = fmtNum(item.targetPrice);
-    input.addEventListener("input", () => (margin.textContent = marginOf(parseNum(input.value) || item.targetPrice)));
-    input.addEventListener("focus", () => input.select());
-    input.addEventListener("change", async () => {
-      const value = parseNum(input.value);
-      if (!value) return;
-      await window.api.updateItem(item.id, { listPrice: value, listPriceEdited: true });
-      renderList();
-    });
-    nums.appendChild(input);
-  }
-
-  const marginLabel = document.createElement("span");
-  marginLabel.textContent = "마진";
-  nums.append(marginLabel, margin);
-  card.appendChild(nums);
+  card.appendChild(del);
 
   // 현지배송비는 드물게만 쓰여서 평소엔 숨기고, 원가를 누르면 입력칸을 연다.
   if (!sold) {

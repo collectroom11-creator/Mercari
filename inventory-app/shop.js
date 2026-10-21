@@ -17,6 +17,7 @@ function showPage(pageId) {
   document.querySelectorAll(".content-body .page").forEach((p) => p.classList.toggle("active", p.id === pageId));
   const link = [...links].find((l) => l.dataset.page === pageId);
   document.getElementById("pageTitle").textContent = link ? link.textContent.trim() : "";
+  document.querySelectorAll(".page-action").forEach((b) => (b.hidden = b.dataset.for !== pageId));
   if (pageRenderers[pageId]) pageRenderers[pageId]();
 }
 

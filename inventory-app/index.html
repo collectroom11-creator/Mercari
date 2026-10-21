@@ -48,6 +48,8 @@
         <h1 id="pageTitle" class="toolbar-title">대시보드</h1>
         <div class="toolbar-right">
           <div id="fxRateChip" class="fx-rate-chip" hidden></div>
+          <!-- 지금 보고 있는 페이지에만 보이는 툴바 버튼 (data-for = 페이지 id) -->
+          <button id="monthlyViewBtn" class="btn-ghost btn-sm page-action" data-for="tab-list" hidden>월별 정리</button>
         </div>
       </header>
 
@@ -71,7 +73,6 @@
             <div class="add-row">
               <input id="urlInput" placeholder="켄즈포스트 상품 링크를 붙여넣으세요">
               <button id="fetchBtn" class="btn-primary">추가</button>
-              <button id="monthlyViewBtn" class="btn-ghost">월별 정리</button>
             </div>
             <p id="fetchResult" class="hint"></p>
 
