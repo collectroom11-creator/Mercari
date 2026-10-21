@@ -122,7 +122,7 @@ function renderDashboardLists(items) {
   const sold = items
     .filter((i) => i.status === "판매완료" && i.soldAt)
     .sort((a, b) => new Date(b.soldAt) - new Date(a.soldAt))
-    .slice(0, 5);
+    .slice(0, 20);
   document.getElementById("recentSold").innerHTML = sold.length
     ? sold.map((i) => row(i, i.listedAt ? (days(i.listedAt, i.soldAt) === 0 ? "당일" : `${days(i.listedAt, i.soldAt)}일`) : "-")).join("")
     : `<div class="empty">아직 판매 기록이 없어요</div>`;
@@ -130,15 +130,36 @@ function renderDashboardLists(items) {
   const stale = items
     .filter((i) => (i.status === "판매중" || i.status === "재고") && i.listedAt)
     .sort((a, b) => new Date(a.listedAt) - new Date(b.listedAt))
-    .slice(0, 5);
+    .slice(0, 20);
   document.getElementById("staleListed").innerHTML = stale.length
     ? stale.map((i) => { const d = days(i.listedAt); return row(i, `${d}일째`, d >= 14 ? "warn" : ""); }).join("")
     : `<div class="empty">판매중인 상품이 없어요</div>`;
 
+  fitRows("recentSold");
+  fitRows("staleListed");
   document.querySelectorAll(".drow[data-open-url]").forEach((r) =>
     r.addEventListener("click", () => r.dataset.openUrl && window.api.openExternal(r.dataset.openUrl))
   );
 }
+
+// 목록 칸 높이에 다 들어가는 줄까지만 보여주고, 반쯤 잘리는 줄은 숨긴다(스크롤 없이).
+function fitRows(id) {
+  const box = document.getElementById(id);
+  const limit = box.getBoundingClientRect().bottom;
+  box.querySelectorAll(".drow").forEach((r) => (r.hidden = false));
+  box.querySelectorAll(".drow").forEach((r) => {
+    if (r.getBoundingClientRect().bottom > limit + 0.5) r.hidden = true;
+  });
+}
+
+// 창 크기가 바뀌면 대시보드를 다시 맞춘다
+let dashResizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(dashResizeTimer);
+  dashResizeTimer = setTimeout(() => {
+    if (document.getElementById("page-dashboard").classList.contains("active")) renderDashboard();
+  }, 120);
+});
 
 // 만 원 단위로 짧게: 584000 → "58.4만"
 function shortWon(n) {
@@ -151,7 +172,8 @@ function renderLineChart(el, months, key, color) {
     el.innerHTML = `<div class="empty">아직 판매 기록이 없어요</div>`;
     return;
   }
-  const W = 420, H = 160, padX = 30, padTop = 26, padBottom = 26;
+  // 창 크기에 맞춰 늘고 줄도록 컨테이너의 실제 픽셀 크기로 그린다(글자가 찌그러지지 않게 1:1).
+  const W = Math.max(240, el.clientWidth), H = Math.max(90, el.clientHeight), padX = 26, padTop = 24, padBottom = 24;
   const values = months.map((m) => m[key]);
   const max = Math.max(0, ...values);
   const min = Math.min(0, ...values);
@@ -165,7 +187,7 @@ function renderLineChart(el, months, key, color) {
   const gridYs = [padTop, (padTop + (H - padBottom)) / 2, H - padBottom];
   const gradId = `fill-${key}`;
   el.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" class="line-svg" role="img">
+    <svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" class="line-svg" role="img">
       <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" style="stop-color:${color};stop-opacity:0.18"/><stop offset="1" style="stop-color:${color};stop-opacity:0"/>
       </linearGradient></defs>

@@ -46,10 +46,13 @@ function createMainWindow() {
   // 재고 입력 보드(열 4개 × 최소 210px) + 사이드바(210) + 여백(40)이 1,090px라서, 그보다
   // 좁아져서 가로 스크롤바가 생기지 않게 창을 이 이상 못 줄이게 한다.
   const MIN_CONTENT_WIDTH = 1100;
+  const MIN_CONTENT_HEIGHT = 560;
   mainWindow = new BrowserWindow({
     width: TARGET_WIDTH,
     height: TARGET_HEIGHT,
     minWidth: MIN_CONTENT_WIDTH,
+    // 대시보드가 스크롤 없이 다 들어가는 최소 높이
+    minHeight: MIN_CONTENT_HEIGHT,
     useContentSize: true,
     show: false,
     icon: APP_ICON_PATH,
@@ -73,7 +76,7 @@ function createMainWindow() {
       if (actualWidth > 0 && actualWidth < TARGET_WIDTH) {
         const scale = TARGET_WIDTH / actualWidth;
         mainWindow.setContentSize(Math.round(TARGET_WIDTH * scale), Math.round(TARGET_HEIGHT * scale));
-        mainWindow.setMinimumSize(Math.round(MIN_CONTENT_WIDTH * scale), 400);
+        mainWindow.setMinimumSize(Math.round(MIN_CONTENT_WIDTH * scale), Math.round(MIN_CONTENT_HEIGHT * scale));
       }
     } catch (e) {
       // 보정 실패해도 기본 크기로는 뜨니 무시한다.
