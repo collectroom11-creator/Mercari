@@ -196,6 +196,9 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .dash-kpis { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); flex-shrink: 0; padding: 14px 0; margin-top: 10px; border-top: 1px solid var(--separator); }
 .kpi { min-width: 0; padding: 0 20px; border-left: 1px solid var(--separator); }
 .kpi:first-child { padding-left: 0; border-left: 0; }
+/* 막대 없는 두 칸은 숫자를 크게 하고, 재고원가 칸 높이에 맞춰 위(라벨)·아래(보조 줄)로 벌린다 */
+.kpi.simple { display: flex; flex-direction: column; justify-content: space-between; }
+.kpi.simple .kpi-value { font-size: 30px; letter-spacing: -0.6px; }
 .kpi-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .kpi-target { font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .kpi-target.short { color: var(--warning); }
