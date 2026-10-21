@@ -29,11 +29,6 @@
           <svg viewBox="0 0 16 16"><path d="M2 3h12l-4.5 5.5V13l-3-1.5V8.5Z"/></svg>
           메루카리 필터
         </button>
-        <div class="side-section">기록</div>
-        <button class="side-link" data-page="page-ledger">
-          <svg viewBox="0 0 16 16"><rect x="3" y="2" width="10" height="12" rx="1.5"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3"/></svg>
-          가계부
-        </button>
         <div class="side-spacer"></div>
         <button id="alertsBtn" class="side-link">
           <svg viewBox="0 0 16 16"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1.5H3Z"/><path d="M6.5 14a1.5 1.5 0 0 0 3 0"/></svg>
@@ -58,8 +53,6 @@
           <div id="fxRateChip" class="fx-rate-chip" hidden></div>
           <!-- 지금 보고 있는 페이지에만 보이는 툴바 버튼 (data-for = 페이지 id) -->
           <button id="monthlyViewBtn" class="btn-ghost btn-sm page-action" data-for="tab-list" hidden>월별 정리</button>
-          <span id="ledgerImportResult" class="hint-inline page-action" data-for="page-ledger" hidden></span>
-          <button id="ledgerImportBtn" class="btn-ghost btn-sm page-action" data-for="page-ledger" hidden>백업 불러오기</button>
           <button id="filterSaveBtn" class="btn-primary btn-sm page-action" data-for="page-filters" hidden>저장</button>
         </div>
       </header>
@@ -120,10 +113,6 @@
 
         <section id="page-wishlist" class="page"></section>
         <section id="page-filters" class="page"></section>
-
-        <section id="page-ledger" class="page ledger-view">
-          <iframe id="ledgerFrame" class="ledger-frame" src="ledger/ledger.html"></iframe>
-        </section>
       </div>
     </main>
   </div>

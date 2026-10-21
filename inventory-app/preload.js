@@ -28,21 +28,4 @@ contextBridge.exposeInMainWorld("api", {
   getFilters: () => ipcRenderer.invoke("get-filters"),
   matchBrand: (input) => ipcRenderer.invoke("match-brand", input),
   saveFilters: (filters) => ipcRenderer.invoke("save-filters", filters),
-  ledgerImport: () => ipcRenderer.invoke("ledger-import"),
-});
-
-// 가계부(iframe) 저장소 - Claude.ai의 window.storage와 같은 모양: get은 {value}를
-// 돌려주고 키가 없으면 throw, set(key, value).
-// contextBridge로 노출한 속성은 수정 불가(non-configurable)라서 이름을 window.storage로
-// 하면 가계부의 최상위 `const storage` 선언이 SyntaxError로 통째로 실패한다. 그래서 다른
-// 이름으로 노출하고, ledger.html 맨 앞의 짧은 스크립트가 window.storage로 연결한다.
-contextBridge.exposeInMainWorld("__ledgerStorage", {
-  get: async (key) => {
-    const r = ipcRenderer.sendSync("ledger-get", key);
-    if (!r.ok) throw new Error(r.error);
-    return r.result;
-  },
-  set: async (key, value) => {
-    ipcRenderer.sendSync("ledger-set", key, value);
-  },
 });
