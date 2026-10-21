@@ -81,17 +81,15 @@ async function renderDashboard() {
   document.getElementById("revenueNow").textContent = last ? `이번 달 ${shortWon(last.revenue)}` : "";
   document.getElementById("profitNow").textContent = last ? `이번 달 ${shortWon(last.profit)}` : "";
 
-  renderDashboardLists(await window.api.listItems());
+  renderStockMix(await window.api.listItems());
+  renderBrandMix(await window.api.getBrandMix());
 
   renderLineChart(document.getElementById("revenueChart"), months, "revenue", cssVar("--accent"));
   renderLineChart(document.getElementById("profitChart"), months, "profit", cssVar("--positive"));
 }
 
 // 대시보드 아래쪽: 재고 현황 막대 + 최근 판매 / 오래 머문 상품 목록(재고 보드와 같은 행 스타일)
-function renderDashboardLists(items) {
-  const DAY = 86400000;
-  const days = (from, to = new Date()) => Math.max(0, Math.floor((new Date(to) - new Date(from)) / DAY));
-
+function renderStockMix(items) {
   const groups = [
     { name: "배송전", color: "var(--tertiary)", match: (i) => i.status === "배송전" },
     { name: "업로드전", color: "var(--warning)", match: (i) => i.status === "업로드전" },
@@ -107,36 +105,51 @@ function renderDashboardLists(items) {
     <div class="mix-legend">${groups.map((g) => `
       <div><span class="mix-dot" style="background:${g.color}"></span>${g.name} <b>${g.count}개</b> <span class="muted">${shortWon(g.cost)}</span></div>`).join("")}
     </div>`;
+}
 
-  const row = (i, right, rightClass = "") => `
-    <div class="drow" data-open-url="${escapeHtml(i.sourceUrl || "")}" title="${escapeHtml(i.title)}">
-      <div class="dphoto" style="background-image:url('${i.imageUrl || ""}')"></div>
-      <div class="dbody">
-        <div class="dprice">${Number(i.actualPrice ?? i.listPrice ?? i.targetPrice ?? 0).toLocaleString()}<small>원</small></div>
-        <div class="dsub">원가 ${i.costKrw.toLocaleString()}</div>
-      </div>
-      <div class="dright ${rightClass}">${right}</div>
+// 브랜드 비율 도넛 + 오른쪽 표. 조각이나 표 줄에 올리면 그 브랜드만 진하게, 가운데에 이름과 개수.
+function renderBrandMix(mix) {
+  const box = document.getElementById("brandMix");
+  if (!mix.total) {
+    box.innerHTML = `<div class="empty">상품이 없어요</div>`;
+    return;
+  }
+  const color = (s, i) => (s.name === "기타" ? "var(--brand-other)" : `var(--brand-${i + 1})`);
+  const pct = (n) => Math.round((n / mix.total) * 100);
+  const R = 84, r = 56, C = 84;
+  const pt = (rad, a) => [C + rad * Math.sin(a), C - rad * Math.cos(a)];
+  let a0 = 0;
+  const paths = mix.slices.map((s, i) => {
+    const a1 = a0 + (s.count / mix.total) * Math.PI * 2;
+    const end = a1 - a0 >= Math.PI * 2 ? a1 - 1e-4 : a1;
+    const large = end - a0 > Math.PI ? 1 : 0;
+    const [x0, y0] = pt(R, a0), [x1, y1] = pt(R, end), [x2, y2] = pt(r, end), [x3, y3] = pt(r, a0);
+    const d = `M${x0},${y0}A${R},${R} 0 ${large} 1 ${x1},${y1}L${x2},${y2}A${r},${r} 0 ${large} 0 ${x3},${y3}Z`;
+    a0 = a1;
+    return `<path d="${d}" fill="${color(s, i)}" data-i="${i}"></path>`;
+  });
+  const center = (num, sub) => `<text x="${C}" y="${C + 2}" text-anchor="middle" class="donut-center-num">${num}</text><text x="${C}" y="${C + 22}" text-anchor="middle" class="donut-center-sub">${sub}</text>`;
+  box.innerHTML = `
+    <svg class="donut" viewBox="0 0 168 168">${paths.join("")}<g id="donutCenter">${center(mix.total, "전체 상품")}</g></svg>
+    <div class="brand-legend">${mix.slices.map((s, i) => `
+      <div class="brand-row" data-i="${i}">
+        <span class="mix-dot" style="background:${color(s, i)}"></span>
+        <span class="brand-name">${escapeHtml(s.name)}</span>
+        <span class="brand-count">${s.count}개</span>
+        <span class="brand-pct">${pct(s.count)}%</span>
+      </div>`).join("")}
     </div>`;
-
-  const sold = items
-    .filter((i) => i.status === "판매완료" && i.soldAt)
-    .sort((a, b) => new Date(b.soldAt) - new Date(a.soldAt))
-    .slice(0, 20);
-  document.getElementById("recentSold").innerHTML = sold.length
-    ? sold.map((i) => row(i, i.listedAt ? (days(i.listedAt, i.soldAt) === 0 ? "당일" : `${days(i.listedAt, i.soldAt)}일`) : "-")).join("")
-    : `<div class="empty">아직 판매 기록이 없어요</div>`;
-
-  const stale = items
-    .filter((i) => (i.status === "판매중" || i.status === "재고") && i.listedAt)
-    .sort((a, b) => new Date(a.listedAt) - new Date(b.listedAt))
-    .slice(0, 20);
-  document.getElementById("staleListed").innerHTML = stale.length
-    ? stale.map((i) => { const d = days(i.listedAt); return row(i, `${d}일째`, d >= 14 ? "warn" : ""); }).join("")
-    : `<div class="empty">판매중인 상품이 없어요</div>`;
-
-  document.querySelectorAll(".drow[data-open-url]").forEach((r) =>
-    r.addEventListener("click", () => r.dataset.openUrl && window.api.openExternal(r.dataset.openUrl))
-  );
+  const centerEl = box.querySelector("#donutCenter");
+  const focus = (i) => {
+    box.classList.toggle("focus", i != null);
+    box.querySelectorAll("[data-i]").forEach((el) => el.classList.toggle("on", el.dataset.i === String(i)));
+    const s = mix.slices[i];
+    centerEl.innerHTML = s ? center(`${pct(s.count)}%`, `${escapeHtml(s.name)} ${s.count}개`) : center(mix.total, "전체 상품");
+  };
+  box.querySelectorAll("[data-i]").forEach((el) => {
+    el.addEventListener("mouseenter", () => focus(Number(el.dataset.i)));
+    el.addEventListener("mouseleave", () => focus(null));
+  });
 }
 
 // 만 원 단위로 짧게: 584000 → "58.4만"

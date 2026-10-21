@@ -349,19 +349,6 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 .mix-legend { display: flex; gap: 20px; font-size: 12px; color: var(--secondary); flex-wrap: wrap; }
 .mix-legend b { color: var(--label); font-weight: 600; margin: 0 2px; }
 .mix-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
-.dash-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
-.dash-list { padding: 14px 12px 8px 16px; }
-.drow { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 8px; cursor: pointer; }
-.drow:hover { background: var(--fill-hover); }
-.drow + .drow::before { content: ""; position: absolute; top: 0; left: 50px; right: 4px; height: 1px; background: var(--separator); }
-.drow:hover::before, .drow:hover + .drow::before { background: transparent; }
-.dphoto { width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0; background: var(--fill) center / cover no-repeat; }
-.dbody { flex: 1; min-width: 0; }
-.dprice { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.dprice small { font-size: 11px; font-weight: 500; color: var(--secondary); margin-left: 1px; }
-.dsub { font-size: 12px; color: var(--secondary); font-variant-numeric: tabular-nums; }
-.dright { font-size: 12px; color: var(--secondary); white-space: nowrap; font-variant-numeric: tabular-nums; margin-right: 3px; }
-.dright.warn { color: var(--negative); font-weight: 600; }
 
 /* ---- 찜 목록: 사진 격자 ---- */
 .wish-add { margin-bottom: 14px; }
@@ -394,13 +381,10 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 .bkw-name { font-weight: 600; margin-bottom: 6px; }
 .bkw .inline-row { margin-top: 2px; }
 
-/* ---- 대시보드 아래 두 목록: 최소 4줄(한 줄 48px), 창이 커지면 남는 높이만큼 늘고, 나머지는 목록 안에서 스크롤 ---- */
+/* ---- 대시보드: 창 높이에 맞춰 늘고, 페이지 자체는 스크롤하지 않는다 ---- */
 #page-dashboard.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 #page-dashboard .stat-grid, #page-dashboard .chart-grid, #page-dashboard .stock-mix { flex-shrink: 0; }
-#page-dashboard .dash-lists { flex: 1 0 auto; }
-.dash-list { display: flex; flex-direction: column; }
-.dash-list > div:last-child { flex: 1 1 0; min-height: 192px; overflow-y: auto; scrollbar-width: none; }
-.dash-list > div:last-child::-webkit-scrollbar { display: none; }
+#page-dashboard .brand-mix { flex: 1 0 auto; padding-top: 14px; border-top: 1px solid var(--separator); }
 /* 창이 넓어져도 그래프가 위아래로 계속 커지지 않게 */
 #page-dashboard .line-svg { max-height: 165px; }
 
@@ -412,6 +396,22 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 #page-dashboard .chart-grid { gap: 32px; padding: 14px 0 6px; }
 #page-dashboard .chart-card { padding: 0; }
 #page-dashboard .stock-mix { margin: 0; padding: 4px 0 10px; }
-#page-dashboard .dash-lists { gap: 32px; margin: 0; padding-top: 14px; border-top: 1px solid var(--separator); }
-#page-dashboard .dash-list { padding: 0; }
-#page-dashboard .drow { margin: 0 -4px; }
+
+/* 브랜드 비율 도넛: 색은 순서대로 고정(색맹 구분 검증된 팔레트), 기타는 회색 */
+:root { --brand-1: #2a78d6; --brand-2: #eb6834; --brand-3: #1baf7a; --brand-4: #eda100; --brand-5: #e87ba4; --brand-6: #008300; --brand-7: #6250d6; --brand-other: #c7c7cc; }
+@media (prefers-color-scheme: dark) {
+  :root { --brand-1: #3987e5; --brand-2: #d95926; --brand-3: #199e70; --brand-4: #c98500; --brand-5: #d55181; --brand-6: #008300; --brand-7: #9085e9; --brand-other: #48484a; }
+}
+.brand-body { display: flex; align-items: center; gap: 36px; padding: 8px 0 4px; }
+.donut { width: 168px; height: 168px; flex-shrink: 0; overflow: visible; }
+.donut path { stroke: var(--content-bg); stroke-width: 2; transition: opacity .15s; cursor: default; }
+.donut-center-num { font-size: 26px; font-weight: 600; fill: var(--label); font-variant-numeric: tabular-nums; }
+.donut-center-sub { font-size: 12px; font-weight: 500; fill: var(--secondary); }
+.brand-legend { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(4, auto); grid-auto-flow: column; column-gap: 32px; }
+.brand-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--separator); font-size: 13px; transition: opacity .15s; }
+.brand-row:nth-child(4n), .brand-row:last-child { border-bottom: 0; }
+.brand-row .mix-dot { margin-right: 0; flex-shrink: 0; }
+.brand-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-count { color: var(--secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.brand-pct { width: 36px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.brand-body.focus .donut path:not(.on), .brand-body.focus .brand-row:not(.on) { opacity: 0.3; }

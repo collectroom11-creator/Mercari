@@ -23,6 +23,7 @@ const { computeDiscountAlerts, discountedPrice } = require("./discounts");
 const { ledgerGet, ledgerSet, importLedgerBackup, exportLedgerBackup } = require("./ledger-store");
 const { parseWishlistLink, loadManual, addManual, removeManual, loadDrops, loadHidden, hideItem } = require("./wishlist-files");
 const { loadBrandNames, matchBrand, validateFilters } = require("./filters");
+const { computeBrandMix } = require("./brands");
 const { readRemoteFilters, saveFilters } = require("./filters-git");
 
 const DB_FILE = path.join(app.getPath("userData"), "inventory.json");
@@ -346,6 +347,7 @@ function saveAlertsState(state) {
 }
 
 ipcMain.handle("get-shop-stats", () => computeShopStats(listItems(DB_FILE)));
+ipcMain.handle("get-brand-mix", () => computeBrandMix(listItems(DB_FILE)));
 // 대시보드 그래프는 최근 6개월 고정
 ipcMain.handle("get-monthly-sales", () => computeMonthlySales(listItems(DB_FILE), { lastMonths: 6 }));
 
