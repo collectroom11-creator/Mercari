@@ -25,6 +25,22 @@ document.querySelectorAll(".side-link[data-page]").forEach((link) => {
   link.addEventListener("click", () => showPage(link.dataset.page));
 });
 
+// 사이드바 숨기기/보이기 (툴바 버튼, ⌘⌃S). 마지막 상태는 이 컴퓨터에 기억한다.
+function setSidebarHidden(hidden) {
+  document.body.classList.toggle("sidebar-hidden", hidden);
+  try { localStorage.setItem("sidebarHidden", hidden ? "1" : "0"); } catch {}
+}
+try { setSidebarHidden(localStorage.getItem("sidebarHidden") === "1"); } catch {}
+document.getElementById("sidebarToggle").addEventListener("click", () =>
+  setSidebarHidden(!document.body.classList.contains("sidebar-hidden"))
+);
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey && e.ctrlKey && e.key.toLowerCase() === "s") {
+    e.preventDefault();
+    setSidebarHidden(!document.body.classList.contains("sidebar-hidden"));
+  }
+});
+
 // 창이 비활성이면 사이드바 선택 표시를 회색으로(맥 기본 앱과 같은 동작)
 window.addEventListener("blur", () => document.body.classList.add("inactive"));
 window.addEventListener("focus", () => document.body.classList.remove("inactive"));
@@ -66,8 +82,62 @@ async function renderDashboard() {
   document.getElementById("revenueNow").textContent = last ? `이번 달 ${shortWon(last.revenue)}` : "";
   document.getElementById("profitNow").textContent = last ? `이번 달 ${shortWon(last.profit)}` : "";
 
+  renderDashboardLists(await window.api.listItems());
+
   renderLineChart(document.getElementById("revenueChart"), months, "revenue", cssVar("--accent"));
   renderLineChart(document.getElementById("profitChart"), months, "profit", cssVar("--positive"));
+}
+
+// 대시보드 아래쪽: 재고 현황 막대 + 최근 판매 / 오래 머문 상품 목록(재고 보드와 같은 행 스타일)
+function renderDashboardLists(items) {
+  const DAY = 86400000;
+  const days = (from, to = new Date()) => Math.max(0, Math.floor((new Date(to) - new Date(from)) / DAY));
+
+  const groups = [
+    { name: "배송전", color: "var(--tertiary)", match: (i) => i.status === "배송전" },
+    { name: "업로드전", color: "var(--warning)", match: (i) => i.status === "업로드전" },
+    { name: "판매중", color: "var(--accent)", match: (i) => i.status === "판매중" || i.status === "재고" },
+  ].map((g) => {
+    const list = items.filter(g.match);
+    return { ...g, count: list.length, cost: list.reduce((s, i) => s + i.costKrw, 0) };
+  });
+  const total = groups.reduce((s, g) => s + g.cost, 0) || 1;
+  document.getElementById("stockMix").innerHTML = `
+    <div class="chart-head"><span class="chart-title">재고 현황</span><span class="chart-now">원가 기준</span></div>
+    <div class="mix-bar">${groups.map((g) => `<span style="width:${(g.cost / total) * 100}%;background:${g.color}"></span>`).join("")}</div>
+    <div class="mix-legend">${groups.map((g) => `
+      <div><span class="mix-dot" style="background:${g.color}"></span>${g.name} <b>${g.count}개</b> <span class="muted">${shortWon(g.cost)}</span></div>`).join("")}
+    </div>`;
+
+  const row = (i, right, rightClass = "") => `
+    <div class="drow" data-open-url="${escapeHtml(i.sourceUrl || "")}" title="${escapeHtml(i.title)}">
+      <div class="dphoto" style="background-image:url('${i.imageUrl || ""}')"></div>
+      <div class="dbody">
+        <div class="dprice">${Number(i.actualPrice ?? i.listPrice ?? i.targetPrice ?? 0).toLocaleString()}<small>원</small></div>
+        <div class="dsub">원가 ${i.costKrw.toLocaleString()}</div>
+      </div>
+      <div class="dright ${rightClass}">${right}</div>
+    </div>`;
+
+  const sold = items
+    .filter((i) => i.status === "판매완료" && i.soldAt)
+    .sort((a, b) => new Date(b.soldAt) - new Date(a.soldAt))
+    .slice(0, 5);
+  document.getElementById("recentSold").innerHTML = sold.length
+    ? sold.map((i) => row(i, i.listedAt ? (days(i.listedAt, i.soldAt) === 0 ? "당일" : `${days(i.listedAt, i.soldAt)}일`) : "-")).join("")
+    : `<div class="empty">아직 판매 기록이 없어요</div>`;
+
+  const stale = items
+    .filter((i) => (i.status === "판매중" || i.status === "재고") && i.listedAt)
+    .sort((a, b) => new Date(a.listedAt) - new Date(b.listedAt))
+    .slice(0, 5);
+  document.getElementById("staleListed").innerHTML = stale.length
+    ? stale.map((i) => { const d = days(i.listedAt); return row(i, `${d}일째`, d >= 14 ? "warn" : ""); }).join("")
+    : `<div class="empty">판매중인 상품이 없어요</div>`;
+
+  document.querySelectorAll(".drow[data-open-url]").forEach((r) =>
+    r.addEventListener("click", () => r.dataset.openUrl && window.api.openExternal(r.dataset.openUrl))
+  );
 }
 
 // 만 원 단위로 짧게: 584000 → "58.4만"
@@ -151,6 +221,9 @@ async function refreshAlerts() {
   const count = discounts.length + drops.length;
   alertsBadge.textContent = count;
   alertsBadge.hidden = count === 0;
+  const tb = document.getElementById("toolbarAlertsBadge");
+  tb.textContent = count;
+  tb.hidden = count === 0;
 
   const discountRows = discounts.length
     ? discounts.map((a) => `
@@ -179,6 +252,12 @@ async function refreshAlerts() {
     <div class="alerts-section-title">찜 상품 가격 인하</div>${dropRows}`;
 }
 
+document.getElementById("toolbarAlertsBtn").addEventListener("click", (e) => alertsBtn.onclickHandler(e));
+alertsBtn.onclickHandler = (e) => {
+  e.stopPropagation();
+  alertsPopup.hidden = !alertsPopup.hidden;
+  if (!alertsPopup.hidden) refreshAlerts();
+};
 alertsBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   alertsPopup.hidden = !alertsPopup.hidden;
@@ -208,39 +287,38 @@ window.addEventListener("focus", refreshAlerts);
 setInterval(refreshAlerts, 5 * 60 * 1000);
 
 // ---- 찜 목록 ----
+// 메루카리 상품 대표 사진은 id만 있으면 이 주소로 바로 받을 수 있다.
+const mercariPhoto = (id) => `https://static.mercdn.net/item/detail/orig/photos/${id}_1.jpg`;
+
+// 찜 목록: 이름 대신 사진 위주의 격자(사진 앱 느낌). 사진 아래 현재가와 마지막 확인.
 async function renderWishlist() {
   const page = document.getElementById("page-wishlist");
   const { items, lastRunAt } = await window.api.getWishlist();
   const fmt = (iso) => (iso ? friendlyTime(iso) : "-");
-  // 품절된 건 흐리게 맨 아래로. 출처는 대부분 켄즈포스트라 "직접 추가"만 작은 뱃지로 표시한다.
-  const rows = items
+  const tiles = items
     .sort((a, b) => Number(a.soldOut) - Number(b.soldOut))
     .map((w) => `
-      <tr class="${w.soldOut ? "dimmed" : ""}">
-        <td class="col-title"><a href="#" data-open="${w.id}">${escapeHtml(w.title)}</a>${w.manual ? ' <span class="badge">직접 추가</span>' : ""}${w.soldOut ? ' <span class="badge">품절</span>' : ""}</td>
-        <td class="col-num">${w.lastPrice != null ? yen(w.lastPrice) : "-"}</td>
-        <td class="col-num muted">${fmt(w.checkedAt)}</td>
-        <td class="col-action">${w.manual ? `<button class="row-remove" data-remove="${w.id}" title="삭제">−</button>` : ""}</td>
-      </tr>`).join("");
+      <div class="wtile ${w.soldOut ? "dimmed" : ""}" title="${escapeHtml(w.title)}" data-open="${w.id}">
+        <div class="wphoto" style="background-image:url('${mercariPhoto(w.id)}')">
+          ${w.soldOut ? '<span class="wtag">품절</span>' : w.manual ? '<span class="wtag">직접 추가</span>' : ""}
+          ${w.manual ? `<button class="wremove" data-remove="${w.id}" title="삭제">✕</button>` : ""}
+        </div>
+        <div class="wprice">${w.lastPrice != null ? yen(w.lastPrice) : "-"}</div>
+        <div class="wtime">${fmt(w.checkedAt)}</div>
+      </div>`).join("");
   page.innerHTML = `
-    <div class="page-card">
-      <h2 class="page-title">찜 상품 추가</h2>
-      <div class="inline-row">
-        <input id="wishLinkInput" placeholder="켄즈포스트 메루카리 링크나 jp.mercari.com 링크">
-        <button id="wishAddBtn" class="btn-primary">추가</button>
+    <div class="wish-add">
+      <div class="add-row">
+        <input id="wishLinkInput" placeholder="켄즈포스트 메루카리 링크나 jp.mercari.com 링크로 찜 추가">
+        <button id="wishAddBtn" class="round-go" title="추가" aria-label="추가"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       </div>
       <div id="wishAddMsg"></div>
-      <p class="hint">켄즈포스트 관심상품은 자동으로 들어와요. 가격 확인은 30분마다 자동으로 돌아요 · 마지막 확인 ${fmt(lastRunAt)}</p>
+      <p class="hint">켄즈포스트 관심상품은 자동으로 들어와요 · 가격 확인은 30분마다 · 마지막 확인 ${fmt(lastRunAt)}</p>
     </div>
-    <div class="page-card table-wrap">
-      <table class="item-table">
-        <thead><tr><th class="col-title">상품</th><th class="col-num">현재가</th><th class="col-num">마지막 확인</th><th class="col-action"></th></tr></thead>
-        <tbody>${rows || `<tr><td colspan="4" class="empty">찜 상품이 없어요</td></tr>`}</tbody>
-      </table>
-    </div>`;
+    <div class="wgrid">${tiles || `<div class="empty">찜 상품이 없어요</div>`}</div>`;
 
   const msg = document.getElementById("wishAddMsg");
-  document.getElementById("wishAddBtn").addEventListener("click", async () => {
+  const add = async () => {
     const input = document.getElementById("wishLinkInput");
     const r = await window.api.addWishlistLink(input.value.trim());
     if (!r.ok) {
@@ -249,19 +327,19 @@ async function renderWishlist() {
       return;
     }
     renderWishlist();
-  });
+  };
+  document.getElementById("wishAddBtn").addEventListener("click", add);
+  document.getElementById("wishLinkInput").addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
   document.getElementById("wishLinkInput").addEventListener("input", () => (msg.textContent = ""));
   page.querySelectorAll("[data-remove]").forEach((b) =>
-    b.addEventListener("click", async () => {
+    b.addEventListener("click", async (e) => {
+      e.stopPropagation();
       await window.api.removeWishlistLink(b.dataset.remove);
       renderWishlist();
     })
   );
-  page.querySelectorAll("[data-open]").forEach((a) =>
-    a.addEventListener("click", (e) => {
-      e.preventDefault();
-      window.api.openExternal(kenzLink(a.dataset.open));
-    })
+  page.querySelectorAll(".wtile[data-open]").forEach((t) =>
+    t.addEventListener("click", () => window.api.openExternal(kenzLink(t.dataset.open)))
   );
 }
 pageRenderers["page-wishlist"] = renderWishlist;
@@ -297,36 +375,36 @@ function renderFilterPage(message = "") {
       </tr>`).join("");
   const brandKw = Object.entries(f.brandExcludeKeywords)
     .map(([brand, words]) => `
-      <div style="margin-bottom:10px"><b>${escapeHtml(brand)}</b>
+      <div class="bkw"><div class="bkw-name">${escapeHtml(brand)}</div>
         <div>${chipList(words, (i) => `data-del-bkw="${escapeHtml(brand)}" data-idx="${i}"`)}</div>
         <div class="inline-row"><input placeholder="${escapeHtml(brand)} 제외 키워드 추가" data-bkw-input="${escapeHtml(brand)}"><button class="btn-ghost btn-sm" data-add-bkw="${escapeHtml(brand)}">추가</button></div>
       </div>`).join("");
+  // 왼쪽: 브랜드(패널 안에서만 스크롤), 오른쪽: 공통 / 브랜드별 제외 키워드. 저장은 툴바 버튼.
   page.innerHTML = `
-    <div class="page-card">
-      <div class="inline-row" style="justify-content:space-between">
-        <h2 class="page-title" style="margin:0">브랜드 (${f.brands.length}개)</h2>
-        <button id="filterSaveBtn" class="btn-primary">저장</button>
+    <div class="filters-layout">
+      <section class="fpanel fbrands">
+        <div class="fhead"><h2 class="page-title">브랜드 <span class="muted">${f.brands.length}개</span></h2></div>
+        <div id="filterMsg">${message}</div>
+        <div class="inline-row fadd">
+          <input id="brandInput" placeholder="브랜드 이름 (메루카리 표기로 확인해요)">
+          <input id="brandPriceInput" class="price-input" type="text" inputmode="numeric" value="30,000"><span class="unit">엔 이하</span>
+          <button id="brandAddBtn" class="btn-ghost">추가</button>
+        </div>
+        <div id="brandCandidates" class="candidate-list"></div>
+        <div class="fscroll"><table class="item-table"><tbody>${brandRows}</tbody></table></div>
+      </section>
+      <div class="fside">
+        <section class="fpanel">
+          <h2 class="page-title">공통 제외 키워드</h2>
+          <div>${chipList(f.excludeKeywords, (i) => `data-del-kw="${i}"`)}</div>
+          <div class="inline-row"><input id="kwInput" placeholder="제목에 이 단어가 있으면 알림 제외"><button id="kwAddBtn" class="btn-ghost btn-sm">추가</button></div>
+        </section>
+        <section class="fpanel fgrow">
+          <h2 class="page-title">브랜드별 제외 키워드</h2>
+          <div class="fscroll">${brandKw}</div>
+          <div class="inline-row"><select id="bkwBrandSelect">${f.brands.filter((b) => !f.brandExcludeKeywords[b.name]).map((b) => `<option>${escapeHtml(b.name)}</option>`).join("")}</select><button id="bkwBrandAddBtn" class="btn-ghost btn-sm">브랜드 추가</button></div>
+        </section>
       </div>
-      <div id="filterMsg">${message}</div>
-      <div class="inline-row" style="margin-top:12px">
-        <input id="brandInput" placeholder="브랜드 이름 (메루카리 표기로 확인해요)">
-        <input id="brandPriceInput" class="price-input" type="text" inputmode="numeric" value="30,000"><span class="unit">엔 이하</span>
-        <button id="brandAddBtn" class="btn-ghost">추가</button>
-      </div>
-      <div id="brandCandidates" class="candidate-list"></div>
-      <div class="table-wrap" style="margin-top:12px">
-        <table class="item-table"><tbody>${brandRows}</tbody></table>
-      </div>
-    </div>
-    <div class="page-card">
-      <h2 class="page-title">공통 제외 키워드</h2>
-      <div>${chipList(f.excludeKeywords, (i) => `data-del-kw="${i}"`)}</div>
-      <div class="inline-row"><input id="kwInput" placeholder="제목에 이 단어가 있으면 알림 제외"><button id="kwAddBtn" class="btn-ghost btn-sm">추가</button></div>
-    </div>
-    <div class="page-card">
-      <h2 class="page-title">브랜드별 제외 키워드</h2>
-      ${brandKw}
-      <div class="inline-row"><select id="bkwBrandSelect">${f.brands.filter((b) => !f.brandExcludeKeywords[b.name]).map((b) => `<option>${escapeHtml(b.name)}</option>`).join("")}</select><button id="bkwBrandAddBtn" class="btn-ghost btn-sm">브랜드 추가</button></div>
     </div>`;
   bindFilterPage();
 }
@@ -405,7 +483,11 @@ function bindFilterPage() {
     if (brand) filterDraft.brandExcludeKeywords[brand] = [];
     renderFilterPage();
   });
-  document.getElementById("filterSaveBtn").addEventListener("click", async () => {
+}
+
+// 저장 버튼은 툴바에 고정이라 한 번만 연결한다.
+document.getElementById("filterSaveBtn").addEventListener("click", async () => {
+    if (!filterDraft) return;
     // 키워드가 하나도 없는 브랜드별 항목은 저장하지 않는다.
     const toSave = structuredClone(filterDraft);
     for (const [brand, words] of Object.entries(toSave.brandExcludeKeywords)) {
@@ -415,9 +497,8 @@ function bindFilterPage() {
     const r = await window.api.saveFilters(toSave);
     if (r.ok && r.unchanged) return setFilterMsg("바뀐 내용이 없어요", true);
     if (r.ok) return setFilterMsg("저장됐어요. 1분 안에 알림에 반영돼요", true);
-    setFilterMsg(r.errors ? r.errors.join(" / ") : `저장 실패: ${r.error}`, false);
-  });
-}
+  setFilterMsg(r.errors ? r.errors.join(" / ") : `저장 실패: ${r.error}`, false);
+});
 pageRenderers["page-filters"] = loadFilterPage;
 
 renderDashboard();

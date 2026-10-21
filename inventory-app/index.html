@@ -45,11 +45,20 @@
 
     <main class="content">
       <header class="toolbar">
+        <button id="sidebarToggle" class="toolbar-icon" title="사이드바 보기/숨기기 (⌘⌃S)" aria-label="사이드바 보기/숨기기">
+          <svg viewBox="0 0 20 16" aria-hidden="true"><rect x="1.5" y="1.5" width="17" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M7 1.5v13" stroke="currentColor" stroke-width="1.4"/><path d="M3.5 5h1.5M3.5 7.5h1.5M3.5 10h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+        <!-- 사이드바를 숨겼을 때만 보이는 알림 버튼 -->
+        <button id="toolbarAlertsBtn" class="toolbar-icon toolbar-alerts" title="알림" aria-label="알림">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 11V7a4 4 0 0 1 8 0v4l1 1.5H3Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6.5 14a1.5 1.5 0 0 0 3 0" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          <span id="toolbarAlertsBadge" class="toolbar-badge" hidden></span>
+        </button>
         <h1 id="pageTitle" class="toolbar-title">대시보드</h1>
         <div class="toolbar-right">
           <div id="fxRateChip" class="fx-rate-chip" hidden></div>
           <!-- 지금 보고 있는 페이지에만 보이는 툴바 버튼 (data-for = 페이지 id) -->
           <button id="monthlyViewBtn" class="btn-ghost btn-sm page-action" data-for="tab-list" hidden>월별 정리</button>
+          <button id="filterSaveBtn" class="btn-primary btn-sm page-action" data-for="page-filters" hidden>저장</button>
         </div>
       </header>
 
@@ -65,6 +74,17 @@
               <div class="chart-head"><span class="chart-title">월별 순이익</span><span id="profitNow" class="chart-now"></span></div>
               <div id="profitChart" class="line-chart"></div>
             </div>
+          </div>
+          <div id="stockMix" class="group stock-mix"></div>
+          <div class="dash-lists">
+            <section class="group dash-list">
+              <div class="chart-head"><span class="chart-title">최근 판매</span><span class="chart-now">업로드 후 판매까지</span></div>
+              <div id="recentSold"></div>
+            </section>
+            <section class="group dash-list">
+              <div class="chart-head"><span class="chart-title">오래 머문 상품</span><span class="chart-now">판매중 경과일</span></div>
+              <div id="staleListed"></div>
+            </section>
           </div>
         </section>
 
