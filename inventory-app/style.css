@@ -664,3 +664,6 @@ input:disabled {
 .line-value.neg { fill: var(--negative); }
 .line-label { font-size: 11px; fill: var(--text-secondary); }
 .kprice::-webkit-inner-spin-button, .kprice::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+/* 재고 박스 안 스크롤은 그대로 되지만 스크롤바는 숨긴다 */
+.klist { scrollbar-width: none; }
+.klist::-webkit-scrollbar { display: none; }
