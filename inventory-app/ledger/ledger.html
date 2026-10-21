@@ -213,12 +213,13 @@
     position:absolute; inset: 0; background: rgba(120,120,128,0.2); transition: .2s; border-radius: 999px;
   }
   .switch-slider:before{
-    /* 아래로만 떨어지는 그림자는 동그라미가 아래로 처져 보여서, 사방으로 고르게 */
-    content:""; position:absolute; height: 16px; width: 16px; left: 2px; top: 50%; margin-top: -8px;
+    /* 화면 배율이 1.095처럼 딱 안 떨어지면 left/top 위치는 픽셀에 따로 맞춰져 1px 쏠린다.
+       transform은 픽셀에 안 맞추므로 위치를 transform으로만 준다. 그림자도 사방으로 고르게. */
+    content:""; position:absolute; height: 16px; width: 16px; left: 0; top: 0; transform: translate(2px, 2px);
     background: #fff; transition: .2s; border-radius: 50%; box-shadow: 0 0 0 0.5px rgba(0,0,0,.06), 0 0 2px rgba(0,0,0,.18);
   }
   .switch input:checked + .switch-slider{ background: var(--positive, #34c759); }
-  .switch input:checked + .switch-slider:before{ transform: translateX(12px); }
+  .switch input:checked + .switch-slider:before{ transform: translate(14px, 2px); }
 
   .proof-badge{
     display:inline-block; margin-left: 6px; font-size: 10px; font-weight: 600;
