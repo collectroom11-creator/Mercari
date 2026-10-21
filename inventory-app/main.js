@@ -41,9 +41,11 @@ function createMainWindow() {
   // 좁게 나온다(예: 1040을 줬는데 실제로는 949) - 그래서 970px 미만으로 착각해서
   // 대시보드가 위로 올라가는 좁은 레이아웃이 매번 뜨는 문제였다. 배율을 감안해서
   // 실제 렌더링 폭이 넉넉히 970을 넘도록 여유있게 크게 잡는다.
-  const TARGET_WIDTH = 1040;
+  const TARGET_WIDTH = 1120;
   const TARGET_HEIGHT = 720;
-  const MIN_CONTENT_WIDTH = 1010;
+  // 재고 입력 보드(열 4개 × 최소 210px) + 왼쪽 메뉴 + 여백이 1,076px라서, 그보다
+  // 좁아져서 가로 스크롤바가 생기지 않게 창을 이 이상 못 줄이게 한다.
+  const MIN_CONTENT_WIDTH = 1080;
   mainWindow = new BrowserWindow({
     width: TARGET_WIDTH,
     height: TARGET_HEIGHT,
