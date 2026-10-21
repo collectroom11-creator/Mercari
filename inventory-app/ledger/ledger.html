@@ -504,6 +504,22 @@
   .modal-breakdown .bd-row{ margin-bottom: 12px; }
   .modal-breakdown .bd-label{ width: 96px; font-size: 12px; }
   .modal-breakdown .bd-amt{ width: 86px; }
+  /* ---- 상자 없이 흰 바닥에 (재고관리 앱 대시보드와 같은 방식): 칸 사이는 세로 얇은 선, 입력칸은 옅은 회색 ---- */
+  .app{ gap: 0; }
+  .col-left, .col-right, .col-monthly{ background: transparent; border-radius: 0; padding: 0 20px; }
+  .col-left{ padding-left: 0; }
+  .col-right, .col-monthly{ border-left: 1px solid var(--separator); }
+  .col-monthly{ padding-right: 0; }
+  @media (max-width: 1059px){ .col-right{ padding-right: 0; } }
+  .entry-form input, .entry-form select, .date-picker-btn, .cat-add-row input, .kw-chip{ background: var(--field-bg); }
+  .date-picker-btn:hover{ background: var(--field-bg-hover); }
+  .kw-add-input{ background: transparent; box-shadow: inset 0 0 0 1px var(--separator); }
+  .summary{ background: transparent; border-radius: 0; padding: 10px 0; border-top: 1px solid var(--separator); border-bottom: 1px solid var(--separator); }
+  .ledger, #moMonthList{ background: transparent; border-radius: 0; padding: 0; }
+  .mo-chart{ background: transparent; border-radius: 0; padding-left: 0; border-bottom: 1px solid var(--separator); }
+  /* 동그란 버튼은 앱과 같이 파랑 대신 진한 무채색 */
+  .submit-circle, .fab-add{ background: var(--label); color: var(--content-bg); }
+  .submit-circle:hover, .fab-add:hover{ background: var(--secondary); }
 </style>
 <!-- 재고관리 앱 안에서 열릴 때: 앱 저장소(preload의 __ledgerStorage)를 window.storage로 연결 -->
 <script>if (window.__ledgerStorage) Object.defineProperty(window, "storage", { value: window.__ledgerStorage, configurable: true, writable: true });</script>
