@@ -403,3 +403,15 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 .dash-list > div:last-child::-webkit-scrollbar { display: none; }
 /* 창이 넓어져도 그래프가 위아래로 계속 커지지 않게 */
 #page-dashboard .line-svg { max-height: 165px; }
+
+/* ---- 대시보드: 상자 없이 흰 바닥에 바로 놓고, 구역은 얇은 선과 여백으로만 나눈다 ---- */
+#page-dashboard .group, #page-dashboard .stat-card { background: transparent; border-radius: 0; }
+#page-dashboard .stat-grid { gap: 0; margin: 4px 0 0; padding-bottom: 16px; border-bottom: 1px solid var(--separator); }
+#page-dashboard .stat-card { padding: 2px 16px; border-left: 1px solid var(--separator); }
+#page-dashboard .stat-card:first-child { padding-left: 0; border-left: 0; }
+#page-dashboard .chart-grid { gap: 32px; padding: 14px 0 6px; }
+#page-dashboard .chart-card { padding: 0; }
+#page-dashboard .stock-mix { margin: 0; padding: 14px 0 16px; border-top: 1px solid var(--separator); border-bottom: 1px solid var(--separator); }
+#page-dashboard .dash-lists { gap: 32px; margin: 0; padding-top: 14px; }
+#page-dashboard .dash-list { padding: 0; }
+#page-dashboard .drow { margin: 0 -4px; }
