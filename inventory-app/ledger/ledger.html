@@ -226,13 +226,6 @@
     color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 999px; vertical-align: 1px;
   }
 
-  .submit-circle{
-    flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
-    border: 0; background: var(--accent); color: #fff; padding: 0;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .submit-circle .material-icons{ font-size: 18px; }
-  .submit-circle:hover{ background: var(--accent-hover); }
 
   /* ---- 카테고리 관리 ---- */
   #categoryEditList{ flex: 1; min-height: 0; overflow-y: auto; }
@@ -267,16 +260,7 @@
     border: 0; background: var(--field-bg); border-radius: 999px; height: 24px;
     font-size: 12px; padding: 0 10px; width: 104px; color: var(--label);
   }
-  .fab-add{
-    position: absolute; bottom: 14px; right: 14px;
-    width: 34px; height: 34px; border-radius: 50%;
-    background: var(--accent); color: #fff; border: 0;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-  }
-  .fab-add .material-icons{ font-size: 20px; }
-  .fab-add:hover{ background: var(--accent-hover); }
-  .cat-add-row{ margin-top: 8px; margin-bottom: 44px; }
+  .cat-add-row{ margin-top: 8px; }
   .cat-add-row input{
     width: 100%; height: 34px; border: 0; background: var(--content-bg); border-radius: 8px;
     padding: 0 12px; font-size: 13px; color: var(--label);
@@ -518,9 +502,6 @@
   .ledger, #moMonthList{ background: transparent; border-radius: 0; padding: 0; }
   .mo-chart{ background: transparent; border-radius: 0; padding-left: 0; border-bottom: 1px solid var(--separator); }
   .modal-list{ background: transparent; border-radius: 0; padding: 0; }
-  /* 동그란 버튼은 앱과 같이 파랑 대신 진한 무채색 */
-  .submit-circle, .fab-add{ background: var(--label); color: var(--content-bg); }
-  .submit-circle:hover, .fab-add:hover{ background: var(--secondary); }
 </style>
 <!-- 재고관리 앱 안에서 열릴 때: 앱 저장소(preload의 __ledgerStorage)를 window.storage로 연결 -->
 <script>if (window.__ledgerStorage) Object.defineProperty(window, "storage", { value: window.__ledgerStorage, configurable: true, writable: true });</script>
@@ -575,9 +556,6 @@
             </span>
             <span class="proof-toggle-label">증빙</span>
           </label>
-          <button class="submit-circle" id="btnAdd" title="기록하기">
-            <span class="material-icons">arrow_forward</span>
-          </button>
         </div>
       </div>
     </div>
@@ -588,12 +566,9 @@
         <button type="button" class="income" data-ctype="income">수입</button>
       </div>
       <div id="categoryEditList"></div>
-      <div class="cat-add-row" id="catAddRow" style="display:none;">
+      <div class="cat-add-row" id="catAddRow">
         <input type="text" id="newCategoryInput" placeholder="새 카테고리 이름 입력 후 Enter">
       </div>
-      <button type="button" class="fab-add" id="btnAddCategory" title="카테고리 추가">
-        <span class="material-icons">add</span>
-      </button>
     </div>
 
   </div>
@@ -1905,7 +1880,6 @@ function init(){
 
   $("btnExpense").addEventListener("click", () => setType("expense"));
   $("btnIncome").addEventListener("click", () => setType("income"));
-  $("btnAdd").addEventListener("click", addTx);
 
   $("fDesc").addEventListener("input", () => {
     renderAutocomplete();
@@ -1918,11 +1892,17 @@ function init(){
 
   $("fCategory").addEventListener("change", () => { categoryManuallySet = true; });
 
-  $("fAmount").addEventListener("keydown", (e) => {
-    if (e.key === "Enter"){
-      e.preventDefault();
-      addTx();
-    }
+  // 기록 버튼 대신: 사용처와 금액이 채워져 있으면 기록 탭 어디서든 Enter로 기록한다.
+  // (한글 조합 중 Enter, 카테고리 탭·전체 내역 창의 입력칸에서 누른 Enter는 제외)
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.isComposing) return;
+    if (!$("leftPanelRecord").classList.contains("active")) return;
+    if (e.target.closest && e.target.closest("#leftPanelCategory, .modal-overlay, .kw-add-input")) return;
+    if ($("monthModalOverlay").classList.contains("open")) return;
+    if (!$("fDesc").value.trim() || !(Number($("fAmount").value) > 0)) return;
+    e.preventDefault();
+    closeAutocomplete();
+    addTx();
   });
 
   function animateWeekChange(direction, applyChange){
@@ -2106,22 +2086,12 @@ function init(){
     }
   });
 
-  $("btnAddCategory").addEventListener("click", () => {
-    const row = $("catAddRow");
-    const willShow = (row.style.display === "none" || !row.style.display);
-    row.style.display = willShow ? "block" : "none";
-    if (willShow){
-      $("newCategoryInput").value = "";
-      $("newCategoryInput").focus();
-    }
-  });
   $("newCategoryInput").addEventListener("keydown", async (e) => {
     if (e.key === "Enter"){
       e.preventDefault();
       const name = $("newCategoryInput").value;
       await addCategoryDirect(activeCatEditType, name);
       $("newCategoryInput").value = "";
-      $("catAddRow").style.display = "none";
     }
   });
 
