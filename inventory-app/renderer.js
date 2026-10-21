@@ -420,7 +420,11 @@ async function renderList() {
       );
     const colEl = document.createElement("section");
     colEl.className = "kcol";
-    colEl.innerHTML = `<div class="kcol-head">${col.title}<span class="kcount">${colItems.length}</span></div>`;
+    // 열 제목 오른쪽: 판매완료는 판매액 합, 나머지는 원가 합(만 원 단위)
+    const sum = colItems.reduce((s, i) => s + ((col.title === "판매완료" ? i.actualPrice : i.costKrw) || 0), 0);
+    const man = sum / 10000;
+    const sumText = colItems.length ? `${col.title === "판매완료" ? "판매" : "원가"} ${man >= 100 ? Math.round(man) : Math.round(man * 10) / 10}만` : "";
+    colEl.innerHTML = `<div class="kcol-head">${col.title}<span class="kcount">${colItems.length}</span><span class="ksum">${sumText}</span></div>`;
     const list = document.createElement("div");
     list.className = "klist";
     if (colItems.length === 0) list.innerHTML = `<div class="kempty">없음</div>`;

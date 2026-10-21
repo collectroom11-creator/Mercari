@@ -417,46 +417,49 @@ function chipList(words, makeAttrs) {
   return words.map((w, i) => `<span class="chip">${escapeHtml(w)}<button ${makeAttrs(i)} title="삭제">✕</button></span>`).join("");
 }
 
+// 왼쪽: 브랜드 목록(가격 상한, 제외 키워드 개수). 줄을 누르면 오른쪽에 그 브랜드의 제외 키워드.
+// 오른쪽 위는 모든 브랜드에 적용되는 공통 제외 키워드. 저장은 툴바 버튼.
+let selectedFilterBrand = null;
+
 function renderFilterPage(message = "") {
   const page = document.getElementById("page-filters");
   const f = filterDraft;
+  if (!f.brands.some((b) => b.name === selectedFilterBrand)) selectedFilterBrand = f.brands[0]?.name ?? null;
+  const kwCount = (name) => (f.brandExcludeKeywords[name] || []).length;
   const brandRows = f.brands
     .map((b, i) => `
-      <tr>
+      <tr data-select-brand="${escapeHtml(b.name)}" class="${b.name === selectedFilterBrand ? "selected" : ""}">
         <td class="col-title">${escapeHtml(b.name)}</td>
+        <td class="col-kw">${kwCount(b.name) ? `제외 ${kwCount(b.name)}` : ""}</td>
         <td class="col-num"><input class="price-input" type="text" inputmode="numeric" value="${fmtNum(b.priceMax)}" data-price="${i}"><span class="unit">엔 이하</span></td>
         <td class="col-action"><button class="row-remove" data-del-brand="${i}" title="삭제">−</button></td>
       </tr>`).join("");
-  const brandKw = Object.entries(f.brandExcludeKeywords)
-    .map(([brand, words]) => `
-      <div class="bkw"><div class="bkw-name">${escapeHtml(brand)}</div>
-        <div>${chipList(words, (i) => `data-del-bkw="${escapeHtml(brand)}" data-idx="${i}"`)}</div>
-        <div class="inline-row"><input placeholder="${escapeHtml(brand)} 제외 키워드 추가" data-bkw-input="${escapeHtml(brand)}"><button class="btn-ghost btn-sm" data-add-bkw="${escapeHtml(brand)}">추가</button></div>
-      </div>`).join("");
-  // 왼쪽: 브랜드(패널 안에서만 스크롤), 오른쪽: 공통 / 브랜드별 제외 키워드. 저장은 툴바 버튼.
+  const sel = selectedFilterBrand;
+  const selWords = sel ? f.brandExcludeKeywords[sel] || [] : [];
   page.innerHTML = `
     <div class="filters-layout">
-      <section class="fpanel fbrands">
+      <section class="fcol fbrands">
         <div class="fhead"><h2 class="page-title">브랜드 <span class="muted">${f.brands.length}개</span></h2></div>
-        <div id="filterMsg">${message}</div>
         <div class="inline-row fadd">
           <input id="brandInput" placeholder="브랜드 이름 (메루카리 표기로 확인해요)">
           <input id="brandPriceInput" class="price-input" type="text" inputmode="numeric" value="30,000"><span class="unit">엔 이하</span>
           <button id="brandAddBtn" class="btn-ghost">추가</button>
         </div>
+        <div id="filterMsg">${message}</div>
         <div id="brandCandidates" class="candidate-list"></div>
         <div class="fscroll"><table class="item-table"><tbody>${brandRows}</tbody></table></div>
       </section>
-      <div class="fside">
-        <section class="fpanel">
-          <h2 class="page-title">공통 제외 키워드</h2>
-          <div>${chipList(f.excludeKeywords, (i) => `data-del-kw="${i}"`)}</div>
+      <div class="fcol fside">
+        <section class="fsec">
+          <h2 class="page-title">공통 제외 키워드 <span class="muted">모든 브랜드</span></h2>
+          <div class="chips">${chipList(f.excludeKeywords, (i) => `data-del-kw="${i}"`)}</div>
           <div class="inline-row"><input id="kwInput" placeholder="제목에 이 단어가 있으면 알림 제외"><button id="kwAddBtn" class="btn-ghost btn-sm">추가</button></div>
         </section>
-        <section class="fpanel fgrow">
-          <h2 class="page-title">브랜드별 제외 키워드</h2>
-          <div class="fscroll">${brandKw}</div>
-          <div class="inline-row"><select id="bkwBrandSelect">${f.brands.filter((b) => !f.brandExcludeKeywords[b.name]).map((b) => `<option>${escapeHtml(b.name)}</option>`).join("")}</select><button id="bkwBrandAddBtn" class="btn-ghost btn-sm">브랜드 추가</button></div>
+        <section class="fsec fgrow">
+          ${sel ? `
+          <h2 class="page-title">${escapeHtml(sel)} 제외 키워드</h2>
+          <div class="fscroll chips">${selWords.length ? chipList(selWords, (i) => `data-del-bkw="${escapeHtml(sel)}" data-idx="${i}"`) : `<p class="hint">이 브랜드만 따로 빼고 싶은 단어가 있으면 추가하세요</p>`}</div>
+          <div class="inline-row"><input placeholder="${escapeHtml(sel)} 제외 키워드 추가" data-bkw-input="${escapeHtml(sel)}"><button class="btn-ghost btn-sm" data-add-bkw="${escapeHtml(sel)}">추가</button></div>` : `<p class="hint">브랜드를 추가하세요</p>`}
         </section>
       </div>
     </div>`;
@@ -528,15 +531,25 @@ function bindFilterPage() {
     b.addEventListener("click", () => {
       const brand = b.dataset.addBkw;
       const v = page.querySelector(`[data-bkw-input="${CSS.escape(brand)}"]`).value.trim();
-      if (v && !filterDraft.brandExcludeKeywords[brand].includes(v)) filterDraft.brandExcludeKeywords[brand].push(v);
+      const words = (filterDraft.brandExcludeKeywords[brand] ||= []);
+      if (v && !words.includes(v)) words.push(v);
       renderFilterPage();
     })
   );
-  document.getElementById("bkwBrandAddBtn").addEventListener("click", () => {
-    const brand = document.getElementById("bkwBrandSelect").value;
-    if (brand) filterDraft.brandExcludeKeywords[brand] = [];
-    renderFilterPage();
-  });
+  // 브랜드 줄을 누르면 오른쪽에 그 브랜드의 제외 키워드 (가격칸·삭제 버튼을 누를 때는 그대로)
+  page.querySelectorAll("[data-select-brand]").forEach((tr) =>
+    tr.addEventListener("click", (e) => {
+      if (e.target.closest("input, button")) return;
+      selectedFilterBrand = tr.dataset.selectBrand;
+      renderFilterPage();
+    })
+  );
+  // 입력칸에서 Enter = 옆의 추가 버튼
+  page.querySelectorAll(".inline-row input").forEach((inp) =>
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") inp.parentElement.querySelector("button")?.click();
+    })
+  );
 }
 
 // 저장 버튼은 툴바에 고정이라 한 번만 연결한다.

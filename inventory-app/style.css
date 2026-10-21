@@ -135,7 +135,7 @@ input, select {
   font-size: 13px;
   color: var(--label);
 }
-.group input, .page-card input, .fpanel input, .group select, .page-card select, .fpanel select, .kcard input, .kshippop input { background: var(--content-bg); }
+.group input, .page-card input, .group select, .page-card select { background: var(--content-bg); }
 input::placeholder { color: var(--tertiary); }
 input:focus, select:focus { outline: none; box-shadow: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft); }
 input:disabled { color: var(--secondary); background: var(--fill); }
@@ -239,18 +239,22 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .field-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--secondary); font-weight: 600; }
 .manual-image-preview { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; background: var(--fill); }
 
-.kanban { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(200px, 1fr)); gap: 12px; overflow-x: auto; }
-/* 열마다 둥근 회색 패널 하나, 그 안의 상품은 박스 없이 얇은 선으로만 나눈다(미리알림/메일 목록 방식) */
-.kcol { display: flex; flex-direction: column; min-height: 0; }
-.kcol-head { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 0 4px 8px; }
+/* 행 강조가 열 밖으로 8px 나가므로 보드도 양옆으로 8px 넓혀서 가로 스크롤이 안 생기게 */
+.kanban { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 -8px; padding: 0 8px; overflow: hidden; }
+/* 상자 없이 흰 바닥에: 열 사이는 세로 얇은 선, 상품 사이는 가로 얇은 선(대시보드와 같은 방식) */
+.kcol { display: flex; flex-direction: column; min-height: 0; min-width: 0; padding: 0 14px; border-left: 1px solid var(--separator); }
+.kcol:first-child { padding-left: 0; border-left: 0; }
+.kcol:last-child { padding-right: 0; }
+.kcol-head { display: flex; align-items: baseline; gap: 6px; font-weight: 600; padding-bottom: 8px; margin-bottom: 4px; border-bottom: 1px solid var(--separator); }
+.ksum { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .kcount { color: var(--secondary); font-weight: 400; font-variant-numeric: tabular-nums; }
-.klist { overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; align-content: start; scrollbar-width: none; background: var(--group-bg); border-radius: 14px; padding: 4px; max-height: 100%; }
+.klist { overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; align-content: start; scrollbar-width: none; margin: 0 -8px; max-height: 100%; }
 .klist::-webkit-scrollbar { display: none; }
-.kempty { color: var(--secondary); font-size: 12px; padding: 10px; }
+.kempty { color: var(--secondary); font-size: 12px; padding: 10px 8px; }
 /* 재고 카드: 왼쪽 작은 정사각 사진, 오른쪽 판매가(크게) / 원가 · 마진(작게). 라벨 반복 없음. */
 /* 행: 배경 없이 패널 위에 놓이고, 마우스를 올리면 둥근 강조. 행 사이는 사진 오른쪽부터 시작하는 얇은 선. */
 .kcard { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; padding: 7px 8px; border-radius: 10px; }
-.kcard:hover { background: var(--fill-hover); }
+.kcard:hover { background: var(--field-bg); }
 .kcard + .kcard::before { content: ""; position: absolute; top: 0; left: 62px; right: 8px; height: 1px; background: var(--separator); }
 .kcard:hover::before, .kcard:hover + .kcard::before { background: transparent; }
 .kphoto { width: 44px; height: 44px; flex-shrink: 0; border-radius: 6px; background: var(--fill) center / cover no-repeat; }
@@ -262,7 +266,7 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 /* 입력칸 폭을 숫자 길이에 맞춰서 "원"이 숫자 바로 뒤에 붙게 */
 .kprice, .kcard .kprice { field-sizing: content; width: auto; min-width: 3ch; max-width: 110px; padding: 1px 4px; margin-left: -4px; background: transparent; border-radius: 5px; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.2px; }
 .kprice::placeholder { color: var(--tertiary); font-weight: 500; }
-.kcard:hover .kprice { background: var(--content-bg); }
+.kcard:hover .kprice { background: var(--field-bg); }
 .kcard .kprice:focus { background: var(--content-bg); }
 .kprice-unit { font-size: 12px; color: var(--secondary); margin-left: 1px; }
 .kprice-wrap > .kprice { margin-right: -3px; }
@@ -283,7 +287,7 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .kdel { position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 9px; line-height: 18px; padding: 0; cursor: default; opacity: 0; transition: opacity 0.12s ease; }
 .kcard:hover .kdel { opacity: 1; }
 .kdel:hover { background: var(--negative); }
-.kshippop { flex-basis: 100%; margin-top: 8px; background: var(--content-bg); border-radius: 7px; padding: 5px 8px; font-size: 12px; white-space: nowrap; color: var(--secondary); }
+.kshippop { flex-basis: 100%; margin-top: 8px; background: var(--field-bg); border-radius: 7px; padding: 5px 8px; font-size: 12px; white-space: nowrap; color: var(--secondary); }
 .kshippop[hidden] { display: none; }
 .kshippop input { width: 80px; padding: 2px 6px; margin-left: 4px; font-size: 12px; text-align: right; }
 
@@ -388,21 +392,31 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 .wtile.dimmed .wphoto { opacity: 0.45; }
 .wtile.dimmed .wprice { color: var(--secondary); }
 
-/* ---- 메루카리 필터: 왼쪽 브랜드(안에서 스크롤) / 오른쪽 키워드 ---- */
+/* ---- 메루카리 필터: 상자 없이 흰 바닥에. 왼쪽 브랜드 목록(안에서 스크롤) | 오른쪽 공통 / 선택한 브랜드 제외 키워드 ---- */
 #page-filters.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.filters-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; }
-.fpanel { background: var(--group-bg); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; min-height: 0; }
-.fpanel .page-title { margin-bottom: 10px; }
+.filters-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+.fcol { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.fbrands { padding-right: 24px; }
+.fside { padding-left: 24px; border-left: 1px solid var(--separator); }
+.fcol .page-title { margin-bottom: 10px; }
+.fcol .page-title .muted { font-weight: 500; margin-left: 4px; }
 .fbrands .fadd input:first-child { min-width: 120px; }
-.fscroll { flex: 1; min-height: 0; overflow-y: auto; margin: 8px -4px 0; padding: 0 4px; scrollbar-width: none; }
+.fscroll { flex: 1; min-height: 0; overflow-y: auto; margin-top: 8px; scrollbar-width: none; }
 .fscroll::-webkit-scrollbar { display: none; }
-.fside { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.fsec { display: flex; flex-direction: column; min-height: 0; padding-bottom: 16px; }
+.fsec + .fsec { padding-top: 16px; padding-bottom: 0; border-top: 1px solid var(--separator); }
 .fgrow { flex: 1; }
-.fgrow .fscroll { margin-bottom: 10px; }
-.bkw { padding: 8px 0; border-top: 1px solid var(--separator); }
-.bkw:first-child { border-top: 0; padding-top: 0; }
-.bkw-name { font-weight: 600; margin-bottom: 6px; }
-.bkw .inline-row { margin-top: 2px; }
+.fgrow .fscroll { flex: 0 1 auto; margin: 0 0 10px; }
+.chips { margin-bottom: 4px; }
+/* 브랜드 줄: 누르면 선택(오른쪽에 그 브랜드 키워드), 선택한 줄은 옅은 파랑 */
+.fbrands .item-table tr { cursor: default; }
+.fbrands .item-table tbody tr:hover td { background: var(--field-bg); }
+.fbrands .item-table tr.selected td { background: var(--accent-soft); }
+.fbrands .item-table td:first-child { border-radius: 7px 0 0 7px; }
+.fbrands .item-table td:last-child { border-radius: 0 7px 7px 0; }
+.col-kw { font-size: 12px; color: var(--secondary); white-space: nowrap; text-align: right; }
+.fbrands .item-table .price-input { background: transparent; }
+.fbrands .item-table tr:hover .price-input, .fbrands .item-table .price-input:focus { background: var(--content-bg); }
 
 #page-dashboard .brand-mix { flex: 0 0 auto; padding-top: 14px; border-top: 1px solid var(--separator); }
 
