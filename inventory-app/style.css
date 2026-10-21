@@ -320,6 +320,9 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .modal-title { font-size: 13px; font-weight: 700; }
 
+/* ---- 가계부 (안쪽 화면은 기존 디자인 그대로) ---- */
+.ledger-view.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.ledger-frame { flex: 1; width: 100%; border: 0; background: transparent; }
 
 /* ---- 사이드바 숨기기 ---- */
 .toolbar-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 0; background: transparent; color: var(--secondary); border-radius: 6px; padding: 0; position: relative; -webkit-app-region: no-drag; cursor: default; }

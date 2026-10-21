@@ -1,5 +1,5 @@
 // inventory-app/main.js
-const { app, BrowserWindow, ipcMain, shell, session, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, session, nativeImage, dialog } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
 const {
@@ -20,6 +20,7 @@ const { loadSettings, saveSettings } = require("./settings");
 const { fetchMercariItem } = require("./mercari-fetch");
 const { computeShopStats, computeMonthlySales } = require("./stats");
 const { computeDiscountAlerts, discountedPrice } = require("./discounts");
+const { ledgerGet, ledgerSet, importLedgerBackup } = require("./ledger-store");
 const { parseWishlistLink, loadManual, addManual, removeManual, loadDrops, loadHidden, hideItem } = require("./wishlist-files");
 const { loadBrandNames, matchBrand, validateFilters } = require("./filters");
 const { readRemoteFilters, saveFilters } = require("./filters-git");
@@ -62,7 +63,9 @@ function createMainWindow() {
     vibrancy: "sidebar",
     visualEffectState: "followWindow",
     backgroundColor: "#00000000",
-    webPreferences: { preload: path.join(__dirname, "preload.js") },
+    // 가계부(ledger/ledger.html)는 iframe으로 띄우는데, 그 안에서도 preload의
+    // window.storage가 필요해서 하위 프레임에도 preload를 돌린다.
+    webPreferences: { preload: path.join(__dirname, "preload.js"), nodeIntegrationInSubFrames: true },
   });
   mainWindow.loadFile("index.html");
   mainWindow.once("ready-to-show", async () => {
@@ -322,8 +325,9 @@ ipcMain.handle("get-settings", () => loadSettings(SETTINGS_FILE));
 
 ipcMain.handle("open-external", (event, url) => shell.openExternal(url));
 
-// ---- 샵 운영 툴: 대시보드 / 알림 / 찜 / 메루카리 필터 ----
+// ---- 샵 운영 툴: 대시보드 / 알림 / 찜 / 메루카리 필터 / 가계부 ----
 const DATA_DIR = app.getPath("userData");
+const LEDGER_FILE = path.join(DATA_DIR, "ledger.json");
 const ALERTS_STATE_FILE = path.join(DATA_DIR, "alerts-state.json");
 const WISHLIST_STATE_FILE = path.join(DATA_DIR, "wishlist-watch.json");
 const WISHLIST_MANUAL_FILE = path.join(DATA_DIR, "wishlist-manual.json");
@@ -416,6 +420,33 @@ ipcMain.handle("save-filters", (event, filters) => {
   const errors = validateFilters(filters, brandNames());
   if (errors.length) return { ok: false, errors };
   return saveFilters(REPO_DIR, filters);
+});
+
+ipcMain.on("ledger-get", (event, key) => {
+  try {
+    event.returnValue = { ok: true, result: ledgerGet(LEDGER_FILE, key) };
+  } catch (e) {
+    event.returnValue = { ok: false, error: e.message };
+  }
+});
+ipcMain.on("ledger-set", (event, key, value) => {
+  ledgerSet(LEDGER_FILE, key, value);
+  event.returnValue = true;
+});
+ipcMain.handle("ledger-import", async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+    title: "가계부 백업 파일 선택",
+    defaultPath: app.getPath("downloads"),
+    filters: [{ name: "가계부 백업", extensions: ["json"] }],
+    properties: ["openFile"],
+  });
+  if (canceled || !filePaths[0]) return { ok: false, canceled: true };
+  try {
+    const backup = JSON.parse(fs.readFileSync(filePaths[0], "utf-8"));
+    return { ok: true, ...importLedgerBackup(LEDGER_FILE, backup) };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 });
 
 app.whenReady().then(() => {

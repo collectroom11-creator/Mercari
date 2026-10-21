@@ -1,4 +1,4 @@
-// 샵 운영 툴 화면: 왼쪽 사이드바 메뉴, 대시보드, 알림, 찜 목록, 메루카리 필터.
+// 샵 운영 툴 화면: 왼쪽 사이드바 메뉴, 대시보드, 알림, 찜 목록, 메루카리 필터, 가계부.
 // 재고 입력 보드는 renderer.js가 담당한다.
 
 const won = (n) => `${Math.round(n).toLocaleString()}원`;
@@ -185,6 +185,19 @@ function refreshShopPanels() {
   if (document.getElementById("page-dashboard").classList.contains("active")) renderDashboard();
   if (typeof refreshAlerts === "function") refreshAlerts();
 }
+
+// ---- 가계부 ----
+document.getElementById("ledgerImportBtn").addEventListener("click", async () => {
+  const result = document.getElementById("ledgerImportResult");
+  const r = await window.api.ledgerImport();
+  if (r.canceled) return;
+  if (!r.ok) {
+    result.textContent = `불러오기 실패: ${r.error}`;
+    return;
+  }
+  result.textContent = `거래 ${r.transactionCount.toLocaleString()}건을 불러왔어요`;
+  document.getElementById("ledgerFrame").contentWindow.location.reload();
+});
 
 // ---- 알림 팝업 (할인 필요 + 찜 가격 인하) ----
 const alertsBtn = document.getElementById("alertsBtn");
