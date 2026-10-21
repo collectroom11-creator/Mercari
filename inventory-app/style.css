@@ -214,13 +214,14 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .kcol:last-child { padding-right: 0; }
 .kcol-head { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: 0 2px 8px; }
 .kcount { color: var(--secondary); font-weight: 400; font-variant-numeric: tabular-nums; }
-.klist { overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; gap: 6px; align-content: start; scrollbar-width: none; }
+.klist { overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; gap: 8px; align-content: start; scrollbar-width: none; }
 .klist::-webkit-scrollbar { display: none; }
 .kempty { color: var(--secondary); font-size: 12px; padding: 8px 2px; }
 /* 재고 카드: 왼쪽 작은 정사각 사진, 오른쪽 판매가(크게) / 원가 · 마진(작게). 라벨 반복 없음. */
-.kcard { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; padding: 7px 8px 7px 7px; border-radius: 10px; background: var(--group-bg); }
+/* 여백은 사방 8px로 같게, 모서리는 동심원(카드 14 = 사진 6 + 여백 8) */
+.kcard { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; padding: 8px; border-radius: 14px; background: var(--group-bg); }
 .kcard:hover { background: var(--fill-hover); }
-.kphoto { width: 46px; height: 46px; flex-shrink: 0; border-radius: 7px; background: var(--fill) center / cover no-repeat; }
+.kphoto { width: 44px; height: 44px; flex-shrink: 0; border-radius: 6px; background: var(--fill) center / cover no-repeat; }
 .kphoto.clickable { cursor: pointer; }
 .kbody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ktop { display: flex; align-items: baseline; gap: 6px; }
@@ -242,14 +243,14 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .kmargin { color: var(--positive); font-weight: 600; }
 .kmargin.neg { color: var(--negative); }
 .kship { font-size: 11px; color: var(--warning); white-space: nowrap; }
-.kadv { position: absolute; right: 7px; bottom: 7px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--accent); color: #fff; padding: 0; cursor: default; opacity: 0; transition: opacity 0.12s ease; }
+.kadv { position: absolute; right: 8px; bottom: 8px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--accent); color: #fff; padding: 0; cursor: default; opacity: 0; transition: opacity 0.12s ease; }
 .kadv svg { width: 12px; height: 12px; }
 .kcard:hover .kadv { opacity: 1; }
 .kadv:hover { background: var(--accent-hover); }
-.kdel { position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 9px; line-height: 18px; padding: 0; cursor: default; opacity: 0; transition: opacity 0.12s ease; }
+.kdel { position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 9px; line-height: 18px; padding: 0; cursor: default; opacity: 0; transition: opacity 0.12s ease; }
 .kcard:hover .kdel { opacity: 1; }
 .kdel:hover { background: var(--negative); }
-.kshippop { flex-basis: 100%; margin-top: 7px; background: var(--content-bg); border-radius: 7px; padding: 5px 8px; font-size: 12px; white-space: nowrap; color: var(--secondary); }
+.kshippop { flex-basis: 100%; margin-top: 8px; background: var(--content-bg); border-radius: 7px; padding: 5px 8px; font-size: 12px; white-space: nowrap; color: var(--secondary); }
 .kshippop[hidden] { display: none; }
 .kshippop input { width: 80px; padding: 2px 6px; margin-left: 4px; font-size: 12px; text-align: right; }
 
