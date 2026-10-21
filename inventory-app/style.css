@@ -390,12 +390,9 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 .bkw-name { font-weight: 600; margin-bottom: 6px; }
 .bkw .inline-row { margin-top: 2px; }
 
-/* ---- 대시보드: 창 높이에 꽉 맞추고 스크롤 없이. 그래프는 그대로, 아래 두 목록만 남는 높이를 쓴다. ---- */
-#page-dashboard.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-#page-dashboard .stat-grid, #page-dashboard .chart-grid, #page-dashboard .stock-mix { flex-shrink: 0; }
-#page-dashboard .dash-lists { flex: 1 1 0; min-height: 0; }
-/* 창이 넓어져도 그래프가 위아래로 계속 커지지 않게(그래야 아래 목록 자리가 남는다) */
+/* ---- 대시보드 아래 두 목록: 4줄(한 줄 48px)만 보이고 나머지는 목록 안에서 스크롤 ---- */
+.dash-list { display: flex; flex-direction: column; }
+.dash-list > div:last-child { height: 192px; overflow-y: auto; scrollbar-width: none; }
+.dash-list > div:last-child::-webkit-scrollbar { display: none; }
+/* 창이 넓어져도 그래프가 위아래로 계속 커지지 않게 */
 #page-dashboard .line-svg { max-height: 165px; }
-.dash-list { display: flex; flex-direction: column; min-height: 0; }
-.dash-list > div:last-child { flex: 1; min-height: 0; overflow: hidden; }
-.drow[hidden] { display: none; }

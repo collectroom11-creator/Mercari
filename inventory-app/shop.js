@@ -135,31 +135,10 @@ function renderDashboardLists(items) {
     ? stale.map((i) => { const d = days(i.listedAt); return row(i, `${d}일째`, d >= 14 ? "warn" : ""); }).join("")
     : `<div class="empty">판매중인 상품이 없어요</div>`;
 
-  fitRows("recentSold");
-  fitRows("staleListed");
   document.querySelectorAll(".drow[data-open-url]").forEach((r) =>
     r.addEventListener("click", () => r.dataset.openUrl && window.api.openExternal(r.dataset.openUrl))
   );
 }
-
-// 목록 칸 높이에 다 들어가는 줄까지만 보여주고, 반쯤 잘리는 줄은 숨긴다(스크롤 없이).
-function fitRows(id) {
-  const box = document.getElementById(id);
-  const limit = box.getBoundingClientRect().bottom;
-  box.querySelectorAll(".drow").forEach((r) => (r.hidden = false));
-  box.querySelectorAll(".drow").forEach((r) => {
-    if (r.getBoundingClientRect().bottom > limit + 0.5) r.hidden = true;
-  });
-}
-
-// 창 크기가 바뀌면 대시보드를 다시 맞춘다
-let dashResizeTimer = null;
-window.addEventListener("resize", () => {
-  clearTimeout(dashResizeTimer);
-  dashResizeTimer = setTimeout(() => {
-    if (document.getElementById("page-dashboard").classList.contains("active")) renderDashboard();
-  }, 120);
-});
 
 // 만 원 단위로 짧게: 584000 → "58.4만"
 function shortWon(n) {
