@@ -169,7 +169,7 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 /* 상자 없이 흰 바닥에 바로 놓고, 구역은 얇은 선과 여백으로만 나눈다.
    1) 이번 달 매출/순이익: 큰 숫자 + 6개월 추이  2) 재고 지표  3) 브랜드 비율 */
 #page-dashboard.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-/* 남는 세로 공간은 매출/순이익 그래프가 채운다(아래에 빈 여백이 안 남게) */
+/* 남는 세로 공간은 매출/순이익 그래프가 채운다(아래에 빈 여백이 안 남게). 그래프는 최대 280px까지 */
 .dash-hero { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; flex: 1 1 auto; min-height: 0; padding-top: 2px; }
 .hero { min-width: 0; display: flex; flex-direction: column; min-height: 0; }
 .hero-label, .kpi-label { font-size: 12px; font-weight: 500; color: var(--secondary); }
@@ -187,7 +187,7 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .up { color: var(--positive); }
 .down { color: var(--negative); }
 /* 그래프는 칸 크기를 재서 그 픽셀 크기 그대로 그린다(늘려서 찌그러지지 않게). svg는 칸 크기에 영향을 안 주도록 띄운다 */
-.line-chart { position: relative; flex: 1 1 auto; min-height: 130px; margin-top: 4px; }
+.line-chart { position: relative; flex: 1 1 auto; min-height: 130px; max-height: 280px; margin-top: 4px; }
 .line-svg { position: absolute; inset: 0; display: block; }
 .line-value { font-size: 11px; font-weight: 600; fill: var(--label); }
 .line-value.neg { fill: var(--negative); }
