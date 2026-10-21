@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4DA3FF"/>
+      <stop offset="1" stop-color="#0A5FE0"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".22"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="tag" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFB340"/>
+      <stop offset="1" stop-color="#FF8A00"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity=".28"/>
+    </filter>
+    <filter id="glyph" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#002a6e" flood-opacity=".35"/>
+    </filter>
+  </defs>
+  <!-- macOS 아이콘 격자: 1024 캔버스에 824 둥근 사각형 -->
+  <g filter="url(#shadow)">
+    <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  </g>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#gloss)"/>
+  <rect x="100.5" y="100.5" width="823" height="823" rx="184.5" fill="none" stroke="#fff" stroke-opacity=".18"/>
+  <g filter="url(#glyph)">
+    <!-- 옷걸이 -->
+    <path d="M466 352 a46 46 0 1 1 46 46 v36 L262 600 q-22 15 -10 34 q8 12 26 12 h468 q18 0 26 -12 q12 -19 -10 -34 L512 434"
+          fill="none" stroke="#fff" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- 가격표 -->
+    <g transform="rotate(-14 648 646)">
+      <line x1="648" y1="646" x2="648" y2="700" stroke="#fff" stroke-width="10" stroke-linecap="round"/>
+      <path d="M598 726 l50 -38 l50 38 v126 q0 20 -20 20 h-60 q-20 0 -20 -20 z" fill="url(#tag)" stroke="#fff" stroke-width="10" stroke-linejoin="round"/>
+      <circle cx="648" cy="724" r="11" fill="#fff"/>
+      <rect x="622" y="768" width="52" height="10" rx="5" fill="#fff" opacity=".9"/>
+      <rect x="622" y="796" width="36" height="10" rx="5" fill="#fff" opacity=".9"/>
+    </g>
+  </g>
+</svg>
