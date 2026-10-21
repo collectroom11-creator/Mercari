@@ -84,7 +84,7 @@ input[type="checkbox"] { accent-color: var(--accent); }
 body.no-vibrancy .sidebar { background: var(--sidebar-fallback); }
 
 /* 신호등 버튼 자리 + 창 드래그 영역 */
-.sidebar-titlebar { height: 58px; flex-shrink: 0; -webkit-app-region: drag; }
+.sidebar-titlebar { height: 52px; flex-shrink: 0; -webkit-app-region: drag; }
 
 .side-nav { flex: 1; display: flex; flex-direction: column; gap: 1px; padding: 0 10px 12px; min-height: 0; }
 .side-section { font-size: 11px; font-weight: 700; color: var(--secondary); padding: 12px 8px 4px; }
@@ -109,7 +109,7 @@ body.inactive .side-link.active svg { stroke: var(--secondary); }
 .content { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--content-bg); }
 
 .toolbar {
-  height: 58px; flex-shrink: 0; display: flex; align-items: center; gap: 12px;
+  height: 52px; flex-shrink: 0; display: flex; align-items: center; gap: 12px;
   padding: 0 20px; border-bottom: 1px solid transparent;
   transition: border-color 0.15s ease;
   -webkit-app-region: drag;

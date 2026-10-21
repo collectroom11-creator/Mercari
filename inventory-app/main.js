@@ -47,7 +47,7 @@ function createMainWindow() {
   // 재고 입력 보드(열 4개 × 최소 210px) + 사이드바(210) + 여백(40)이 1,090px라서, 그보다
   // 좁아져서 가로 스크롤바가 생기지 않게 창을 이 이상 못 줄이게 한다.
   const MIN_CONTENT_WIDTH = 1100;
-  const MIN_CONTENT_HEIGHT = 736;
+  const MIN_CONTENT_HEIGHT = 730;
   mainWindow = new BrowserWindow({
     width: TARGET_WIDTH,
     height: TARGET_HEIGHT,
@@ -60,7 +60,7 @@ function createMainWindow() {
     // 맥 기본 앱처럼: 제목줄을 숨기고 신호등 버튼을 사이드바 위에 겹쳐 두고,
     // 사이드바 뒤로 바탕화면이 비치는 반투명 효과(vibrancy)를 쓴다.
     titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 18, y: 22 },
+    trafficLightPosition: { x: 18, y: 18 },
     vibrancy: "sidebar",
     visualEffectState: "followWindow",
     backgroundColor: "#00000000",
