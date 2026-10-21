@@ -25,7 +25,6 @@ async function loadCurrentSettings() {
 // 켄즈포스트 로그인은 더 이상 쓰지 않는다 - 로그인이 없으면 main.js의 fetch-item이
 // 메루카리 상품 페이지에서 가격/제목/사진을 대신 읽는다.
 const urlInput = document.getElementById("urlInput");
-const fetchBtn = document.getElementById("fetchBtn");
 
 async function showManualForm(prefillTitle) {
   if (!currentSettings) await loadCurrentSettings();
@@ -141,7 +140,6 @@ async function handleAddFromUrl() {
   renderList();
 }
 
-fetchBtn.addEventListener("click", handleAddFromUrl);
 urlInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") handleAddFromUrl();
 });

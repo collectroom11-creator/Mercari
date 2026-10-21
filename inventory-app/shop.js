@@ -362,8 +362,7 @@ async function renderWishlist() {
   page.innerHTML = `
     <div class="wish-add">
       <div class="add-row">
-        <input id="wishLinkInput" placeholder="켄즈포스트 메루카리 링크나 jp.mercari.com 링크로 찜 추가">
-        <button id="wishAddBtn" class="round-go" title="추가" aria-label="추가"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <input id="wishLinkInput" placeholder="켄즈포스트 메루카리 링크나 jp.mercari.com 링크를 붙여넣고 Enter">
       </div>
       <div id="wishAddMsg"></div>
       <p class="hint">켄즈포스트 관심상품은 자동으로 들어와요 · 가격 확인은 30분마다 · 마지막 확인 ${fmt(lastRunAt)}</p>
@@ -381,7 +380,6 @@ async function renderWishlist() {
     }
     renderWishlist();
   };
-  document.getElementById("wishAddBtn").addEventListener("click", add);
   document.getElementById("wishLinkInput").addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
   document.getElementById("wishLinkInput").addEventListener("input", () => (msg.textContent = ""));
   page.querySelectorAll("[data-remove]").forEach((b) =>
