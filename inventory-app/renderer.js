@@ -22,38 +22,10 @@ async function loadCurrentSettings() {
   updateFxRateChip();
 }
 
-const loginBtn = document.getElementById("loginBtn");
+// 켄즈포스트 로그인은 더 이상 쓰지 않는다 - 로그인이 없으면 main.js의 fetch-item이
+// 메루카리 상품 페이지에서 가격/제목/사진을 대신 읽는다.
 const urlInput = document.getElementById("urlInput");
 const fetchBtn = document.getElementById("fetchBtn");
-
-loginBtn.addEventListener("click", () => {
-  window.api.openLogin();
-});
-
-function setLoginBtnText(loggedIn) {
-  loginBtn.textContent = loggedIn ? "켄즈포스트 로그인됨" : "켄즈포스트 로그인";
-}
-
-// 로그인 안 된 상태로는 링크를 읽어올 수 없으니, 아예 입력칸을 막고
-// 플레이스홀더로 이유를 보여준다.
-function setLoginGatedUi(loggedIn) {
-  urlInput.disabled = !loggedIn;
-  fetchBtn.disabled = !loggedIn;
-  urlInput.placeholder = loggedIn
-    ? "켄즈포스트 상품 링크를 붙여넣으세요"
-    : "로그인이 되어있지 않습니다.";
-}
-
-window.api.checkLoginStatus().then((loggedIn) => {
-  setLoginBtnText(loggedIn);
-  setLoginGatedUi(loggedIn);
-});
-
-window.api.onLoginSuccess(() => {
-  alert("로그인에 성공했어요!");
-  setLoginBtnText(true);
-  setLoginGatedUi(true);
-});
 
 async function showManualForm(prefillTitle) {
   if (!currentSettings) await loadCurrentSettings();
@@ -117,9 +89,8 @@ async function handleAddFromUrl() {
     return;
   }
   if (result.jpyPrice == null) {
-    resultDiv.textContent = result.needsLogin
-      ? "로그인이 안 되어 있는 것 같아요. 상단의 '켄즈포스트 로그인'을 먼저 눌러주세요."
-      : "가격을 자동으로 못 읽었어요. 아래 값을 직접 입력해주세요.";
+    // 메루카리가 아닌 켄즈포스트 링크(야후옥션 등)는 로그인 없이 가격을 읽을 방법이 없다.
+    resultDiv.textContent = "가격을 자동으로 못 읽었어요. 아래 값을 직접 입력해주세요.";
     await showManualForm(result.title);
     return;
   }
@@ -162,10 +133,7 @@ async function handleAddFromUrl() {
     // listPrice를 안 주면 비어있는 채로 등록되고, 추천가(targetPrice)는
     // 판매가 칸에 플레이스홀더로만 보인다.
     await window.api.saveItem(fetchedFields);
-    resultDiv.textContent =
-      result.priceSource === "mercari"
-        ? "재고에 추가했어요! (켄즈포스트 로그인이 안 되어 있어서 메루카리 페이지 가격으로 계산했어요)"
-        : "재고에 추가했어요!";
+    resultDiv.textContent = "재고에 추가했어요!";
   }
   // 이전 시도에서 열려있던 수동입력 폼이 있었다면(자동으로 이번엔 성공했으니) 닫는다.
   document.getElementById("saveForm").hidden = true;

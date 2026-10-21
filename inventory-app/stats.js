@@ -19,12 +19,17 @@ function computeShopStats(items, { now = new Date() } = {}) {
   const monthRevenue = monthSold.reduce((s, r) => s + r.revenue, 0);
   const monthSoldCost = monthSold.reduce((s, r) => s + r.cost, 0);
   const listedCost = items.filter((i) => i.status === "판매중").reduce((s, i) => s + i.costKrw, 0);
+  // 아직 안 팔린 재고 전부(배송전/업로드전/판매중) - 개인구매는 사업 재고가 아니라 뺀다.
+  const stockCost = items
+    .filter((i) => i.status !== "판매완료" && i.status !== "개인구매")
+    .reduce((s, i) => s + i.costKrw, 0);
   const base = monthSoldCost + listedCost;
   return {
     monthRevenue,
     monthProfit: monthRevenue - monthSoldCost,
     turnoverPct: monthSoldCost > 0 ? Math.round((monthSoldCost / base) * 100) : 0,
     listedCost,
+    stockCost,
   };
 }
 

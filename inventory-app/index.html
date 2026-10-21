@@ -16,7 +16,6 @@
     </div>
     <div class="topbar-right">
       <div id="fxRateChip" class="fx-rate-chip" hidden></div>
-      <button id="loginBtn" class="btn-ghost">켄즈포스트 로그인</button>
     </div>
   </header>
 
@@ -33,10 +32,15 @@
   <main class="side-main">
   <section id="page-dashboard" class="page active">
     <div id="statCards" class="stat-grid"></div>
-    <div class="card chart-card">
-      <div class="chart-title">월별 매출 · 순이익</div>
-      <div id="salesChart" class="sales-chart"></div>
-      <div class="chart-legend"><span class="legend-dot legend-revenue"></span>매출 <span class="legend-dot legend-profit"></span>순이익</div>
+    <div class="chart-grid">
+      <div class="card chart-card">
+        <div class="chart-title">월별 매출</div>
+        <div id="revenueChart" class="line-chart"></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-title">월별 순이익</div>
+        <div id="profitChart" class="line-chart"></div>
+      </div>
     </div>
   </section>
 
@@ -46,8 +50,8 @@
   <section id="tab-list" class="page panel">
     <div class="card add-card">
       <div class="add-row">
-        <input id="urlInput" placeholder="켄즈포스트 상품 링크를 붙여넣으세요" disabled>
-        <button id="fetchBtn" class="btn-primary" disabled>추가</button>
+        <input id="urlInput" placeholder="켄즈포스트 상품 링크를 붙여넣으세요">
+        <button id="fetchBtn" class="btn-primary">추가</button>
         <button id="manualAddBtn" class="btn-ghost">수동으로 추가</button>
       </div>
       <p id="fetchResult" class="hint"></p>

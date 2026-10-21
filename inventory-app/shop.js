@@ -31,32 +31,54 @@ document.querySelectorAll(".side-link").forEach((link) => {
 async function renderDashboard() {
   const [s, months] = await Promise.all([window.api.getShopStats(), window.api.getMonthlySales()]);
   const cards = [
-    ["이번 달 매출", won(s.monthRevenue), ""],
-    ["이번 달 순이익", won(s.monthProfit), s.monthProfit >= 0 ? "positive" : "negative"],
-    ["회전율 (업로드 기준)", `${s.turnoverPct}%`, ""],
-    ["판매중 재고원가", won(s.listedCost), ""],
+    ["이번 달 매출", won(s.monthRevenue), "", ""],
+    ["이번 달 순이익", won(s.monthProfit), s.monthProfit >= 0 ? "positive" : "negative", ""],
+    ["회전율 (업로드 기준)", `${s.turnoverPct}%`, "", `판매중 재고원가 ${won(s.listedCost)}`],
+    ["재고원가 합계", won(s.stockCost), "", "배송전 · 업로드전 · 판매중"],
   ];
   document.getElementById("statCards").innerHTML = cards
-    .map(([label, value, cls]) => `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value ${cls}">${value}</div></div>`)
-    .join("");
-
-  const chart = document.getElementById("salesChart");
-  if (months.length === 0) {
-    chart.innerHTML = `<div class="empty">아직 판매 기록이 없어요</div>`;
-    return;
-  }
-  const max = Math.max(1, ...months.map((m) => Math.max(m.revenue, Math.abs(m.profit))));
-  const pct = (v) => `${Math.max(1, Math.round((Math.abs(v) / max) * 100))}%`;
-  chart.innerHTML = months
-    .map((m) => `
-      <div class="chart-month" title="${m.month} 매출 ${won(m.revenue)} / 순이익 ${won(m.profit)}">
-        <div class="chart-bars">
-          <div class="chart-bar revenue" style="height:${pct(m.revenue)}"></div>
-          <div class="chart-bar profit ${m.profit < 0 ? "negative" : ""}" style="height:${pct(m.profit)}"></div>
-        </div>
-        <div class="chart-label">${Number(m.month.slice(5))}월</div>
+    .map(([label, value, cls, sub]) => `
+      <div class="stat-card">
+        <div class="stat-label">${label}</div>
+        <div class="stat-value ${cls}">${value}</div>
+        ${sub ? `<div class="stat-sub">${sub}</div>` : ""}
       </div>`)
     .join("");
+
+  renderLineChart(document.getElementById("revenueChart"), months, "revenue", "#3182F6");
+  renderLineChart(document.getElementById("profitChart"), months, "profit", "#12B564");
+}
+
+// 만 원 단위로 짧게: 584000 → "58.4만"
+function shortWon(n) {
+  const man = n / 10000;
+  return `${Math.abs(man) >= 100 ? Math.round(man) : Math.round(man * 10) / 10}만`;
+}
+
+function renderLineChart(el, months, key, color) {
+  if (months.length === 0) {
+    el.innerHTML = `<div class="empty">아직 판매 기록이 없어요</div>`;
+    return;
+  }
+  const W = 420, H = 180, padX = 36, padTop = 28, padBottom = 28;
+  const values = months.map((m) => m[key]);
+  const max = Math.max(0, ...values);
+  const min = Math.min(0, ...values);
+  const range = max - min || 1;
+  const x = (i) => (months.length === 1 ? W / 2 : padX + (i * (W - padX * 2)) / (months.length - 1));
+  const y = (v) => padTop + ((max - v) / range) * (H - padTop - padBottom);
+  const points = values.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+  const zeroLine = min < 0 ? `<line x1="${padX}" x2="${W - padX}" y1="${y(0)}" y2="${y(0)}" stroke="#E5E8EB" stroke-dasharray="3 3"/>` : "";
+  el.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="line-svg" role="img">
+      <line x1="${padX}" x2="${W - padX}" y1="${H - padBottom}" y2="${H - padBottom}" stroke="#E5E8EB"/>
+      ${zeroLine}
+      <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${values.map((v, i) => `
+        <circle cx="${x(i)}" cy="${y(v)}" r="4" fill="#fff" stroke="${v < 0 ? "#F04452" : color}" stroke-width="2.5"/>
+        <text x="${x(i)}" y="${y(v) - 10}" text-anchor="middle" class="line-value ${v < 0 ? "neg" : ""}">${shortWon(v)}</text>
+        <text x="${x(i)}" y="${H - 8}" text-anchor="middle" class="line-label">${Number(months[i].month.slice(5))}월</text>`).join("")}
+    </svg>`;
 }
 pageRenderers["page-dashboard"] = renderDashboard;
 

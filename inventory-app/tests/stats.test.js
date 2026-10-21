@@ -24,6 +24,15 @@ test("computeShopStats: 10월 매출/순이익/회전율/판매중 원가", () =
   assert.equal(s.turnoverPct, Math.round((355545 / (355545 + 110000)) * 100));
 });
 
+test("computeShopStats: 재고원가 합 = 안 팔린 상품(배송전/업로드전/판매중) 원가, 개인구매 제외", () => {
+  const list = [
+    ...items,
+    { status: "배송전", costKrw: 30000 },
+    { status: "개인구매", costKrw: 12345 },
+  ];
+  assert.equal(computeShopStats(list, { now }).stockCost, 50000 + 60000 + 999999 + 30000);
+});
+
 test("computeMonthlySales: 첫 판매월부터 이번 달까지 오래된 순", () => {
   assert.deepEqual(computeMonthlySales(items, { now }), [
     { month: "2026-09", revenue: 150000, profit: 50000 },
