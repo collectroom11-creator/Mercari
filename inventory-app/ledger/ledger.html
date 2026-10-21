@@ -213,8 +213,9 @@
     position:absolute; inset: 0; background: rgba(120,120,128,0.2); transition: .2s; border-radius: 999px;
   }
   .switch-slider:before{
-    content:""; position:absolute; height: 16px; width: 16px; left: 2px; top: 2px;
-    background: #fff; transition: .2s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+    /* 아래로만 떨어지는 그림자는 동그라미가 아래로 처져 보여서, 사방으로 고르게 */
+    content:""; position:absolute; height: 16px; width: 16px; left: 2px; top: 50%; margin-top: -8px;
+    background: #fff; transition: .2s; border-radius: 50%; box-shadow: 0 0 0 0.5px rgba(0,0,0,.06), 0 0 2px rgba(0,0,0,.18);
   }
   .switch input:checked + .switch-slider{ background: var(--positive, #34c759); }
   .switch input:checked + .switch-slider:before{ transform: translateX(12px); }
