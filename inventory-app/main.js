@@ -46,7 +46,7 @@ function createMainWindow() {
   // 재고 입력 보드(열 4개 × 최소 210px) + 사이드바(210) + 여백(40)이 1,090px라서, 그보다
   // 좁아져서 가로 스크롤바가 생기지 않게 창을 이 이상 못 줄이게 한다.
   const MIN_CONTENT_WIDTH = 1100;
-  const MIN_CONTENT_HEIGHT = 560;
+  const MIN_CONTENT_HEIGHT = 660;
   mainWindow = new BrowserWindow({
     width: TARGET_WIDTH,
     height: TARGET_HEIGHT,
