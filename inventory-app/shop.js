@@ -21,7 +21,13 @@ document.querySelectorAll(".side-link[data-page]").forEach((link) => {
   link.addEventListener("click", () => showPage(link.dataset.page));
 });
 
-// 큰 숫자: 숫자는 크고 얇게, 단위(원, %)는 작은 회색으로 따로 붙인다.
+// 최신 macOS처럼 툴바 아래 구분선은 평소엔 없고, 본문을 스크롤했을 때만 보인다.
+const contentBody = document.querySelector(".content-body");
+contentBody.addEventListener("scroll", () => {
+  document.querySelector(".toolbar").classList.toggle("scrolled", contentBody.scrollTop > 0);
+});
+
+// 큰 숫자: 숫자는 크게(semibold), 단위(원, %)는 작은 회색으로 따로 붙인다.
 const bigNum = (n, unit) => `${Math.round(n).toLocaleString()}<small>${unit}</small>`;
 // 차트 색은 다크 모드에 따라 바뀌는 CSS 변수를 그대로 쓴다.
 const cssVar = (name) => `var(${name})`;
