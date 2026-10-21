@@ -292,9 +292,10 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .unit { color: var(--secondary); margin-left: 6px; white-space: nowrap; }
 .muted { color: var(--secondary); }
 /* 행 삭제: 평소엔 숨기고 행에 마우스를 올리면 작은 원형 − 버튼 */
-.col-action { width: 36px; text-align: right; }
-.row-remove { width: 20px; height: 20px; border: 0; border-radius: 50%; background: var(--field-bg-hover); color: var(--secondary); font-size: 14px; line-height: 18px; padding: 0; cursor: default; opacity: 0; }
-.item-table tr:hover .row-remove { opacity: 1; }
+/* 삭제(−) 버튼은 평소엔 자리를 안 차지하고, 행에 올렸을 때만 펼쳐진다 */
+.item-table td.col-action { width: 0; padding-left: 0; padding-right: 0; text-align: right; white-space: nowrap; }
+.row-remove { width: 0; height: 20px; margin-right: 0; border: 0; border-radius: 50%; background: var(--field-bg-hover); color: var(--secondary); font-size: 14px; line-height: 18px; padding: 0; cursor: default; opacity: 0; overflow: hidden; vertical-align: middle; transition: width .15s ease, margin .15s ease, opacity .15s ease; }
+.item-table tr:hover .row-remove { width: 20px; margin-right: 8px; opacity: 1; }
 .row-remove:hover { background: var(--negative); color: #fff; }
 .item-table tr.dimmed td, .item-table tr.dimmed a { color: var(--secondary); }
 
