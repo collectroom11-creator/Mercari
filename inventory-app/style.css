@@ -626,8 +626,12 @@ input:disabled {
 /* 재고 입력 탭: 상태별 박스 4개, 박스 안에서만 스크롤 */
 #tab-list.active { display: flex; flex-direction: column; height: calc(100vh - 140px); }
 #tab-list .add-card { flex-shrink: 0; }
-.kanban { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.kcol { display: flex; flex-direction: column; min-height: 0; background: var(--card); border-radius: 16px; padding: 10px; }
+.kanban { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(210px, 1fr)); overflow-x: auto; }
+/* 박스로 감싸지 않고, 열 사이를 세로선 하나로만 나눈다 */
+.kcol { display: flex; flex-direction: column; min-height: 0; padding: 0 12px; }
+.kcol + .kcol { border-left: 1px solid var(--border); }
+.kcol:first-child { padding-left: 0; }
+.kcol:last-child { padding-right: 0; }
 .kcol-head { display: flex; align-items: center; gap: 6px; font-weight: 700; margin: 2px 4px 10px; }
 .kcount { background: var(--bg); color: var(--stock-text); border-radius: 10px; padding: 0 8px; font-size: 12px; font-weight: 600; }
 .klist { overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; gap: 6px; align-content: start; padding-right: 2px; }
@@ -645,11 +649,11 @@ input:disabled {
 .kcard:hover .kadv { opacity: 1; }
 .kadv:hover { background: var(--primary-hover); }
 .knums { flex: 1; min-width: 0; padding: 5px 7px; font-size: 10px; color: var(--stock-text); display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 2px 4px; align-items: center; }
-.knums b { color: var(--text); font-size: 12px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.knums b { color: var(--text); font-size: 12px; text-align: right; white-space: nowrap; }
 .knums b.clickable { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
 .kmargin { color: var(--positive) !important; }
 .kship { grid-column: 1 / 3; color: #C77C00; font-size: 10px; text-align: right; white-space: nowrap; margin-top: -2px; }
-.kprice { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; padding: 1px 4px; font: inherit; font-size: 12px; font-weight: 700; text-align: right; }
+.kprice { width: 100%; min-width: 64px; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; padding: 1px 4px; font: inherit; font-size: 12px; font-weight: 700; text-align: right; }
 .kshippop { flex-basis: 100%; margin: 0 8px 8px; background: var(--text); color: #fff; border-radius: 8px; padding: 6px 8px; font-size: 11px; white-space: nowrap; }
 .kshippop[hidden] { display: none; }
 .kshippop input { width: 70px; border: 0; border-radius: 4px; padding: 2px 4px; margin-left: 4px; }
