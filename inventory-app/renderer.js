@@ -146,11 +146,6 @@ urlInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") handleAddFromUrl();
 });
 
-// 링크 없이 바로 수동 입력 폼을 열고 싶을 때(로그인 여부와 무관하게 항상 가능).
-document.getElementById("manualAddBtn").addEventListener("click", () => {
-  showManualForm();
-});
-
 // 엔화 제품가 구간별로 최소 마진율을 다르게 적용한다(pricing.js의 getTieredMarginRate와
 // 동일한 로직) - 렌더러는 메인 프로세스 모듈을 require할 수 없어서 그대로 복제해둔다.
 function getTieredMarginRate(jpyPrice) {

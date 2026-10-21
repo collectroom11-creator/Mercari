@@ -625,7 +625,9 @@ input:disabled {
 .alert-sub .negative { color: var(--negative); }
 /* 재고 입력 탭: 상태별 박스 4개, 박스 안에서만 스크롤 */
 #tab-list.active { display: flex; flex-direction: column; height: calc(100vh - 140px); }
-#tab-list .add-card { flex-shrink: 0; }
+#tab-list .add-card { flex-shrink: 0; margin-bottom: 14px; }
+/* 링크 입력칸은 박스 없이 바로 놓여서, 페이지 배경과 구분되게 흰 배경을 준다 */
+#tab-list .add-row input { background: var(--card); border: 1px solid var(--border); }
 .kanban { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(210px, 1fr)); overflow-x: auto; }
 /* 박스로 감싸지 않고, 열 사이를 세로선 하나로만 나눈다 */
 .kcol { display: flex; flex-direction: column; min-height: 0; padding: 0 12px; }
