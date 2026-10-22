@@ -318,7 +318,13 @@ function buildCard(item) {
       const value = parseNum(input.value);
       if (!value) return;
       await window.api.updateItem(item.id, { listPrice: value, listPriceEdited: true });
-      renderList();
+      // 판매가만 바뀐 거라 보드를 다시 그리지 않는다(다시 그리면 스크롤이 맨 위로 가고,
+      // 이어서 누른 다른 판매가 칸의 포커스도 사라진다). 숫자 모양만 정리하고 대시보드만 갱신.
+      item.listPrice = value;
+      item.listPriceEdited = true;
+      input.value = fmtNum(value);
+      setMargin(value);
+      refreshShopPanels();
     });
     const unit = document.createElement("span");
     unit.className = "kprice-unit";
@@ -405,6 +411,8 @@ async function renderList() {
   refreshShopPanels();
   const items = await window.api.listItems();
   const board = document.getElementById("kanban");
+  // 다시 그려도 열마다 보던 스크롤 위치는 그대로 둔다
+  const scrollTops = [...board.querySelectorAll(".klist")].map((l) => l.scrollTop);
   board.innerHTML = "";
 
   for (const col of BOARD_COLUMNS) {
@@ -430,6 +438,7 @@ async function renderList() {
     colEl.appendChild(list);
     board.appendChild(colEl);
   }
+  board.querySelectorAll(".klist").forEach((l, i) => (l.scrollTop = scrollTops[i] || 0));
 }
 
 const monthlyViewBtn = document.getElementById("monthlyViewBtn");
