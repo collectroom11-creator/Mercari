@@ -427,10 +427,10 @@ function renderFilterPage(message = "") {
   const brandRows = f.brands
     .map((b, i) => `
       <tr data-select-brand="${escapeHtml(b.name)}" class="${b.name === selectedFilterBrand ? "selected" : ""}">
+        <td class="col-action"><button class="row-remove" data-del-brand="${i}" title="삭제">−</button></td>
         <td class="col-title">${escapeHtml(b.name)}</td>
         <td class="col-kw">${kwCount(b.name) ? `제외 ${kwCount(b.name)}` : ""}</td>
         <td class="col-num"><input class="price-input" type="text" inputmode="numeric" value="${fmtNum(b.priceMax)}" data-price="${i}"><span class="unit">엔 이하</span></td>
-        <td class="col-action"><button class="row-remove" data-del-brand="${i}" title="삭제">−</button></td>
       </tr>`).join("");
   const sel = selectedFilterBrand;
   const selWords = sel ? f.brandExcludeKeywords[sel] || [] : [];
