@@ -244,6 +244,20 @@ async function advanceStatus(item) {
   renderList();
 }
 
+// ‹ 버튼: 한 단계 뒤로. 앞으로 갈 때 기록한 값(업로드일·판매가·판매일)은 지운다.
+async function revertStatus(item) {
+  const now = new Date().toISOString();
+  if (item.status === "업로드전") {
+    await window.api.updateItem(item.id, { status: "배송전", statusChangedAt: now });
+  } else if (item.status === "판매중" || item.status === "재고") {
+    await window.api.updateItem(item.id, { status: "업로드전", statusChangedAt: now, listedAt: null, listedPrice: null });
+  } else if (item.status === "판매완료") {
+    if (!confirm(`"${item.title}" 판매 기록을 취소하고 판매중으로 돌릴까요?`)) return;
+    await window.api.updateItem(item.id, { status: "판매중", statusChangedAt: now, actualPrice: null, soldAt: null });
+  }
+  renderList();
+}
+
 function daysLabel(item) {
   if (item.status === "판매완료") {
     // 좁은 카드에 맞게 짧게 "N일"(업로드 후 며칠 만에 팔렸는지)
@@ -358,7 +372,20 @@ function buildCard(item) {
   }
   card.appendChild(body);
 
-  // 마우스를 올렸을 때만 보이는 버튼: 오른쪽 아래 › (다음 단계), 사진 왼쪽 위 ✕ (삭제)
+  // 마우스를 올렸을 때만 보이는 버튼: 오른쪽 아래 ‹ (이전 단계) › (다음 단계), 사진 왼쪽 위 ✕ (삭제)
+  const actions = document.createElement("div");
+  actions.className = "kactions";
+  if (item.status !== "배송전") {
+    const back = document.createElement("button");
+    back.className = "kback";
+    back.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8 10 12.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    back.title = "이전 단계로";
+    back.addEventListener("click", (e) => {
+      e.stopPropagation();
+      revertStatus(item);
+    });
+    actions.appendChild(back);
+  }
   if (!sold) {
     const adv = document.createElement("button");
     adv.className = "kadv";
@@ -369,8 +396,9 @@ function buildCard(item) {
       e.stopPropagation();
       advanceStatus(item);
     });
-    card.appendChild(adv);
+    actions.appendChild(adv);
   }
+  if (actions.children.length) card.appendChild(actions);
   const del = document.createElement("button");
   del.className = "kdel";
   del.textContent = "✕";

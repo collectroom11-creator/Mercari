@@ -248,7 +248,9 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 /* 재고 카드: 왼쪽 작은 정사각 사진, 오른쪽 판매가(크게) / 원가 · 마진(작게). 라벨 반복 없음. */
 /* 행: 배경 없이 패널 위에 놓이고, 마우스를 올리면 둥근 강조. 행 사이는 사진 오른쪽부터 시작하는 얇은 선. */
 .kcard { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; padding: 7px 8px; border-radius: 10px; }
-.kcard:hover { background: var(--field-bg); }
+.kcard { --row-hover: #f2f2f2; }
+.kcard:hover { background: var(--row-hover); }
+@media (prefers-color-scheme: dark) { .kcard { --row-hover: #303030; } }
 .kcard + .kcard::before { content: ""; position: absolute; top: 0; left: 62px; right: 8px; height: 1px; background: var(--separator); }
 .kcard:hover::before, .kcard:hover + .kcard::before { background: transparent; }
 .kphoto { width: 44px; height: 44px; flex-shrink: 0; border-radius: 6px; background: var(--fill) center / cover no-repeat; }
@@ -274,10 +276,17 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .kcost.clickable:hover { background: var(--field-bg-hover); color: var(--label); }
 .kmargin { font-weight: 600; }
 .kship { font-size: 11px; color: var(--warning); white-space: nowrap; }
-.kadv { position: absolute; right: 8px; bottom: 7px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--label); color: var(--content-bg); padding: 0; cursor: default; opacity: 0; transition: opacity 0.12s ease; }
+.kadv { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--label); color: var(--content-bg); padding: 0; cursor: default; }
 .kadv svg { width: 12px; height: 12px; }
-.kcard:hover .kadv { opacity: 1; }
 .kadv:hover { background: var(--secondary); }
+/* 마우스를 올리면 오른쪽 아래에 ‹ 이전 단계(옅은 회색) · › 다음 단계(진한 색). 밑의 글씨를 가리도록
+   행 강조색과 같은 바탕을 왼쪽으로 부드럽게 깔아준다. */
+.kactions { position: absolute; right: 6px; bottom: 5px; display: flex; gap: 6px; padding: 2px 2px 2px 18px; opacity: 0; transition: opacity 0.12s ease;
+  background: linear-gradient(to right, transparent, var(--row-hover) 16px); }
+.kcard:hover .kactions { opacity: 1; }
+.kback { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--field-bg-hover); color: var(--label); padding: 0; cursor: default; }
+.kback svg { width: 12px; height: 12px; }
+.kback:hover { background: var(--fill-hover); }
 .kdel { position: absolute; left: 4px; top: 4px; width: 18px; height: 18px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 9px; line-height: 18px; padding: 0; cursor: default; opacity: 0; transition: opacity 0.12s ease; }
 .kcard:hover .kdel { opacity: 1; }
 .kdel:hover { background: var(--negative); }
