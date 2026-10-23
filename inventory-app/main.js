@@ -142,6 +142,8 @@ function openLoginWindow() {
       logNav("SUCCESS-DETECTED", loginWindow.webContents.getURL());
       await persistKenzCookies();
       if (mainWindow) mainWindow.webContents.send("login-success");
+      // 찜 감시(launchd, 30분마다)를 바로 한 번 돌려서 관심상품 목록을 지금 가져온다
+      require("child_process").execFile("launchctl", ["kickstart", `gui/${process.getuid()}/com.collectroom.wishlist-watch`], () => {});
       loginWindow.close();
     }
   });
