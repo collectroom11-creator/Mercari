@@ -346,9 +346,7 @@ const mercariPhoto = (id) => `https://static.mercdn.net/item/detail/orig/photos/
 // 찜 목록: 이름 대신 사진 위주의 격자(사진 앱 느낌). 사진 아래 현재가와 마지막 확인.
 async function renderWishlist() {
   const page = document.getElementById("page-wishlist");
-  const { items, lastRunAt, lastListSyncAt } = await window.api.getWishlist();
-  // 관심상품 목록을 3시간 넘게 못 가져왔으면 켄즈포스트 로그인이 풀린 것(가격 확인은 저장된 목록으로 계속 된다)
-  const syncStale = !lastListSyncAt || Date.now() - new Date(lastListSyncAt) > 3 * 60 * 60 * 1000;
+  const { items, lastRunAt } = await window.api.getWishlist();
   const fmt = (iso) => (iso ? friendlyTime(iso) : "-");
   const tiles = items
     .sort((a, b) => Number(a.soldOut) - Number(b.soldOut))
@@ -367,8 +365,7 @@ async function renderWishlist() {
         <input id="wishLinkInput" placeholder="켄즈포스트 메루카리 링크나 jp.mercari.com 링크를 붙여넣고 Enter">
       </div>
       <div id="wishAddMsg"></div>
-      <p class="hint">켄즈포스트 관심상품은 자동으로 들어와요 · 가격 확인은 30분마다 · 마지막 확인 ${fmt(lastRunAt)}</p>
-      ${syncStale ? `<p class="hint warn-line">켄즈포스트 로그인이 풀려서 ${lastListSyncAt ? `${fmt(lastListSyncAt)} 이후` : ""} 새 관심상품을 못 가져오고 있어요 <button id="kenzLoginBtn" class="btn-ghost btn-sm">켄즈포스트 로그인</button></p>` : ""}
+      <p class="hint">가격 확인은 30분마다 · 마지막 확인 ${fmt(lastRunAt)}</p>
     </div>
     <div class="wgrid">${tiles || `<div class="empty">찜 상품이 없어요</div>`}</div>`;
 
@@ -384,7 +381,6 @@ async function renderWishlist() {
     renderWishlist();
   };
   document.getElementById("wishLinkInput").addEventListener("keydown", (e) => { if (e.key === "Enter") add(); });
-  document.getElementById("kenzLoginBtn")?.addEventListener("click", () => window.api.openLogin());
   document.getElementById("wishLinkInput").addEventListener("input", () => (msg.textContent = ""));
   page.querySelectorAll("[data-remove]").forEach((b) =>
     b.addEventListener("click", async (e) => {
@@ -399,7 +395,7 @@ async function renderWishlist() {
   );
 }
 pageRenderers["page-wishlist"] = renderWishlist;
-// 가격 확인은 별도 프로세스가 30분마다 하므로, 찜 화면을 열어둔 채면 1분마다 / 창으로 돌아올 때 새로 읽는다.
+// 가격 확인(별도 프로세스, 30분마다)이 끝나면 메인 프로세스가 알려준다 - 그때 한 번만 새로 그린다.
 // (링크를 입력하는 중이면 지우지 않게 건너뛴다)
 function refreshWishlistIfIdle() {
   if (!document.getElementById("page-wishlist").classList.contains("active")) return;
@@ -407,9 +403,10 @@ function refreshWishlistIfIdle() {
   if (input && (input.value || document.activeElement === input)) return;
   renderWishlist();
 }
-setInterval(refreshWishlistIfIdle, 60 * 1000);
-window.api.onLoginSuccess(() => refreshWishlistIfIdle());
-window.addEventListener("focus", refreshWishlistIfIdle);
+window.api.onWishlistUpdated(() => {
+  refreshWishlistIfIdle();
+  refreshAlerts();
+});
 
 // ---- 메루카리 필터 ----
 let filterDraft = null;

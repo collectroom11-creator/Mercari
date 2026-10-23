@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("api", {
   getSettings: () => ipcRenderer.invoke("get-settings"),
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   onLoginSuccess: (callback) => ipcRenderer.on("login-success", () => callback()),
+  onWishlistUpdated: (callback) => ipcRenderer.on("wishlist-updated", () => callback()),
   getShopStats: () => ipcRenderer.invoke("get-shop-stats"),
   getBrandMix: () => ipcRenderer.invoke("get-brand-mix"),
   getMonthlySales: () => ipcRenderer.invoke("get-monthly-sales"),

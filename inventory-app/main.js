@@ -142,8 +142,6 @@ function openLoginWindow() {
       logNav("SUCCESS-DETECTED", loginWindow.webContents.getURL());
       await persistKenzCookies();
       if (mainWindow) mainWindow.webContents.send("login-success");
-      // 찜 감시(launchd, 30분마다)를 바로 한 번 돌려서 관심상품 목록을 지금 가져온다
-      require("child_process").execFile("launchctl", ["kickstart", `gui/${process.getuid()}/com.collectroom.wishlist-watch`], () => {});
       loginWindow.close();
     }
   });
@@ -333,6 +331,13 @@ const DATA_DIR = app.getPath("userData");
 const LEDGER_FILE = path.join(DATA_DIR, "ledger.json");
 const ALERTS_STATE_FILE = path.join(DATA_DIR, "alerts-state.json");
 const WISHLIST_STATE_FILE = path.join(DATA_DIR, "wishlist-watch.json");
+// 찜 가격 확인(launchd로 30분마다 도는 wishlist-watch.js)이 결과 파일을 쓰면 화면에 알려서 바로 새로 그리게 한다.
+let wishlistNotifyTimer = null;
+fs.watchFile(WISHLIST_STATE_FILE, { interval: 5000 }, (cur, prev) => {
+  if (cur.mtimeMs === prev.mtimeMs) return;
+  clearTimeout(wishlistNotifyTimer);
+  wishlistNotifyTimer = setTimeout(() => mainWindow && mainWindow.webContents.send("wishlist-updated"), 500);
+});
 const WISHLIST_MANUAL_FILE = path.join(DATA_DIR, "wishlist-manual.json");
 const WISHLIST_DROPS_FILE = path.join(DATA_DIR, "wishlist-drops.json");
 const WISHLIST_HIDDEN_FILE = path.join(DATA_DIR, "wishlist-hidden.json");
