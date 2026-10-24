@@ -36,7 +36,8 @@ test("buildSearchBody: 정렬 이름을 API 값으로, 판매중만, 조건을 �
 
 test("mapResults: 화면에 필요한 값만, 가격은 숫자, 시각은 마지막 수정(없으면 등록) 기준 ISO", () => {
   const r = mapResults({ items: [{ id: "m1", name: "a", price: "8000", created: "1600000000", updated: "1700000000", thumbnails: ["t.jpg"] }], meta: { nextPageToken: "v1:1", numFound: "291" } });
-  assert.deepEqual(r, { items: [{ id: "m1", name: "a", price: 8000, thumbnail: "t.jpg", updatedAt: "2023-11-14T22:13:20.000Z" }], nextPageToken: "v1:1", total: 291 });
+  assert.deepEqual(r, { items: [{ id: "m1", name: "a", price: 8000, thumbnail: "t.jpg", shop: false, updatedAt: "2023-11-14T22:13:20.000Z" }], nextPageToken: "v1:1", total: 291 });
+  assert.equal(mapResults({ items: [{ id: "2JYa", price: "1", itemType: "ITEM_TYPE_BEYOND" }] }).items[0].shop, true);
   assert.equal(mapResults({ items: [{ id: "m2", price: "1", created: "1700000000" }] }).items[0].updatedAt, "2023-11-14T22:13:20.000Z");
 });
 

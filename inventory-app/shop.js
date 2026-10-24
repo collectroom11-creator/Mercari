@@ -416,7 +416,7 @@ const CATEGORY_KO = {
   帽子: "모자", アクセサリー: "액세서리", 小物: "소품", 時計: "시계", 水着: "수영복", レッグウェア: "양말",
   アンダーウェア: "속옷", その他: "기타", ルームウェア: "실내복", "ルームウェア/パジャマ": "실내복", ジャージ: "저지",
 };
-const search = { brands: [], category: "", min: "", max: "", sort: "new", keyword: "", exclude: "", nextPageToken: "", loading: false, fx: null, seq: 0 };
+const search = { brands: [], category: "", min: "", max: "", sort: "new", keyword: "", exclude: "", nextPageToken: "", loading: false, fx: null, seq: 0, shown: new Set() };
 try { Object.assign(search, JSON.parse(localStorage.getItem("searchConditions") || "{}")); } catch {}
 const saveSearch = () => {
   const { brands, category, min, max, sort, keyword, exclude } = search;
@@ -532,7 +532,7 @@ async function setupSearchPage() {
       return;
     }
     const tile = e.target.closest("[data-open]");
-    if (tile) window.api.openExternal(kenzLink(tile.dataset.open));
+    if (tile) window.api.openExternal(tile.dataset.shop ? `https://kenzpost.com/mercari/bid.s/https://jp.mercari.com/shops/product/${tile.dataset.open}` : kenzLink(tile.dataset.open));
   });
 }
 
@@ -560,10 +560,10 @@ function searchConditions(pageToken = "") {
 }
 
 const searchTile = (it) => `
-  <div class="stile wtile" data-open="${it.id}" title="${escapeHtml(it.name)}">
+  <div class="stile wtile" data-open="${it.id}" ${it.shop ? 'data-shop="1"' : ""} title="${escapeHtml(it.name)}">
     <div class="wphoto" style="background-image:url('${it.thumbnail || ""}')">
       ${it.updatedAt ? `<span class="wtag">${ago(it.updatedAt)}</span>` : ""}
-      <button class="swish" data-wish="${it.id}" title="찜 목록에 추가"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.3C14 10 8 13.5 8 13.5Z"/></svg></button>
+      ${it.shop ? `<span class="wtag sshop">Shops</span>` : `<button class="swish" data-wish="${it.id}" title="찜 목록에 추가"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.3C14 10 8 13.5 8 13.5Z"/></svg></button>`}
     </div>
     <div class="wprice">${yen(it.price)}</div>
     <div class="wtime">${search.fx ? `≈ ${Math.round((it.price * search.fx) / 100).toLocaleString()}원` : ""}</div>
@@ -595,9 +595,16 @@ async function runSearchNow() {
     return;
   }
   search.nextPageToken = r.nextPageToken;
-  meta.textContent = `판매중 ${r.total.toLocaleString()}개`;
+  search.shown = new Set(r.items.map((i) => i.id));
   grid.scrollTop = 0;
   grid.innerHTML = r.items.map(searchTile).join("") || `<div class="empty">조건에 맞는 상품이 없어요</div>`;
+  updateSearchMeta();
+}
+
+// 메루카리가 주는 전체 개수는 추정치라(실제로 넘겨 보면 더 나온다) 불러온 개수와 더 있는지만 보여준다
+function updateSearchMeta() {
+  const n = search.shown.size;
+  document.getElementById("sMeta").textContent = n ? `판매중 ${n.toLocaleString()}개 불러옴${search.nextPageToken ? " · 아래로 내리면 더 불러와요" : " · 끝"}` : "";
 }
 
 async function loadMore() {
@@ -608,7 +615,11 @@ async function loadMore() {
   search.loading = false;
   if (seq !== search.seq || !r.ok) return;
   search.nextPageToken = r.nextPageToken;
-  document.getElementById("sResults").insertAdjacentHTML("beforeend", r.items.map(searchTile).join(""));
+  // 넘기는 사이 새 상품이 올라오면 앞 페이지 상품이 다음 페이지에 또 나온다 - 이미 보인 건 뺀다
+  const fresh = r.items.filter((i) => !search.shown.has(i.id));
+  fresh.forEach((i) => search.shown.add(i.id));
+  document.getElementById("sResults").insertAdjacentHTML("beforeend", fresh.map(searchTile).join(""));
+  updateSearchMeta();
 }
 
 pageRenderers["page-search"] = async () => {

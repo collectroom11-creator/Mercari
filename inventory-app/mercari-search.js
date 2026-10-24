@@ -73,10 +73,13 @@ function mapResults(json) {
       name: i.name,
       price: Number(i.price),
       thumbnail: (i.thumbnails || [])[0] || null,
+      // 메루카리 Shops 상품(약 20%)은 id 모양과 상품 주소가 다르다(/shops/product/ID)
+      shop: i.itemType === "ITEM_TYPE_BEYOND",
       // 최신순은 등록이 아니라 마지막 수정(가격 변경·재등록) 기준으로 정렬돼서, 화면에도 그 시각을 쓴다
       updatedAt: i.updated || i.created ? new Date(Number(i.updated || i.created) * 1000).toISOString() : null,
     })),
     nextPageToken: json.meta?.nextPageToken || "",
+    // numFound는 첫 페이지 기준 추정치라 실제로 넘겨 보면 더 많다 - 화면엔 쓰지 않는다
     total: Number(json.meta?.numFound || 0),
   };
 }
