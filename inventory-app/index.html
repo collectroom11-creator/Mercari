@@ -21,6 +21,10 @@
           <svg viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
           재고 입력
         </button>
+        <button class="side-link" data-page="page-search">
+          <svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></svg>
+          매입 검색
+        </button>
         <button class="side-link" data-page="page-wishlist">
           <svg viewBox="0 0 16 16"><path d="M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.3C14 10 8 13.5 8 13.5Z"/></svg>
           찜 목록
@@ -124,6 +128,28 @@
           <div id="kanban" class="kanban"></div>
         </section>
 
+        <section id="page-search" class="page">
+          <div class="sbar">
+            <div class="sbrand" id="sBrandBox">
+              <div id="sBrandChips" class="sbrand-chips"></div>
+              <input id="sBrandInput" placeholder="브랜드 (여러 개 가능)" autocomplete="off">
+              <div id="sBrandPop" class="spop" hidden></div>
+            </div>
+            <select id="sCategory"></select>
+            <div class="sprice"><input id="sMin" inputmode="numeric" placeholder="최소"><span>~</span><input id="sMax" inputmode="numeric" placeholder="최대"><span class="unit">엔</span></div>
+            <div class="seg" id="sSort">
+              <button type="button" class="active" data-sort="new">최신순</button>
+              <button type="button" data-sort="priceAsc">낮은 가격</button>
+              <button type="button" data-sort="priceDesc">높은 가격</button>
+            </div>
+          </div>
+          <div class="sbar">
+            <input id="sKeyword" placeholder="키워드 (Enter로 검색)">
+            <input id="sExclude" placeholder="제외 키워드 (띄어쓰기로 여러 개)">
+          </div>
+          <div id="sMeta" class="smeta"></div>
+          <div id="sResults" class="sgrid"></div>
+        </section>
         <section id="page-wishlist" class="page"></section>
         <section id="page-filters" class="page"></section>
 

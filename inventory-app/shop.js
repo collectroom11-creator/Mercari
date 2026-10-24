@@ -408,6 +408,207 @@ window.api.onWishlistUpdated(() => {
   refreshAlerts();
 });
 
+// ---- 매입 검색 ----
+// 켄즈포스트 검색 대신 메루카리 검색 API를 앱에서 바로 부른다. 결과를 누르면 켄즈포스트 상품 페이지로.
+// 버튼 없이: 키워드·가격 칸은 Enter, 브랜드·카테고리·정렬은 바꾸는 즉시 검색. 마지막 조건은 기억한다.
+const CATEGORY_KO = {
+  トップス: "상의", "ジャケット/アウター": "아우터", パンツ: "바지", 靴: "신발", バッグ: "가방", スーツ: "수트",
+  帽子: "모자", アクセサリー: "액세서리", 小物: "소품", 時計: "시계", 水着: "수영복", レッグウェア: "양말",
+  アンダーウェア: "속옷", その他: "기타", ルームウェア: "실내복", "ルームウェア/パジャマ": "실내복", ジャージ: "저지",
+};
+const search = { brands: [], category: "", min: "", max: "", sort: "new", keyword: "", exclude: "", nextPageToken: "", loading: false, fx: null, seq: 0 };
+try { Object.assign(search, JSON.parse(localStorage.getItem("searchConditions") || "{}")); } catch {}
+const saveSearch = () => {
+  const { brands, category, min, max, sort, keyword, exclude } = search;
+  try { localStorage.setItem("searchConditions", JSON.stringify({ brands, category, min, max, sort, keyword, exclude })); } catch {}
+};
+const ago = (iso) => {
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60000));
+  return m < 1 ? "방금" : m < 60 ? `${m}분 전` : m < 1440 ? `${Math.floor(m / 60)}시간 전` : `${Math.floor(m / 1440)}일 전`;
+};
+
+let searchReady = false;
+async function setupSearchPage() {
+  if (searchReady) return;
+  searchReady = true;
+  const tree = await window.api.menCategories();
+  const sel = document.getElementById("sCategory");
+  sel.innerHTML = `<option value="">카테고리 전체</option>` + (tree
+    ? `<option value="${tree.id}">남성 전체</option>` + tree.groups.map((g) => `
+        <optgroup label="${escapeHtml(CATEGORY_KO[g.name] ? `${CATEGORY_KO[g.name]} (${g.name})` : g.name)}">
+          <option value="${g.id}">${escapeHtml(CATEGORY_KO[g.name] || g.name)} 전체</option>
+          ${g.leaves.map((l) => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join("")}
+        </optgroup>`).join("")
+    : "");
+  sel.value = search.category;
+  sel.addEventListener("change", () => { search.category = sel.value; runSearch(); });
+
+  document.getElementById("sMin").value = fmtNum(search.min);
+  document.getElementById("sMax").value = fmtNum(search.max);
+  document.getElementById("sKeyword").value = search.keyword;
+  document.getElementById("sExclude").value = search.exclude;
+  for (const id of ["sMin", "sMax", "sKeyword", "sExclude"]) {
+    document.getElementById(id).addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || e.isComposing) return;
+      search.min = parseNum(document.getElementById("sMin").value) || "";
+      search.max = parseNum(document.getElementById("sMax").value) || "";
+      search.keyword = document.getElementById("sKeyword").value.trim();
+      search.exclude = document.getElementById("sExclude").value.trim();
+      document.getElementById("sMin").value = fmtNum(search.min);
+      document.getElementById("sMax").value = fmtNum(search.max);
+      runSearch();
+    });
+  }
+  document.querySelectorAll("#sSort button").forEach((b) => {
+    b.classList.toggle("active", b.dataset.sort === search.sort);
+    b.addEventListener("click", () => {
+      search.sort = b.dataset.sort;
+      document.querySelectorAll("#sSort button").forEach((x) => x.classList.toggle("active", x === b));
+      runSearch();
+    });
+  });
+
+  // 브랜드: 입력하면 메루카리 브랜드 목록에서 후보, 비어 있으면 알림 필터의 브랜드를 바로 고를 수 있게
+  const input = document.getElementById("sBrandInput");
+  const pop = document.getElementById("sBrandPop");
+  let candidates = [];
+  let alertBrands = null;
+  let popSeq = 0;
+  const showCandidates = async () => {
+    const q = input.value.trim();
+    const seq = ++popSeq;
+    let list;
+    if (q) list = await window.api.searchBrands(q);
+    else {
+      if (!alertBrands) {
+        const f = await window.api.getFilters();
+        alertBrands = await window.api.resolveBrands(f.ok ? f.filters.brands.map((b) => b.name) : []);
+      }
+      list = alertBrands;
+    }
+    if (seq !== popSeq) return; // 그 사이 더 입력했으면 이전 결과는 버린다
+    candidates = list.filter((c) => !search.brands.some((b) => b.id === c.id));
+    pop.innerHTML = candidates.length
+      ? (q ? "" : `<div class="spop-title">알림 브랜드</div>`) + candidates.map((c, i) => `<div class="spop-item" data-i="${i}">${escapeHtml(c.name)}</div>`).join("")
+      : `<div class="spop-empty">${q ? "맞는 브랜드가 없어요" : "브랜드 이름을 입력하세요"}</div>`;
+    pop.hidden = false;
+  };
+  const pick = (c) => {
+    if (!c) return;
+    search.brands.push(c);
+    input.value = "";
+    pop.hidden = true;
+    renderBrandChips();
+    runSearch();
+  };
+  input.addEventListener("input", showCandidates);
+  input.addEventListener("focus", showCandidates);
+  input.addEventListener("blur", () => setTimeout(() => (pop.hidden = true), 150));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.isComposing) pick(candidates[0]);
+    if (e.key === "Backspace" && !input.value && search.brands.length) {
+      search.brands.pop();
+      renderBrandChips();
+      runSearch();
+    }
+  });
+  pop.addEventListener("mousedown", (e) => {
+    const it = e.target.closest("[data-i]");
+    if (it) { e.preventDefault(); pick(candidates[Number(it.dataset.i)]); }
+  });
+  renderBrandChips();
+
+  // 결과 끝까지 내리면 다음 페이지
+  const grid = document.getElementById("sResults");
+  grid.addEventListener("scroll", () => {
+    if (grid.scrollTop + grid.clientHeight > grid.scrollHeight - 400) loadMore();
+  });
+  grid.addEventListener("click", async (e) => {
+    const wish = e.target.closest("[data-wish]");
+    if (wish) {
+      e.stopPropagation();
+      const r = await window.api.addWishlistLink(`https://jp.mercari.com/item/${wish.dataset.wish}`);
+      if (r.ok) wish.closest(".stile").classList.add("wished");
+      return;
+    }
+    const tile = e.target.closest("[data-open]");
+    if (tile) window.api.openExternal(kenzLink(tile.dataset.open));
+  });
+}
+
+function renderBrandChips() {
+  const box = document.getElementById("sBrandChips");
+  box.innerHTML = search.brands.map((b, i) => `<span class="chip">${escapeHtml(b.name)}<button data-del-sbrand="${i}" title="빼기">✕</button></span>`).join("");
+  box.querySelectorAll("[data-del-sbrand]").forEach((x) => x.addEventListener("click", () => {
+    search.brands.splice(Number(x.dataset.delSbrand), 1);
+    renderBrandChips();
+    runSearch();
+  }));
+}
+
+function searchConditions(pageToken = "") {
+  return {
+    brandIds: search.brands.map((b) => b.id),
+    categoryIds: search.category ? [Number(search.category)] : [],
+    priceMin: Number(search.min) || 0,
+    priceMax: Number(search.max) || 0,
+    keyword: search.keyword,
+    exclude: search.exclude,
+    sort: search.sort,
+    pageToken,
+  };
+}
+
+const searchTile = (it) => `
+  <div class="stile wtile" data-open="${it.id}" title="${escapeHtml(it.name)}">
+    <div class="wphoto" style="background-image:url('${it.thumbnail || ""}')">
+      ${it.updatedAt ? `<span class="wtag">${ago(it.updatedAt)}</span>` : ""}
+      <button class="swish" data-wish="${it.id}" title="찜 목록에 추가"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.3C14 10 8 13.5 8 13.5Z"/></svg></button>
+    </div>
+    <div class="wprice">${yen(it.price)}</div>
+    <div class="wtime">${search.fx ? `≈ ${Math.round((it.price * search.fx) / 100).toLocaleString()}원` : ""}</div>
+  </div>`;
+
+async function runSearch() {
+  saveSearch();
+  const meta = document.getElementById("sMeta");
+  const grid = document.getElementById("sResults");
+  const seq = ++search.seq;
+  if (!search.brands.length && !search.keyword && !search.category) {
+    meta.textContent = "브랜드나 키워드를 넣으면 메루카리 판매중 상품을 찾아요. 누르면 켄즈포스트로 열려요.";
+    grid.innerHTML = "";
+    return;
+  }
+  meta.textContent = "검색 중...";
+  search.fx ??= (await window.api.getSettings()).fxRate;
+  const r = await window.api.mercariSearch(searchConditions());
+  if (seq !== search.seq) return; // 그 사이 조건이 바뀌었으면 버린다
+  if (!r.ok) {
+    meta.textContent = r.error;
+    return;
+  }
+  search.nextPageToken = r.nextPageToken;
+  meta.textContent = `판매중 ${r.total.toLocaleString()}개`;
+  grid.scrollTop = 0;
+  grid.innerHTML = r.items.map(searchTile).join("") || `<div class="empty">조건에 맞는 상품이 없어요</div>`;
+}
+
+async function loadMore() {
+  if (search.loading || !search.nextPageToken) return;
+  search.loading = true;
+  const seq = search.seq;
+  const r = await window.api.mercariSearch(searchConditions(search.nextPageToken));
+  search.loading = false;
+  if (seq !== search.seq || !r.ok) return;
+  search.nextPageToken = r.nextPageToken;
+  document.getElementById("sResults").insertAdjacentHTML("beforeend", r.items.map(searchTile).join(""));
+}
+
+pageRenderers["page-search"] = async () => {
+  await setupSearchPage();
+  if (!document.getElementById("sResults").children.length) runSearch();
+};
+
 // ---- 메루카리 필터 ----
 let filterDraft = null;
 

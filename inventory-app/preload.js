@@ -30,6 +30,10 @@ contextBridge.exposeInMainWorld("api", {
   getFilters: () => ipcRenderer.invoke("get-filters"),
   matchBrand: (input) => ipcRenderer.invoke("match-brand", input),
   saveFilters: (filters) => ipcRenderer.invoke("save-filters", filters),
+  mercariSearch: (conditions) => ipcRenderer.invoke("mercari-search", conditions),
+  searchBrands: (query) => ipcRenderer.invoke("search-brands", query),
+  resolveBrands: (names) => ipcRenderer.invoke("resolve-brands", names),
+  menCategories: () => ipcRenderer.invoke("men-categories"),
   ledgerImport: () => ipcRenderer.invoke("ledger-import"),
   ledgerExport: () => ipcRenderer.invoke("ledger-export"),
 });

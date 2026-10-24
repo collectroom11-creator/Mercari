@@ -24,6 +24,7 @@ const { ledgerGet, ledgerSet, importLedgerBackup, exportLedgerBackup } = require
 const { parseWishlistLink, loadManual, addManual, removeManual, loadDrops, loadHidden, hideItem } = require("./wishlist-files");
 const { loadBrandNames, matchBrand, validateFilters } = require("./filters");
 const { computeBrandMix } = require("./brands");
+const { createSigner, searchMercari, loadFacets, searchBrands, menCategoryTree } = require("./mercari-search");
 const { readRemoteFilters, saveFilters } = require("./filters-git");
 
 const DB_FILE = path.join(app.getPath("userData"), "inventory.json");
@@ -431,6 +432,26 @@ ipcMain.handle("get-filters", () => {
   }
 });
 ipcMain.handle("match-brand", (event, input) => matchBrand(input, brandNames()));
+
+// ---- 매입 검색 (메루카리 검색 API를 앱에서 직접) ----
+let searchSigner = null;
+let searchFacets = null;
+const facets = () => (searchFacets ||= loadFacets(path.join(REPO_DIR, "facets")));
+ipcMain.handle("mercari-search", async (event, conditions) => {
+  searchSigner ||= createSigner();
+  try {
+    return { ok: true, ...(await searchMercari(searchSigner, conditions)) };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+ipcMain.handle("search-brands", (event, query) => searchBrands(facets().brands, query));
+// 알림 필터의 브랜드 이름들을 한 번에 메루카리 브랜드(id)로
+ipcMain.handle("resolve-brands", (event, names) => {
+  const byName = new Map(facets().brands.map((b) => [b.name.toLowerCase(), b]));
+  return names.map((n) => byName.get(String(n).toLowerCase())).filter(Boolean).map(({ id, name }) => ({ id, name }));
+});
+ipcMain.handle("men-categories", () => menCategoryTree(facets().categories));
 ipcMain.handle("save-filters", (event, filters) => {
   const errors = validateFilters(filters, brandNames());
   if (errors.length) return { ok: false, errors };
