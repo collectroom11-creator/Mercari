@@ -99,7 +99,7 @@ function drawDashCharts() {
 }
 new ResizeObserver(drawDashCharts).observe(document.getElementById("revenueChart"));
 
-// 재고 지표 3개. 재고원가는 목표(설정 stockTargetKrw, 기본 600만) 대비 모자람/넘침과 단계별 구성을 같이 보여준다.
+// 재고 지표 3개. 재고원가는 목표(설정 stockTargetKrw, 기본 500만) 대비 모자람/넘침과 단계별 구성을 같이 보여준다.
 function renderKpis(s) {
   const target = s.stockTargetKrw;
   const gap = s.stockCost - target;

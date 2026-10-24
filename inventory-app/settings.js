@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const DEFAULT_SETTINGS = {
   fxRate: 950,
   // 대시보드 재고원가 목표(원). 이만큼은 재고를 들고 있어야 판매가 끊기지 않는다는 기준.
-  stockTargetKrw: 6000000,
+  stockTargetKrw: 5000000,
 };
 
 function loadSettings(filePath) {

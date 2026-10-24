@@ -206,7 +206,7 @@ select { appearance: none; padding-right: 26px; background-image: url("data:imag
 .kpi-target { font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .kpi-target.short { color: var(--warning); }
 .kpi-target.over { color: var(--positive); }
-/* 목표 막대: 회색 바탕이 목표 600만, 단계별로 쌓인다. 목표를 넘으면 바탕 대신 목표선 표시 */
+/* 목표 막대: 회색 바탕이 목표 500만, 단계별로 쌓인다. 목표를 넘으면 바탕 대신 목표선 표시 */
 .target-bar { position: relative; display: flex; gap: 2px; height: 8px; margin: 8px 0 6px; border-radius: 4px; overflow: hidden; background: var(--fill); }
 .target-bar span { display: block; min-width: 2px; }
 .target-line { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--label); border-radius: 1px; }

@@ -16,7 +16,7 @@ const GOAL_FILE = path.join(DATA_DIR, "purchase-goal.json");
 const REMINDER_LIST = "콜렉트룸";
 
 function loadGoal() {
-  if (!fs.existsSync(GOAL_FILE)) return { stockTargetKrw: 6000000, days: {} };
+  if (!fs.existsSync(GOAL_FILE)) return { stockTargetKrw: 5000000, days: {} };
   return JSON.parse(fs.readFileSync(GOAL_FILE, "utf-8"));
 }
 
