@@ -413,12 +413,54 @@ window.api.onWishlistUpdated(() => {
 // ---- 매입 검색 ----
 // 켄즈포스트 검색 대신 메루카리 검색 API를 앱에서 바로 부른다. 결과를 누르면 켄즈포스트 상품 페이지로.
 // 버튼 없이: 키워드·가격 칸은 Enter, 브랜드·카테고리·정렬은 바꾸는 즉시 검색. 마지막 조건은 기억한다.
+// 메루카리 남성 카테고리 한글 이름(중분류·소분류). 목록에 없는 이름은 일본어 그대로 보인다.
 const CATEGORY_KO = {
-  トップス: "상의", "ジャケット/アウター": "아우터", パンツ: "바지", 靴: "신발", バッグ: "가방", スーツ: "수트",
-  帽子: "모자", アクセサリー: "액세서리", 小物: "소품", 時計: "시계", 水着: "수영복", レッグウェア: "양말",
-  アンダーウェア: "속옷", その他: "기타", ルームウェア: "실내복", "ルームウェア/パジャマ": "실내복", ジャージ: "저지",
+  トップス: "상의", "ジャケット/アウター": "아우터", パンツ: "바지", 靴: "신발", バッグ: "가방", スーツ: "정장",
+  帽子: "모자", アクセサリー: "액세서리", 小物: "잡화", 時計: "시계", 水着: "수영복", レッグウェア: "양말·레깅스",
+  アンダーウェア: "속옷", その他: "기타",
+  // 상의
+  "Tシャツ/カットソー(半袖/袖なし)": "반팔·민소매 티셔츠", "Tシャツ/カットソー(七分/長袖)": "긴팔 티셔츠", シャツ: "셔츠",
+  ポロシャツ: "폴로셔츠", タンクトップ: "나시", "ニット/セーター": "니트·스웨터", パーカー: "후드티", カーディガン: "가디건",
+  スウェット: "맨투맨", ジャージ: "트레이닝 저지", ベスト: "조끼",
+  // 아우터
+  テーラードジャケット: "테일러드 재킷(블레이저)", ノーカラージャケット: "노카라 재킷", "Gジャン/デニムジャケット": "데님 재킷",
+  レザージャケット: "가죽 재킷", ダウンジャケット: "패딩", ライダースジャケット: "라이더 재킷", ミリタリージャケット: "밀리터리 재킷",
+  ナイロンジャケット: "나일론 재킷", フライトジャケット: "항공 점퍼(MA-1)", ダッフルコート: "더플코트", ピーコート: "피코트",
+  ステンカラーコート: "발마칸 코트", トレンチコート: "트렌치코트", モッズコート: "야상(모즈코트)", チェスターコート: "체스터 코트",
+  スタジャン: "스타디움 점퍼", スカジャン: "스카잔", ブルゾン: "블루종", マウンテンパーカー: "마운틴 파카", ダウンベスト: "패딩 조끼",
+  ポンチョ: "판초", カバーオール: "커버올",
+  // 바지
+  "デニム/ジーンズ": "데님·청바지", "ワークパンツ/カーゴパンツ": "워크·카고 팬츠", スラックス: "슬랙스", チノパン: "치노 팬츠",
+  ショートパンツ: "반바지", ペインターパンツ: "페인터 팬츠", サルエルパンツ: "사루엘 팬츠", オーバーオール: "멜빵바지",
+  // 신발
+  スニーカー: "스니커즈", サンダル: "샌들", ブーツ: "부츠", モカシン: "모카신", "ドレス/ビジネス": "구두", "長靴/レインシューズ": "장화·레인부츠",
+  デッキシューズ: "보트 슈즈",
+  // 가방
+  ショルダーバッグ: "숄더백", トートバッグ: "토트백", ボストンバッグ: "보스턴백", "リュック/バックパック": "백팩", ウエストポーチ: "웨이스트백",
+  ボディーバッグ: "슬링백", ドラムバッグ: "드럼백", ビジネスバッグ: "서류가방", トラベルバッグ: "여행가방", メッセンジャーバッグ: "메신저백",
+  エコバッグ: "에코백",
+  // 정장
+  スーツジャケット: "정장 재킷", スーツベスト: "정장 조끼", セットアップ: "셋업",
+  // 모자
+  キャップ: "캡", ハット: "햇", "ニットキャップ/ビーニー": "비니", "ハンチング/ベレー帽": "헌팅캡·베레모", キャスケット: "캐스케트",
+  サンバイザー: "썬캡",
+  // 액세서리
+  ネックレス: "목걸이", ブレスレット: "팔찌", "バングル/リストバンド": "뱅글·손목밴드", リング: "반지", "ピアス(片耳用)": "귀걸이(한쪽)",
+  "ピアス(両耳用)": "귀걸이(양쪽)", アンクレット: "발찌",
+  // 잡화
+  長財布: "장지갑", 折り財布: "반지갑", マネークリップ: "머니클립", "コインケース/小銭入れ": "동전지갑", "名刺入れ/定期入れ": "명함·카드지갑",
+  キーケース: "키케이스", キーホルダー: "키홀더", ネクタイ: "넥타이", 手袋: "장갑", ハンカチ: "손수건", ベルト: "벨트", マフラー: "목도리",
+  ストール: "스톨", バンダナ: "반다나", ネックウォーマー: "넥워머", サスペンダー: "멜빵", ウォレットチェーン: "지갑 체인",
+  "サングラス/メガネ": "선글라스·안경", "モバイルケース/カバー": "폰케이스", 手帳: "다이어리", ストラップ: "스트랩", ネクタイピン: "넥타이핀",
+  カフリンクス: "커프스", イヤマフラー: "귀마개", 傘: "우산", レインコート: "우비", ミラー: "거울", タバコグッズ: "담배용품",
+  // 시계
+  "腕時計(アナログ)": "아날로그 손목시계", "腕時計(デジタル)": "디지털 손목시계", ラバーベルト: "러버 시곗줄", レザーベルト: "가죽 시곗줄",
+  金属ベルト: "메탈 시곗줄",
+  // 수영복·양말·속옷
+  一般水着: "수영복", スポーツ用: "스포츠용", ソックス: "양말", "レギンス/スパッツ": "레깅스", レッグウォーマー: "레그워머",
+  トランクス: "트렁크", ボクサーパンツ: "드로즈",
 };
-const search = { brands: [], category: "", min: "", max: "", sort: "new", keyword: "", exclude: "", nextPageToken: "", loading: false, fx: null, seq: 0, shown: new Set() };
+const search = { brands: [], category: "", min: "", max: "", sort: "new", keyword: "", exclude: "", nextPageToken: "", loading: false, fx: null, seq: 0, shown: new Set(), wished: new Set() };
 try { Object.assign(search, JSON.parse(localStorage.getItem("searchConditions") || "{}")); } catch {}
 const saveSearch = () => {
   const { brands, category, min, max, sort, keyword, exclude } = search;
@@ -437,9 +479,9 @@ async function setupSearchPage() {
   const sel = document.getElementById("sCategory");
   sel.innerHTML = `<option value="">카테고리 전체</option>` + (tree
     ? `<option value="${tree.id}">남성 전체</option>` + tree.groups.map((g) => `
-        <optgroup label="${escapeHtml(CATEGORY_KO[g.name] ? `${CATEGORY_KO[g.name]} (${g.name})` : g.name)}">
+        <optgroup label="${escapeHtml(CATEGORY_KO[g.name] || g.name)}">
           <option value="${g.id}">${escapeHtml(CATEGORY_KO[g.name] || g.name)} 전체</option>
-          ${g.leaves.map((l) => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join("")}
+          ${g.leaves.map((l) => `<option value="${l.id}">${escapeHtml(CATEGORY_KO[l.name] || l.name)}</option>`).join("")}
         </optgroup>`).join("")
     : "");
   sel.value = search.category;
@@ -526,11 +568,23 @@ async function setupSearchPage() {
     if (grid.scrollTop + grid.clientHeight > grid.scrollHeight - 400) loadMore();
   });
   grid.addEventListener("click", async (e) => {
+    // ♡: 누르면 찜에 넣고, 다시 누르면 뺀다
     const wish = e.target.closest("[data-wish]");
     if (wish) {
       e.stopPropagation();
-      const r = await window.api.addWishlistLink(mercariUrl(wish.dataset.wish));
-      if (r.ok) wish.closest(".stile").classList.add("wished");
+      const tile = wish.closest(".stile");
+      const id = wish.dataset.wish;
+      if (search.wished.has(id)) {
+        await window.api.removeWishlistLink(id);
+        search.wished.delete(id);
+        tile.classList.remove("wished");
+      } else {
+        const r = await window.api.addWishlistLink(mercariUrl(id), tile.dataset.thumb || null);
+        if (r.ok) {
+          search.wished.add(id);
+          tile.classList.add("wished");
+        }
+      }
       return;
     }
     const tile = e.target.closest("[data-open]");
@@ -562,7 +616,7 @@ function searchConditions(pageToken = "") {
 }
 
 const searchTile = (it) => `
-  <div class="stile wtile" data-open="${it.id}" ${it.shop ? 'data-shop="1"' : ""} title="${escapeHtml(it.name)}">
+  <div class="stile wtile${search.wished.has(it.id) ? " wished" : ""}" data-open="${it.id}" ${it.shop ? 'data-shop="1"' : ""} data-thumb="${escapeHtml(it.thumbnail || "")}" title="${escapeHtml(it.name)}">
     <div class="wphoto" style="background-image:url('${it.thumbnail || ""}')">
       ${it.updatedAt ? `<span class="wtag">${ago(it.updatedAt)}</span>` : ""}
       ${it.shop ? `<span class="wtag sshop">Shops</span>` : ""}
@@ -591,7 +645,9 @@ async function runSearchNow() {
   }
   meta.textContent = "검색 중...";
   search.fx ??= (await window.api.getSettings()).fxRate;
-  const r = await window.api.mercariSearch(searchConditions());
+  // 이미 찜한 상품은 ♡가 채워진 채로 보이게
+  const [r, wl] = await Promise.all([window.api.mercariSearch(searchConditions()), window.api.getWishlist()]);
+  search.wished = new Set(wl.items.map((w) => w.id));
   if (seq !== search.seq) return; // 그 사이 조건이 바뀌었으면 버린다
   if (!r.ok) {
     meta.textContent = r.error;

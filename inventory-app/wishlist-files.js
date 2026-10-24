@@ -33,9 +33,13 @@ function loadManual(file) {
   return readJson(file, []);
 }
 
-function addManual(file, id) {
+// imageUrl: 검색 화면에서 찜할 때 넘겨주는 사진 주소. 가격 확인이 돌기 전에도(특히 사진 주소를
+// id로 만들 수 없는 Shops 상품) 찜 화면에 사진이 보이게 한다.
+function addManual(file, id, { imageUrl } = {}) {
   const list = loadManual(file);
-  if (!list.some((m) => m.id === id)) list.push({ id, addedAt: new Date().toISOString() });
+  const found = list.find((m) => m.id === id);
+  if (!found) list.push({ id, addedAt: new Date().toISOString(), ...(imageUrl ? { imageUrl } : {}) });
+  else if (imageUrl && !found.imageUrl) found.imageUrl = imageUrl;
   writeJson(file, list);
   return list;
 }

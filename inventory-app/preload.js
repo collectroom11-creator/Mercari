@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld("api", {
   dismissDiscount: (id, pct) => ipcRenderer.invoke("dismiss-discount", id, pct),
   ackDrop: (dropId) => ipcRenderer.invoke("ack-drop", dropId),
   getWishlist: () => ipcRenderer.invoke("get-wishlist"),
-  addWishlistLink: (url) => ipcRenderer.invoke("add-wishlist-link", url),
+  addWishlistLink: (url, imageUrl) => ipcRenderer.invoke("add-wishlist-link", url, imageUrl),
   removeWishlistLink: (id) => ipcRenderer.invoke("remove-wishlist-link", id),
   getFilters: () => ipcRenderer.invoke("get-filters"),
   matchBrand: (input) => ipcRenderer.invoke("match-brand", input),

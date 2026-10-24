@@ -393,21 +393,23 @@ ipcMain.handle("get-wishlist", () => {
   const state = fs.existsSync(WISHLIST_STATE_FILE)
     ? JSON.parse(fs.readFileSync(WISHLIST_STATE_FILE, "utf-8"))
     : { items: {} };
-  const manual = new Set(loadManual(WISHLIST_MANUAL_FILE).map((m) => m.id));
+  const manualList = loadManual(WISHLIST_MANUAL_FILE);
+  const manual = new Set(manualList.map((m) => m.id));
+  const manualImage = new Map(manualList.filter((m) => m.imageUrl).map((m) => [m.id, m.imageUrl]));
   const hidden = new Set(loadHidden(WISHLIST_HIDDEN_FILE));
   const rows = Object.entries(state.items)
     .filter(([id]) => !hidden.has(id))
-    .map(([id, it]) => ({ id, ...it, manual: manual.has(id) }));
+    .map(([id, it]) => ({ id, ...it, imageUrl: it.imageUrl || manualImage.get(id) || null, manual: manual.has(id) }));
   // 직접 추가했지만 감시 스크립트가 아직 한 번도 안 돈 상품도 보여준다.
   for (const id of manual) {
-    if (!state.items[id] && !hidden.has(id)) rows.push({ id, title: id, lastPrice: null, soldOut: false, checkedAt: null, manual: true });
+    if (!state.items[id] && !hidden.has(id)) rows.push({ id, title: id, lastPrice: null, soldOut: false, checkedAt: null, imageUrl: manualImage.get(id) || null, manual: true });
   }
   return { items: rows, lastRunAt: state.lastRunAt || null, lastListSyncAt: state.lastListSyncAt || null };
 });
-ipcMain.handle("add-wishlist-link", (event, url) => {
+ipcMain.handle("add-wishlist-link", (event, url, imageUrl) => {
   const id = parseWishlistLink(url);
   if (!id) return { ok: false, error: "메루카리 상품 링크가 아니에요(켄즈포스트 메루카리 링크나 jp.mercari.com 링크를 넣어주세요)" };
-  addManual(WISHLIST_MANUAL_FILE, id);
+  addManual(WISHLIST_MANUAL_FILE, id, { imageUrl });
   // 예전에 삭제했던 상품을 다시 추가하면 숨김을 푼다
   const hiddenList = loadHidden(WISHLIST_HIDDEN_FILE).filter((h) => h !== id);
   fs.writeFileSync(WISHLIST_HIDDEN_FILE, JSON.stringify(hiddenList, null, 2));

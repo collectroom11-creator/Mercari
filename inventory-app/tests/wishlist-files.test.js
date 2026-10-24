@@ -52,6 +52,17 @@ test("mergeWishlist: 켄즈에서 새로 담은 상품은 담을 당시 가격�
   assert.deepEqual(out.m5, { title: "t", lastPrice: 8800, soldOut: false });
 });
 
+test("addManual: 사진 주소를 같이 주면 저장하고, 이미 있으면 사진만 채운다", () => {
+  const f = tmp("manual.json");
+  addManual(f, "2JYa", { imageUrl: "a.jpg" });
+  addManual(f, "m1");
+  addManual(f, "m1", { imageUrl: "b.jpg" });
+  const list = loadManual(f);
+  assert.equal(list.find((m) => m.id === "2JYa").imageUrl, "a.jpg");
+  assert.equal(list.find((m) => m.id === "m1").imageUrl, "b.jpg");
+  assert.equal(list.length, 2);
+});
+
 test("hideItem/loadHidden: 숨긴 id가 쌓이고 중복은 무시", () => {
   const f = tmp("hidden.json");
   assert.deepEqual(loadHidden(f), []);
