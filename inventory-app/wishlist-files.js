@@ -19,9 +19,14 @@ function writeJson(file, data) {
   fs.renameSync(tmp, file);
 }
 
+// 일반 상품은 /item/m123..., 메루카리 Shops 상품은 /shops/product/영문숫자 - 둘 다 id만 저장한다.
 function parseWishlistLink(url) {
-  const m = String(url).match(/jp\.mercari\.com\/item\/(m\d+)/);
-  return m ? m[1] : null;
+  const m = String(url).match(/jp\.mercari\.com\/(?:item\/(m\d+)|shops\/product\/([A-Za-z0-9]+))/);
+  return m ? m[1] || m[2] : null;
+}
+
+function mercariItemUrl(id) {
+  return /^m\d+$/.test(id) ? `https://jp.mercari.com/item/${id}` : `https://jp.mercari.com/shops/product/${id}`;
 }
 
 function loadManual(file) {
@@ -86,4 +91,5 @@ function mergeWishlist(stateItems, kenzList, manualIds, hiddenIds = []) {
   return items;
 }
 
-module.exports = { parseWishlistLink, loadManual, addManual, removeManual, appendDrop, loadDrops, mergeWishlist, loadHidden, hideItem };
+module.exports = {
+  mercariItemUrl, parseWishlistLink, loadManual, addManual, removeManual, appendDrop, loadDrops, mergeWishlist, loadHidden, hideItem };

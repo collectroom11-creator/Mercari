@@ -267,7 +267,9 @@ function friendlyTime(iso) {
   if (dayDiff === 1) return `어제 ${hm}`;
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
-const kenzLink = (id) => `https://kenzpost.com/mercari/bid.s/https://jp.mercari.com/item/${id}`;
+// 일반 상품은 /item/m123..., 메루카리 Shops 상품은 /shops/product/영문숫자
+const mercariUrl = (id) => (/^m\d+$/.test(id) ? `https://jp.mercari.com/item/${id}` : `https://jp.mercari.com/shops/product/${id}`);
+const kenzLink = (id) => `https://kenzpost.com/mercari/bid.s/${mercariUrl(id)}`;
 
 async function refreshAlerts() {
   const { discounts, drops } = await window.api.getAlerts();
@@ -352,7 +354,7 @@ async function renderWishlist() {
     .sort((a, b) => Number(a.soldOut) - Number(b.soldOut))
     .map((w) => `
       <div class="wtile ${w.soldOut ? "dimmed" : ""}" title="${escapeHtml(w.title)}" data-open="${w.id}">
-        <div class="wphoto" style="background-image:url('${mercariPhoto(w.id)}')">
+        <div class="wphoto" style="background-image:url('${w.imageUrl || mercariPhoto(w.id)}')">
           ${w.soldOut ? '<span class="wtag">품절</span>' : w.manual ? '<span class="wtag">직접 추가</span>' : ""}
           <button class="wremove" data-remove="${w.id}" title="찜 목록에서 삭제">✕</button>
         </div>
@@ -527,12 +529,12 @@ async function setupSearchPage() {
     const wish = e.target.closest("[data-wish]");
     if (wish) {
       e.stopPropagation();
-      const r = await window.api.addWishlistLink(`https://jp.mercari.com/item/${wish.dataset.wish}`);
+      const r = await window.api.addWishlistLink(mercariUrl(wish.dataset.wish));
       if (r.ok) wish.closest(".stile").classList.add("wished");
       return;
     }
     const tile = e.target.closest("[data-open]");
-    if (tile) window.api.openExternal(tile.dataset.shop ? `https://kenzpost.com/mercari/bid.s/https://jp.mercari.com/shops/product/${tile.dataset.open}` : kenzLink(tile.dataset.open));
+    if (tile) window.api.openExternal(kenzLink(tile.dataset.open));
   });
 }
 
@@ -563,7 +565,8 @@ const searchTile = (it) => `
   <div class="stile wtile" data-open="${it.id}" ${it.shop ? 'data-shop="1"' : ""} title="${escapeHtml(it.name)}">
     <div class="wphoto" style="background-image:url('${it.thumbnail || ""}')">
       ${it.updatedAt ? `<span class="wtag">${ago(it.updatedAt)}</span>` : ""}
-      ${it.shop ? `<span class="wtag sshop">Shops</span>` : `<button class="swish" data-wish="${it.id}" title="찜 목록에 추가"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.3C14 10 8 13.5 8 13.5Z"/></svg></button>`}
+      ${it.shop ? `<span class="wtag sshop">Shops</span>` : ""}
+      <button class="swish" data-wish="${it.id}" title="찜 목록에 추가"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13.5S2 10 2 5.8A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.3C14 10 8 13.5 8 13.5Z"/></svg></button>
     </div>
     <div class="wprice">${yen(it.price)}</div>
     <div class="wtime">${search.fx ? `≈ ${Math.round((it.price * search.fx) / 100).toLocaleString()}원` : ""}</div>

@@ -10,14 +10,17 @@ async function fetchMercariItem(mercariUrl) {
     await win.loadURL(mercariUrl);
     for (let attempt = 0; attempt < 20; attempt++) {
       const info = await win.webContents.executeJavaScript(`(() => {
+        // 일반 상품은 price, 메루카리 Shops 상품은 product-price
         const priceEl = document.querySelector('[data-testid="price"]')
+          || document.querySelector('[data-testid="product-price"]')
           || document.querySelector('[data-testid="converted-currency-section"]');
         const main = document.querySelector('main');
         return {
           title: document.querySelector('h1')?.innerText?.trim() || null,
           priceText: priceEl?.innerText || main?.innerText || '',
           imageUrl: document.querySelector('meta[property="og:image"]')?.content || null,
-          soldOut: !!document.querySelector('[data-testid="image-0"][aria-label="売り切れ"]'),
+          soldOut: !!document.querySelector('[data-testid="image-0"][aria-label="売り切れ"]')
+            || /売り切れ|在庫なし/.test(document.querySelector('[data-testid="product-title-section"]')?.parentElement?.innerText || ''),
         };
       })()`);
       const jpyPrice = parseMercariPriceText(info.priceText);

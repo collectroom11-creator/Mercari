@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const {
-  parseWishlistLink, loadManual, addManual, removeManual, appendDrop, loadDrops, mergeWishlist, loadHidden, hideItem,
+  parseWishlistLink, mercariItemUrl, loadManual, addManual, removeManual, appendDrop, loadDrops, mergeWishlist, loadHidden, hideItem,
 } = require("../wishlist-files");
 
 const tmp = (name) => path.join(fs.mkdtempSync(path.join(os.tmpdir(), "wish-")), name);
@@ -14,6 +14,13 @@ test("parseWishlistLink: 켄즈포스트/메루카리 링크에서 id, 그 외 n
   assert.equal(parseWishlistLink("https://jp.mercari.com/item/m82394126177?source=x"), "m82394126177");
   assert.equal(parseWishlistLink("https://auctions.yahoo.co.jp/jp/auction/x123"), null);
   assert.equal(parseWishlistLink("아무거나"), null);
+});
+
+test("parseWishlistLink / mercariItemUrl: 메루카리 Shops 상품도 id로, 주소는 종류에 맞게", () => {
+  assert.equal(parseWishlistLink("https://jp.mercari.com/shops/product/2JYaH9veBAGGWUmg3SjSUL"), "2JYaH9veBAGGWUmg3SjSUL");
+  assert.equal(parseWishlistLink("https://kenzpost.com/mercari/bid.s/https://jp.mercari.com/shops/product/2JYaH9veBAGGWUmg3SjSUL"), "2JYaH9veBAGGWUmg3SjSUL");
+  assert.equal(mercariItemUrl("m55393345053"), "https://jp.mercari.com/item/m55393345053");
+  assert.equal(mercariItemUrl("2JYaH9veBAGGWUmg3SjSUL"), "https://jp.mercari.com/shops/product/2JYaH9veBAGGWUmg3SjSUL");
 });
 
 test("addManual/removeManual: 중복은 무시하고 삭제된다", () => {

@@ -478,4 +478,4 @@ body.sidebar-hidden .alerts-popup { left: 110px; top: 50px; bottom: auto; }
 .stile:hover .swish, .stile.wished .swish { opacity: 1; }
 .stile.wished .swish { background: var(--negative); }
 .stile.wished .swish svg { fill: currentColor; }
-.sshop { left: auto; right: 6px; top: 6px; bottom: auto; background: rgba(0, 0, 0, 0.6); }
+.sshop { left: 6px; top: 6px; bottom: auto; }

@@ -11,7 +11,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { parseWishlistHtml } = require("./wishlist");
 const { fetchMercariItem } = require("./mercari-fetch");
-const { loadManual, appendDrop, mergeWishlist, loadHidden } = require("./wishlist-files");
+const { loadManual, appendDrop, mergeWishlist, loadHidden, mercariItemUrl } = require("./wishlist-files");
 
 const DATA_DIR = path.join(app.getPath("appData"), "inventory-app");
 const STATE_FILE = path.join(DATA_DIR, "wishlist-watch.json");
@@ -115,9 +115,11 @@ async function run() {
 
   for (const [id, item] of Object.entries(state.items)) {
     if (item.soldOut) continue;
-    const mercari = await fetchMercariItem(`https://jp.mercari.com/item/${id}`).catch(() => null);
+    const mercari = await fetchMercariItem(mercariItemUrl(id)).catch(() => null);
     if (!mercari) continue;
     item.title = mercari.title;
+    // 찜 화면 사진용(Shops 상품은 사진 주소를 id로 만들 수 없어서 읽어 온 걸 저장한다)
+    if (mercari.imageUrl) item.imageUrl = mercari.imageUrl;
     if (mercari.soldOut) {
       item.soldOut = true;
       log(`품절: ${id} ${mercari.title}`);
@@ -129,7 +131,7 @@ async function run() {
       const embed = {
         author: { name: "관심상품 할인" },
         title: mercari.title,
-        url: `https://kenzpost.com/mercari/bid.s/https://jp.mercari.com/item/${id}`,
+        url: `https://kenzpost.com/mercari/bid.s/${mercariItemUrl(id)}`,
         description: `💴 ~~${item.lastPrice.toLocaleString()}円~~ → **${price.toLocaleString()}円** (-${pct}%)`,
         color: 0xe74c3c,
       };
