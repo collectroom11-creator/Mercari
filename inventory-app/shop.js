@@ -569,7 +569,14 @@ const searchTile = (it) => `
     <div class="wtime">${search.fx ? `≈ ${Math.round((it.price * search.fx) / 100).toLocaleString()}원` : ""}</div>
   </div>`;
 
-async function runSearch() {
+// 브랜드를 연달아 넣거나 정렬을 몇 번 바꿀 때 매번 요청하지 않도록, 마지막 변경 0.4초 뒤에 한 번만 검색
+let searchTimer = null;
+function runSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(runSearchNow, 400);
+}
+
+async function runSearchNow() {
   saveSearch();
   const meta = document.getElementById("sMeta");
   const grid = document.getElementById("sResults");
