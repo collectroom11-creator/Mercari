@@ -413,6 +413,9 @@ ipcMain.handle("add-wishlist-link", (event, url, imageUrl) => {
   // 예전에 삭제했던 상품을 다시 추가하면 숨김을 푼다
   const hiddenList = loadHidden(WISHLIST_HIDDEN_FILE).filter((h) => h !== id);
   fs.writeFileSync(WISHLIST_HIDDEN_FILE, JSON.stringify(hiddenList, null, 2));
+  // 30분 주기를 기다리지 않고 가격 확인을 바로 한 번 돌린다 - 새로 넣은 상품의 가격·사진(Shops 상품은
+  // 사진 주소를 확인해야 알 수 있다)이 1분 안에 채워지고, 끝나면 찜 화면이 알아서 새로 그려진다.
+  require("child_process").execFile("launchctl", ["kickstart", `gui/${process.getuid()}/com.collectroom.wishlist-watch`], () => {});
   return { ok: true, id };
 });
 // 찜 삭제: 직접 추가한 건 목록에서 빼고, 켄즈포스트에서 온 건 다시 동기화돼도 안 보이게 숨긴다.

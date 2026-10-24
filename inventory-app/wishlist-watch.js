@@ -115,8 +115,14 @@ async function run() {
 
   for (const [id, item] of Object.entries(state.items)) {
     if (item.soldOut) continue;
-    const mercari = await fetchMercariItem(mercariItemUrl(id)).catch(() => null);
-    if (!mercari) continue;
+    const mercari = await fetchMercariItem(mercariItemUrl(id)).catch((e) => {
+      log(`확인 오류: ${id} ${e.message}`);
+      return null;
+    });
+    if (!mercari) {
+      log(`확인 실패(제목/가격을 못 읽음): ${id}`);
+      continue;
+    }
     item.title = mercari.title;
     // 찜 화면 사진용(Shops 상품은 사진 주소를 id로 만들 수 없어서 읽어 온 걸 저장한다)
     if (mercari.imageUrl) item.imageUrl = mercari.imageUrl;
