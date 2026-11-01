@@ -195,6 +195,10 @@
     {
       "name": "ALEXANDER McQUEEN",
       "priceMax": 30000
+    },
+    {
+      "name": "JOHN LAWRENCE SULLIVAN",
+      "priceMax": 30000
     }
   ],
   "excludeKeywords": [
