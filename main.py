@@ -69,11 +69,17 @@ from config import (
 # 브랜드/가격/카테고리/제외키워드는 config.py에서 관리한다.
 CHUNK_SIZE = 10  # 디스코드 embed는 메시지 하나에 최대 10개까지
 NEW_ITEM_MAX_AGE_MINUTES = 10  # created가 이보다 오래된 매물은 "신규"로 취급하지 않음
+# 맥이 자는 동안(밤사이)은 트리거가 거의 안 와서 검사가 멈춘다. 다음 실행에서 마지막 성공 실행
+# 이후에 올라온 매물을 모아서 한꺼번에 보내도록, 신규 판단 창을 "마지막 실행 이후 + 여유"로 늘린다.
+CATCHUP_MARGIN_MINUTES = 5
+CATCHUP_MAX_HOURS = 16       # 이보다 오래 멈췄으면 최근 16시간치만 보낸다
+CATCHUP_MAX_PAGES = 10       # 몰아받기 때 그룹당 최대 검색 페이지 수
 BRAND_LOOKUP_CONCURRENCY = 10  # 신규 상품 브랜드 조회를 동시에 몇 개까지 날릴지
 
 FACETS_DIR = Path(__file__).parent / "facets"
 DATA_DIR = Path(__file__).parent / "data"
 SEEN_FILE = DATA_DIR / "seen.json"
+LAST_RUN_FILE = DATA_DIR / "last_run.json"
 LAST_CATEGORY_FILE = DATA_DIR / "last_category.json"
 MAX_SEEN_KEEP = 3000
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL")
@@ -288,13 +294,33 @@ def _passes_brand_require_rule(item, brand_name: Optional[str]) -> bool:
     return any(kw in title for kw in keywords)
 
 
-def _is_recently_created(created: Optional[datetime]) -> bool:
+def _is_recently_created(created: Optional[datetime], max_age_minutes: float = NEW_ITEM_MAX_AGE_MINUTES) -> bool:
     # mercapi는 created를 로컬 타임존 기준 naive datetime으로 파싱한다.
     # GitHub Actions 러너의 로컬 타임존은 기본적으로 UTC라 datetime.now()와 그대로 비교해도 맞다.
     if created is None:
         return True
     age_seconds = (datetime.now() - created).total_seconds()
-    return age_seconds <= NEW_ITEM_MAX_AGE_MINUTES * 60
+    return age_seconds <= max_age_minutes * 60
+
+
+def load_last_run() -> Optional[float]:
+    """마지막으로 끝까지 돈 실행의 시각(epoch 초). 없으면 None."""
+    try:
+        return float(json.loads(LAST_RUN_FILE.read_text(encoding="utf-8"))["ts"])
+    except Exception:
+        return None
+
+
+def save_last_run(ts: float):
+    LAST_RUN_FILE.write_text(json.dumps({"ts": ts, "iso": datetime.utcfromtimestamp(ts).isoformat() + "Z"}), encoding="utf-8")
+
+
+def window_minutes(last_run: Optional[float], now: float) -> float:
+    """신규 판단 창(분). 평소엔 10분, 실행이 멈췄다 재개되면 마지막 실행 이후 + 여유(최대 16시간)."""
+    if last_run is None:
+        return NEW_ITEM_MAX_AGE_MINUTES
+    gap = (now - last_run) / 60 + CATCHUP_MARGIN_MINUTES
+    return max(NEW_ITEM_MAX_AGE_MINUTES, min(gap, CATCHUP_MAX_HOURS * 60))
 
 
 async def _fetch_item_brand(m: Mercapi, semaphore: asyncio.Semaphore, item_id: str) -> Optional[str]:
@@ -438,6 +464,12 @@ async def main():
             categories = (category_id,) if category_id else ()
         search_groups.setdefault((price_cap, categories), []).append(brand_id)
 
+    run_started = time.time()
+    max_age = window_minutes(load_last_run(), run_started)
+    catching_up = max_age > NEW_ITEM_MAX_AGE_MINUTES
+    if catching_up:
+        print(f"몰아받기: 마지막 실행 이후 {max_age:.0f}분 치 매물을 확인합니다.")
+
     all_result_items = []
     for (price_cap, categories), brand_ids in search_groups.items():
         results = await m.search(
@@ -451,6 +483,16 @@ async def main():
         )
         print(f"가격상한 {price_cap}엔/카테고리 {categories} 그룹 검색: 브랜드 {len(brand_ids)}개, 결과 {len(results.items)}건")
         all_result_items.extend(results.items)
+        # 몰아받기: 최신순 결과의 마지막 매물이 아직 창 안이면 다음 페이지도 읽는다.
+        pages = 1
+        while (catching_up and results.items and pages < CATCHUP_MAX_PAGES
+               and results.meta.next_page_token
+               and _is_recently_created(getattr(results.items[-1], "created", None), max_age)):
+            results = await results.next_page()
+            pages += 1
+            all_result_items.extend(results.items)
+        if pages > 1:
+            print(f"  몰아받기 페이지 {pages}개, 누적 {len(all_result_items)}건")
 
     is_first_run = not SEEN_FILE.exists()
     seen = load_seen()
@@ -463,7 +505,7 @@ async def main():
         seen_this_run.add(item_id)
         if _is_excluded_item(getattr(item, "name", "")):
             continue
-        if not _is_recently_created(getattr(item, "created", None)):
+        if not _is_recently_created(getattr(item, "created", None), max_age):
             continue
         new_candidates.append(item)
 
@@ -504,6 +546,7 @@ async def main():
             print(f"전송 성공 {success_count}건 / 시도 {len(new_items)}건 (배치 단위 전송)")
 
     save_seen(seen)
+    save_last_run(run_started)
 
 
 if __name__ == "__main__":

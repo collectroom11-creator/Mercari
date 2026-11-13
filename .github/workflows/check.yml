@@ -8,8 +8,10 @@ permissions:
   contents: write
 concurrency:
   group: mercari-alert
-  # 1분 주기로 새 트리거가 들어오므로, 이전 실행이 아직 안 끝났으면 강제 종료하고 새로 시작한다.
-  cancel-in-progress: true
+  # 몰아받기(밤사이 매물 한꺼번에 전송)는 1분 넘게 걸릴 수 있어서, 도중에 끊기면 seen/last_run이
+  # 저장되지 않고 매번 처음부터 다시 보내게 된다. 그래서 실행 중인 건 끊지 않고 다음 트리거를 대기시킨다
+  # (GitHub은 대기 중인 실행을 하나만 남기고 나머지는 자동 취소한다).
+  cancel-in-progress: false
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -34,6 +36,7 @@ jobs:
           # (git add는 여러 경로 중 하나라도 없으면 전부 실패하는 방식이라 한꺼번에 못 넣음).
           git add data/seen.json 2>/dev/null || true
           git add data/last_category.json 2>/dev/null || true
+          git add data/last_run.json 2>/dev/null || true
           git diff --cached --quiet || git commit -m "update seen items"
           # facets.yml 등 다른 워크플로우가 같은 브랜치에 동시에 push할 수 있으므로,
           # 실패하면 최신 커밋을 받아와서(rebase) 몇 번 재시도한다.
