@@ -9625,6 +9625,11 @@
                     "sub_name": "AT THE MOMENT"
                 },
                 {
+                    "id": 57981,
+                    "name": "AT-DIRTY",
+                    "sub_name": "AT-DIRTY"
+                },
+                {
                     "id": 19313,
                     "name": "@Peace Labo",
                     "sub_name": "@Peace Labo"
@@ -25688,6 +25693,11 @@
                     "id": 21508,
                     "name": "INOTA",
                     "sub_name": "INOTA"
+                },
+                {
+                    "id": 57982,
+                    "name": "イノダコーヒ",
+                    "sub_name": "INODA COFFEE"
                 },
                 {
                     "id": 21509,
@@ -57850,6 +57860,11 @@
                     "sub_name": "Kagayaki Senzai Keira"
                 },
                 {
+                    "id": 57975,
+                    "name": "輝く未来教育",
+                    "sub_name": "Kagayaku Mirai Kyoiku"
+                },
+                {
                     "id": 56770,
                     "name": "加賀谷木材",
                     "sub_name": "Kagaya Invention Timber Corporation"
@@ -84555,6 +84570,11 @@
                     "sub_name": "Kome Kara Toru Silica"
                 },
                 {
+                    "id": 57983,
+                    "name": "コメダ珈琲店",
+                    "sub_name": "KOMEDA's Coffee"
+                },
+                {
                     "id": 564,
                     "name": "COMEX",
                     "sub_name": "COMEX"
@@ -93340,6 +93360,11 @@
                     "sub_name": "SAVON & CO."
                 },
                 {
+                    "id": 57977,
+                    "name": "サヴォンローズ",
+                    "sub_name": "SAVON ROSE"
+                },
+                {
                     "id": 30137,
                     "name": "THE",
                     "sub_name": "THE"
@@ -100110,6 +100135,11 @@
                     "sub_name": "Charmante nature"
                 },
                 {
+                    "id": 57978,
+                    "name": "Chalmiere",
+                    "sub_name": "Chalmiere"
+                },
+                {
                     "id": 32631,
                     "name": "CHARME",
                     "sub_name": "CHARME"
@@ -100826,8 +100856,8 @@
                 },
                 {
                     "id": 17580,
-                    "name": "stein",
-                    "sub_name": "stein"
+                    "name": "stein ／ ssstein",
+                    "sub_name": "stein ／ ssstein"
                 },
                 {
                     "id": 14500,
@@ -120716,8 +120746,13 @@
                 },
                 {
                     "id": 15233,
-                    "name": "2nd",
-                    "sub_name": "2nd"
+                    "name": "2nd [子供服]",
+                    "sub_name": "2nd [kids]"
+                },
+                {
+                    "id": 57979,
+                    "name": "s&nd [ユニセックス服]",
+                    "sub_name": "s&nd [unisex clothing]"
                 },
                 {
                     "id": 34806,
@@ -147716,8 +147751,8 @@
                 },
                 {
                     "id": 10599,
-                    "name": "Triumph",
-                    "sub_name": "Triumph"
+                    "name": "Triumph [バイク]",
+                    "sub_name": "Triumph [motorcycle]"
                 },
                 {
                     "id": 38819,
@@ -148766,8 +148801,8 @@
                 },
                 {
                     "id": 849,
-                    "name": "Triumph",
-                    "sub_name": "Triumph"
+                    "name": "Triumph [下着]",
+                    "sub_name": "Triumph [lingerie]"
                 },
                 {
                     "id": 2741,
@@ -151783,6 +151818,11 @@
                     "id": 39098,
                     "name": "DRESS BULLET by glamb",
                     "sub_name": "DRESS BULLET by glamb"
+                },
+                {
+                    "id": 57980,
+                    "name": "DRESS HIPPY",
+                    "sub_name": "DRESS HIPPY"
                 },
                 {
                     "id": 39100,
@@ -169158,6 +169198,11 @@
                     "id": 7276,
                     "name": "BAZaR de CHRISTIAN LACROIX",
                     "sub_name": "BAZaR de CHRISTIAN LACROIX"
+                },
+                {
+                    "id": 57974,
+                    "name": "バシャコーヒー",
+                    "sub_name": "Bacha Coffee"
                 },
                 {
                     "id": 15648,
@@ -220370,6 +220415,11 @@
                     "sub_name": "Maruhachi Seichajo"
                 },
                 {
+                    "id": 57976,
+                    "name": "丸八真綿",
+                    "sub_name": "Maruhachi Mawata"
+                },
+                {
                     "id": 48722,
                     "name": "マルハチ村松",
                     "sub_name": "Maruhachi Muramatsu"
@@ -230078,6 +230128,11 @@
                     "id": 50124,
                     "name": "Merola",
                     "sub_name": "Merola"
+                },
+                {
+                    "id": 57984,
+                    "name": "Mellojoy",
+                    "sub_name": "Mellojoy"
                 },
                 {
                     "id": 50125,
@@ -263179,6 +263234,6 @@
     ],
     "meta": {
         "is_last": true,
-        "requested": 1794638756
+        "requested": 1794813110
     }
 }
