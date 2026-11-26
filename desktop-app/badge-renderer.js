@@ -12,6 +12,7 @@ const ctx = canvas.getContext("2d");
 const ICON_SIZE = 32; // 16pt 아이콘을 2배로 그린 크기
 const HEIGHT = 44; // 메뉴바 @2x 기준 높이
 const GAP = 4;
+const BADGE_FONT = "bold 13px -apple-system, sans-serif";
 
 function drawIcon(x) {
   // 태그(라벨) 모양: 흰색 채우기 + 옅은 테두리로, 메뉴바가 밝든 어둡든 웬만큼 보이게 한다.
@@ -35,9 +36,10 @@ function drawIcon(x) {
   ctx.restore();
 }
 
-function drawBadge(cx, r, label) {
+// 배지 폭은 숫자 길이에 맞춰 늘어난다(1~2자리는 원, 3자리 이상은 알약 모양).
+function drawBadge(x, w, r, label) {
   ctx.beginPath();
-  ctx.arc(cx, HEIGHT / 2, r, 0, Math.PI * 2);
+  ctx.roundRect(x, HEIGHT / 2 - r, w, r * 2, r);
   ctx.fillStyle = "#FF3B30";
   ctx.fill();
   ctx.lineWidth = 1.5;
@@ -45,28 +47,29 @@ function drawBadge(cx, r, label) {
   ctx.stroke();
 
   ctx.fillStyle = "#FFFFFF";
-  ctx.font = "bold 13px -apple-system, sans-serif";
+  ctx.font = BADGE_FONT;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(label, cx, HEIGHT / 2 + 1);
+  ctx.fillText(label, x + w / 2, HEIGHT / 2 + 1);
 }
 
 function render(count) {
   const hasBadge = count > 0;
-  const label = count > 99 ? "99+" : String(count);
-  const badgeR = label.length > 2 ? 13 : 11;
-  const badgeD = badgeR * 2;
+  // 99+로 자르지 않고 실제 개수를 그대로 보여준다.
+  const label = String(count);
+  const badgeR = 11;
+  ctx.font = BADGE_FONT;
+  const badgeW = Math.max(badgeR * 2, Math.ceil(ctx.measureText(label).width) + 12);
 
-  const width = (hasBadge ? badgeD + GAP : 0) + ICON_SIZE + 8;
+  const width = (hasBadge ? badgeW + GAP : 0) + ICON_SIZE + 8;
   canvas.width = width;
   canvas.height = HEIGHT;
   ctx.clearRect(0, 0, width, HEIGHT);
 
   let iconX = 4;
   if (hasBadge) {
-    const badgeCx = badgeR + 2;
-    drawBadge(badgeCx, badgeR, label);
-    iconX = badgeD + GAP + 2;
+    drawBadge(2, badgeW, badgeR, label);
+    iconX = badgeW + GAP + 2;
   }
   drawIcon(iconX);
 

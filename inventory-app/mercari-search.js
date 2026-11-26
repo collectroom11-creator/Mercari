@@ -99,6 +99,15 @@ async function searchMercari(signer, conditions, fetchImpl = fetch) {
   return mapResults(await res.json());
 }
 
+// 알림 필터(filters.json)에서 제외한 키워드를 매입 검색에도 적용한다. 알림 봇(main.py)과 같이
+// 제목에 들어 있으면(대소문자 무시) 뺀다. 검색 결과에는 브랜드 값이 안 와서, 브랜드별 제외
+// 키워드는 지금 검색에 고른 브랜드 기준으로 적용한다.
+function applyAlertExclusions(items, filters, brandNames = []) {
+  const byBrand = new Map(Object.entries(filters?.brandExcludeKeywords || {}).map(([b, w]) => [b.toLowerCase(), w]));
+  const words = [...(filters?.excludeKeywords || []), ...brandNames.flatMap((b) => byBrand.get(String(b).toLowerCase()) || [])].map((w) => w.toLowerCase());
+  return items.filter((i) => !words.some((w) => String(i.name).toLowerCase().includes(w)));
+}
+
 // ---- facets: 브랜드 자동완성, 남성 카테고리 목록 ----
 function loadFacets(facetsDir) {
   const read = (f) => JSON.parse(fs.readFileSync(path.join(facetsDir, f), "utf-8"));
@@ -140,4 +149,4 @@ function menCategoryTree(categories) {
   };
 }
 
-module.exports = { createSigner, buildSearchBody, mapResults, searchMercari, loadFacets, searchBrands, menCategoryTree };
+module.exports = { createSigner, buildSearchBody, mapResults, searchMercari, applyAlertExclusions, loadFacets, searchBrands, menCategoryTree };

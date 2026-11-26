@@ -21,7 +21,6 @@ test("computeShopStats: 10월 매출/순이익/회전율/판매중 원가", () =
   assert.equal(s.monthRevenue, 584000);
   assert.equal(s.monthProfit, 584000 - 355545);
   assert.equal(s.listedCost, 110000);
-  assert.equal(s.turnoverPct, Math.round((355545 / (355545 + 110000)) * 100));
 });
 
 test("computeShopStats: 이번 달 판매 건수 (actualPrice 없는 건 제외)", () => {
@@ -107,4 +106,65 @@ test("computeShopStats: 재고 단계별 원가와 개수 (재고 상태는 판�
     { status: "업로드전", count: 1, cost: 30 },
     { status: "판매중", count: 2, cost: 25 },
   ]);
+});
+
+test("computeShopStats: 0원 판매(폐기)는 원가만큼 손실, 판매 건수·마진율에서는 빠진다", () => {
+  const list = [sold(100000, 150000, new Date(2026, 9, 5)), sold(40000, 0, new Date(2026, 9, 6))];
+  const s = computeShopStats(list, { now });
+  assert.equal(s.monthRevenue, 150000);
+  assert.equal(s.monthProfit, 150000 - 140000);
+  assert.equal(s.monthSoldCount, 1);
+  assert.equal(s.soldAvgMarginPct, Math.round((50000 / 150000) * 100));
+});
+
+// 최근 30일 = 9/19 ~ 10/18 (now = 10/18)
+const listedSold = (cost, actual, listedAt, soldAt) => ({ ...sold(cost, actual, soldAt), listedAt: listedAt.toISOString() });
+const listing = (cost, listedAt) => ({ status: "판매중", costKrw: cost, listedAt: listedAt.toISOString() });
+
+test("회전율: 최근 30일 판매 원가 / 30일 평균 진열 원가", () => {
+  const list = [
+    listing(300000, new Date(2026, 8, 1)), // 30일 내내 진열 → 평균 300000
+    listing(150000, new Date(2026, 9, 4)), // 10/4~10/18, 15일 → 평균 75000
+    listedSold(60000, 100000, new Date(2026, 8, 1), new Date(2026, 9, 4)), // 9/19~10/3, 15일 → 평균 30000
+  ];
+  const s = computeShopStats(list, { now });
+  assert.equal(s.avgListedCost, 405000);
+  assert.equal(s.turnoverSoldCost, 60000);
+  assert.equal(s.turnoverPct, Math.round((60000 / 405000) * 100));
+});
+
+test("회전율: 30일 전에 팔린 건 판매 원가에 안 들어간다", () => {
+  const list = [listing(100000, new Date(2026, 7, 1)), listedSold(50000, 80000, new Date(2026, 7, 1), new Date(2026, 8, 18))];
+  const s = computeShopStats(list, { now });
+  assert.equal(s.turnoverSoldCost, 0);
+  assert.equal(s.turnoverPct, 0);
+});
+
+test("회전율: 올린 당일 팔리면 진열 재고에는 안 잡히고 판매 원가에만 들어간다", () => {
+  const list = [listing(100000, new Date(2026, 7, 1)), listedSold(50000, 80000, new Date(2026, 9, 10, 9), new Date(2026, 9, 10, 20))];
+  const s = computeShopStats(list, { now });
+  assert.equal(s.avgListedCost, 100000);
+  assert.equal(s.turnoverPct, 50);
+});
+
+test("회전율: 업로드전·배송전·개인구매는 진열 재고가 아니다", () => {
+  const list = [
+    listing(100000, new Date(2026, 7, 1)),
+    { status: "업로드전", costKrw: 999999 },
+    { status: "배송전", costKrw: 999999 },
+    { status: "개인구매", costKrw: 999999, listedAt: new Date(2026, 7, 1).toISOString() },
+    listedSold(50000, 80000, new Date(2026, 9, 10), new Date(2026, 9, 10)),
+  ];
+  assert.equal(computeShopStats(list, { now }).avgListedCost, 100000);
+});
+
+test("computeShopStats: 0원 판매(폐기)는 회전율 판매 원가에 들어가지 않는다", () => {
+  const list = [
+    listing(100000, new Date(2026, 7, 1)),
+    listedSold(50000, 150000, new Date(2026, 9, 5), new Date(2026, 9, 5)),
+    listedSold(40000, 0, new Date(2026, 9, 6), new Date(2026, 9, 6)),
+  ];
+  const s = computeShopStats(list, { now });
+  assert.equal(s.turnoverSoldCost, 50000);
+  assert.equal(s.turnoverPct, 50);
 });

@@ -24,7 +24,7 @@ const { ledgerGet, ledgerSet, importLedgerBackup, exportLedgerBackup } = require
 const { parseWishlistLink, loadManual, addManual, removeManual, loadDrops, loadHidden, hideItem } = require("./wishlist-files");
 const { loadBrandNames, matchBrand, validateFilters } = require("./filters");
 const { computeBrandMix } = require("./brands");
-const { createSigner, searchMercari, loadFacets, searchBrands, menCategoryTree } = require("./mercari-search");
+const { createSigner, searchMercari, applyAlertExclusions, loadFacets, searchBrands, menCategoryTree } = require("./mercari-search");
 const { readRemoteFilters, saveFilters } = require("./filters-git");
 const uploadFiles = require("./upload-files");
 const photoSort = require("./photo-sort");
@@ -454,10 +454,23 @@ ipcMain.handle("match-brand", (event, input) => matchBrand(input, brandNames()))
 let searchSigner = null;
 let searchFacets = null;
 const facets = () => (searchFacets ||= loadFacets(path.join(REPO_DIR, "facets")));
+// 알림 필터의 제외 키워드. 검색마다 git fetch를 하면 느려서 한 번 읽어 두고, 필터를 저장하면 다시 읽는다.
+let searchFilters = null;
+function alertFiltersForSearch() {
+  if (searchFilters) return searchFilters;
+  try {
+    searchFilters = readRemoteFilters(REPO_DIR);
+  } catch {
+    // 오프라인 등으로 원격을 못 읽으면 로컬 파일을 이번 검색에만 쓴다
+    return JSON.parse(fs.readFileSync(path.join(REPO_DIR, "filters.json"), "utf-8"));
+  }
+  return searchFilters;
+}
 ipcMain.handle("mercari-search", async (event, conditions) => {
   searchSigner ||= createSigner();
   try {
-    return { ok: true, ...(await searchMercari(searchSigner, conditions)) };
+    const r = await searchMercari(searchSigner, conditions);
+    return { ok: true, ...r, items: applyAlertExclusions(r.items, alertFiltersForSearch(), conditions.brandNames) };
   } catch (e) {
     return { ok: false, error: e.message };
   }
@@ -472,6 +485,7 @@ ipcMain.handle("men-categories", () => menCategoryTree(facets().categories));
 ipcMain.handle("save-filters", (event, filters) => {
   const errors = validateFilters(filters, brandNames());
   if (errors.length) return { ok: false, errors };
+  searchFilters = null;
   return saveFilters(REPO_DIR, filters);
 });
 

@@ -197,7 +197,10 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='10' viewBox='0 0 8 10'%3E%3Cpath d='M1 3.5 4 1l3 2.5M1 6.5 4 9l3-2.5' fill='none' stroke='%2386868b' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat; background-position: right 10px center;
   }
-  .amount-field{ flex: 6 1 0; min-width: 0; }
+  .amount-field{ flex: 6 1 0; min-width: 0; position: relative; }
+  /* 금액에 $를 붙여 쓰면(예: $20) 달러로 보고 환율로 원화를 계산한다. 계산 결과를 칸 아래에 작게 보여준다 */
+  .fx-hint{ position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--secondary); pointer-events: none; font-variant-numeric: tabular-nums; }
+  .fx-note{ margin-left: 4px; font-size: 11px; color: var(--secondary); white-space: nowrap; }
   .amount-field input{ font-variant-numeric: tabular-nums; }
   .entry-form input[type=number]::-webkit-outer-spin-button,
   .entry-form input[type=number]::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
@@ -547,7 +550,7 @@
         </div>
         <div class="row cat-amt">
           <select class="cat-select" id="fCategory"></select>
-          <div class="amount-field"><input type="number" id="fAmount" placeholder="금액" min="0"></div>
+          <div class="amount-field"><input type="text" inputmode="decimal" id="fAmount" placeholder="금액 (달러는 $20)" autocomplete="off"><span class="fx-hint" id="fxHint"></span></div>
         </div>
         <div class="row final-row">
           <label class="proof-toggle compact">
@@ -1324,7 +1327,7 @@ function renderModalList(){
       <div class="ledger-row ${t.type}" data-id="${t.id}">
         <div class="ledger-main">
           <div class="ledger-amt">${t.type === "expense" ? "-" : "+"}${t.amount.toLocaleString("ko-KR")}원</div>
-          <div class="ledger-desc">${escapeHtml(t.desc || "(내용 없음)")} <span class="modal-date">${t.date.slice(2).replace(/-/g, ".")}</span>${t.proof ? '<span class="proof-badge">증빙</span>' : ''}</div>
+          <div class="ledger-desc">${escapeHtml(t.desc || "(내용 없음)")}${fxNote(t)} <span class="modal-date">${t.date.slice(2).replace(/-/g, ".")}</span>${t.proof ? '<span class="proof-badge">증빙</span>' : ''}</div>
         </div>
         <div class="ledger-side">
           <select class="cat-select modal-cat-select" data-id="${t.id}">${options}</select>
@@ -1644,7 +1647,7 @@ function renderLedgerList(list){
         <div class="ledger-row ${t.type}" data-id="${t.id}">
           <div class="ledger-main">
             <div class="ledger-amt">${t.type === "expense" ? "-" : "+"}${t.amount.toLocaleString("ko-KR")}원</div>
-            <div class="ledger-desc">${escapeHtml(t.desc || "(내용 없음)")}${t.proof ? '<span class="proof-badge">증빙</span>' : ''}</div>
+            <div class="ledger-desc">${escapeHtml(t.desc || "(내용 없음)")}${fxNote(t)}${t.proof ? '<span class="proof-badge">증빙</span>' : ''}</div>
           </div>
           <div class="ledger-side">
             <select class="cat-select" data-id="${t.id}">${options}</select>
@@ -1812,11 +1815,55 @@ function renderAutocomplete(){
 }
 function closeAutocomplete(){ $("acBox").classList.remove("open"); }
 
+/* ---------- 달러 금액: 금액 칸에 $20 / 20$ / 20달러 / 20불 처럼 쓰면 달러 ---------- */
+function parseAmount(text){
+  const t = String(text || "").trim();
+  const usd = /\$|달러|불|usd/i.test(t);
+  const num = Number(t.replace(/[^0-9.]/g, ""));
+  return { usd, value: num > 0 ? num : 0 };
+}
+function fxNote(t){
+  if (!t.fx || !(t.fx.usd > 0)) return "";
+  return `<span class="fx-note">$${Number(t.fx.usd).toLocaleString("en-US", { maximumFractionDigits: 2 })} × ${Number(t.fx.rate).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}</span>`;
+}
+// 환율: 오늘 기준환율(open.er-api.com, 하루 한 번만 불러와서 기억), 못 불러오면 마지막으로 쓴 환율.
+let usdRateCache = null;
+async function getUsdRate(){
+  if (usdRateCache) return usdRateCache;
+  try{
+    const r = await fetch("https://open.er-api.com/v6/latest/USD");
+    const j = await r.json();
+    const krw = j && j.rates && j.rates.KRW;
+    if (krw > 0) return (usdRateCache = Math.round(krw * 100) / 100);
+  }catch(e){}
+  try{
+    const res = await storage.get("ledger:usdRate");
+    const v = Number(res && res.value);
+    if (v > 0) return v;
+  }catch(e){}
+  return null;
+}
+async function updateFxHint(){
+  const el = $("fxHint"); if (!el) return;
+  const p = parseAmount($("fAmount").value);
+  if (!p.usd || !(p.value > 0)){ el.textContent = ""; return; }
+  const rate = await getUsdRate();
+  const now = parseAmount($("fAmount").value);   // 불러오는 사이에 바뀌었을 수 있다
+  el.textContent = now.usd && now.value > 0 && rate > 0 ? `≈ ${Math.round(now.value * rate).toLocaleString("ko-KR")}원` : "";
+}
+
 /* ---------- 데이터 조작 ---------- */
 async function addTx(){
   const date = toISO(formDate);
   const desc = $("fDesc").value.trim();
-  const amount = Number($("fAmount").value);
+  const parsed = parseAmount($("fAmount").value);
+  let amount = parsed.value, fx = null;
+  if (parsed.usd && amount > 0){
+    const rate = await getUsdRate();
+    if (!(rate > 0)){ alert("환율을 불러오지 못했어요. 원화 금액으로 입력해주세요."); return; }
+    fx = { usd: amount, rate };
+    amount = Math.round(amount * rate);
+  }
   const category = $("fCategory").value;
 
   if (!date){ alert("날짜를 선택해주세요."); return; }
@@ -1826,6 +1873,7 @@ async function addTx(){
   const proof = $("fProof").checked;
 
   const tx = { id: Date.now(), date, desc, amount, category, type: currentType, proof };
+  if (fx){ tx.fx = fx; try{ await storage.set("ledger:usdRate", String(fx.rate)); }catch(e){} }
   transactions.push(tx);
   await saveTransactions();
   rememberDesc(desc);
@@ -1834,6 +1882,7 @@ async function addTx(){
   summaryMonthDate = new Date(date + "T00:00:00");
   $("fDesc").value = "";
   $("fAmount").value = "";
+  updateFxHint();
   $("fProof").checked = false;
   categoryManuallySet = false;
   $("fCategory").value = categorize("", currentType);
@@ -1893,6 +1942,8 @@ function init(){
 
   $("fCategory").addEventListener("change", () => { categoryManuallySet = true; });
 
+  $("fAmount").addEventListener("input", updateFxHint);
+
   // 기록 버튼 대신: 사용처와 금액이 채워져 있으면 기록 탭 어디서든 Enter로 기록한다.
   // (한글 조합 중 Enter, 카테고리 탭·전체 내역 창의 입력칸에서 누른 Enter는 제외)
   document.addEventListener("keydown", (e) => {
@@ -1900,7 +1951,7 @@ function init(){
     if (!$("leftPanelRecord").classList.contains("active")) return;
     if (e.target.closest && e.target.closest("#leftPanelCategory, .modal-overlay, .kw-add-input")) return;
     if ($("monthModalOverlay").classList.contains("open")) return;
-    if (!$("fDesc").value.trim() || !(Number($("fAmount").value) > 0)) return;
+    if (!$("fDesc").value.trim() || !(parseAmount($("fAmount").value).value > 0)) return;
     e.preventDefault();
     closeAutocomplete();
     addTx();

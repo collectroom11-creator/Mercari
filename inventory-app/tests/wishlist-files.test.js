@@ -89,3 +89,11 @@ test("appendDrop/loadDrops: 기록이 쌓이고 at과 dropId가 붙는다", () =
   assert.ok(drops[0].at);
   assert.equal(drops[0].dropId, `m1@${drops[0].at}`);
 });
+
+test("parseWishlistLink: /item/ 주소로 온 Shops 상품도 id를 읽는다", () => {
+  const { parseWishlistLink } = require("../wishlist-files");
+  assert.equal(parseWishlistLink("https://kenzpost.com/mercari/bid.s/https://jp.mercari.com/item/2JZ6RngjoXq38BY8jdPyJk"), "2JZ6RngjoXq38BY8jdPyJk");
+  assert.equal(parseWishlistLink("https://jp.mercari.com/item/m85016106063"), "m85016106063");
+  assert.equal(parseWishlistLink("https://jp.mercari.com/shops/product/2JY8zPhymbmYCVezUjFaxq"), "2JY8zPhymbmYCVezUjFaxq");
+  assert.equal(parseWishlistLink("https://example.com/item/abc"), null);
+});

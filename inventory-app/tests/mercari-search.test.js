@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const path = require("node:path");
-const { createSigner, buildSearchBody, mapResults, searchMercari, loadFacets, searchBrands, menCategoryTree } = require("../mercari-search");
+const { createSigner, buildSearchBody, mapResults, searchMercari, applyAlertExclusions, loadFacets, searchBrands, menCategoryTree } = require("../mercari-search");
 
 test("createSigner: DPoP 토큰은 ES256 서명이고 htu/htm/uuid가 들어있다", () => {
   const signer = createSigner();
@@ -69,4 +69,13 @@ test("loadFacets + menCategoryTree: 실제 facets 파일에서 브랜드와 メ�
   const men = menCategoryTree(categories);
   assert.equal(men.name, "メンズ");
   assert.ok(men.groups.some((g) => g.name === "トップス" && g.leaves.length > 0));
+});
+
+test("applyAlertExclusions: 공통 제외어는 항상, 브랜드별 제외어는 그 브랜드를 고른 검색에서만 뺀다", () => {
+  const filters = { excludeKeywords: ["ネクタイ"], brandExcludeKeywords: { PRADA: ["Bag"] } };
+  const items = [{ name: "Dior ネクタイ" }, { name: "PRADA nylon BAG" }, { name: "PRADA ニット" }];
+  const names = (brands) => applyAlertExclusions(items, filters, brands).map((i) => i.name);
+  assert.deepEqual(names(["prada"]), ["PRADA ニット"]);
+  assert.deepEqual(names(["Dior Homme"]), ["PRADA nylon BAG", "PRADA ニット"]);
+  assert.deepEqual(names(undefined), ["PRADA nylon BAG", "PRADA ニット"]);
 });

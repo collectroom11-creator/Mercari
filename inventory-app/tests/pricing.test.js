@@ -359,3 +359,10 @@ test("parseMercariPriceText: 원화 환산이 같이 보여도 ¥ 뒤의 엔화 
   assert.equal(parseMercariPriceText("¥13,500"), 13500);
   assert.equal(parseMercariPriceText("価格なし"), null);
 });
+
+test("extractMercariItemUrl: /item/ 주소로 온 Shops 상품은 /shops/product/ 주소로 바꾼다", () => {
+  assert.equal(
+    extractMercariItemUrl("https://kenzpost.com/mercari/bid.s/https://jp.mercari.com/item/2JZ6RngjoXq38BY8jdPyJk"),
+    "https://jp.mercari.com/shops/product/2JZ6RngjoXq38BY8jdPyJk"
+  );
+});

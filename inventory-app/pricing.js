@@ -108,8 +108,10 @@ function extractJpyPrice(html) {
 // 링크 안에 원래 메루카리 주소가 들어있어서, 그 페이지(로그인 불필요)에서 대신 읽는다.
 // 메루카리 Shops 상품(/shops/product/<id>)도 같은 페이지 구조(h1 제목, ¥가격)라 그대로 읽힌다.
 function extractMercariItemUrl(kenzUrl) {
-  const m = kenzUrl.match(/https:\/\/jp\.mercari\.com\/(item\/m\d+|shops\/product\/[A-Za-z0-9]+)/);
-  return m ? `https://jp.mercari.com/${m[1]}` : null;
+  // Shops 상품이 /item/영문숫자 모양으로 오면 그 주소는 404라 /shops/product/로 바꿔서 읽는다.
+  const m = kenzUrl.match(/https:\/\/jp\.mercari\.com\/(?:item|shops\/product)\/([A-Za-z0-9]+)/);
+  if (!m) return null;
+  return /^m\d+$/.test(m[1]) ? `https://jp.mercari.com/item/${m[1]}` : `https://jp.mercari.com/shops/product/${m[1]}`;
 }
 
 // 메루카리 가격 영역은 접속 지역에 따라 "KRW 69,077 (¥ 7,650)"처럼 원화가 먼저

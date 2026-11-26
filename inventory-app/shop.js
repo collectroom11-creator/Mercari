@@ -123,9 +123,9 @@ function renderKpis(s) {
       <div class="kpi-sub">판매 <b>${s.soldAvgMarginPct ?? "-"}%</b> · 재고 <b>${s.stockAvgMarginPct ?? "-"}%</b></div>
     </div>
     <div class="kpi simple">
-      <div class="kpi-label">회전율 · 이번 달</div>
+      <div class="kpi-label">회전율 · 최근 30일</div>
       <div class="kpi-value">${bigNum(s.turnoverPct, "%")}</div>
-      <div class="kpi-sub">판매중 원가 <b>${shortWon(s.listedCost)}</b></div>
+      <div class="kpi-sub">판매 원가 <b>${shortWon(s.turnoverSoldCost)}</b> · 평균 진열 <b>${shortWon(s.avgListedCost)}</b></div>
     </div>`;
 }
 
@@ -494,13 +494,11 @@ async function setupSearchPage() {
   for (const id of ["sMin", "sMax", "sKeyword", "sExclude"]) {
     document.getElementById(id).addEventListener("keydown", (e) => {
       if (e.key !== "Enter" || e.isComposing) return;
-      search.min = parseNum(document.getElementById("sMin").value) || "";
-      search.max = parseNum(document.getElementById("sMax").value) || "";
-      search.keyword = document.getElementById("sKeyword").value.trim();
-      search.exclude = document.getElementById("sExclude").value.trim();
-      document.getElementById("sMin").value = fmtNum(search.min);
-      document.getElementById("sMax").value = fmtNum(search.max);
       runSearch();
+    });
+    // 칸을 싹 지우면 Enter 없이 바로 그 조건을 뺀다
+    document.getElementById(id).addEventListener("input", (e) => {
+      if (!e.target.value) runSearch();
     });
   }
   document.querySelectorAll("#sSort button").forEach((b) => {
@@ -605,6 +603,7 @@ function renderBrandChips() {
 function searchConditions(pageToken = "") {
   return {
     brandIds: search.brands.map((b) => b.id),
+    brandNames: search.brands.map((b) => b.name),
     categoryIds: search.category ? [Number(search.category)] : [],
     priceMin: Number(search.min) || 0,
     priceMax: Number(search.max) || 0,
@@ -633,7 +632,19 @@ function runSearch() {
   searchTimer = setTimeout(runSearchNow, 400);
 }
 
+// 검색은 항상 칸에 보이는 값 그대로 한다. 키워드를 지우고 Enter를 안 누른 채 브랜드를 바꿔도
+// 지운 키워드가 몰래 남아 결과가 줄어드는 일이 없게, 검색 직전에 칸에서 다시 읽는다.
+function readSearchInputs() {
+  search.min = parseNum(document.getElementById("sMin").value) || "";
+  search.max = parseNum(document.getElementById("sMax").value) || "";
+  search.keyword = document.getElementById("sKeyword").value.trim();
+  search.exclude = document.getElementById("sExclude").value.trim();
+  document.getElementById("sMin").value = fmtNum(search.min);
+  document.getElementById("sMax").value = fmtNum(search.max);
+}
+
 async function runSearchNow() {
+  readSearchInputs();
   saveSearch();
   const meta = document.getElementById("sMeta");
   const grid = document.getElementById("sResults");
@@ -656,8 +667,19 @@ async function runSearchNow() {
   search.nextPageToken = r.nextPageToken;
   search.shown = new Set(r.items.map((i) => i.id));
   grid.scrollTop = 0;
-  grid.innerHTML = r.items.map(searchTile).join("") || `<div class="empty">조건에 맞는 상품이 없어요</div>`;
+  // 제외 키워드로 한 페이지가 통째로 빠질 수 있어서, 다음 페이지까지 없을 때만 "없음"이라고 한다
+  grid.innerHTML = r.items.map(searchTile).join("") || (r.nextPageToken ? "" : SEARCH_EMPTY);
   updateSearchMeta();
+  fillSearchGrid();
+}
+
+const SEARCH_EMPTY = `<div class="empty">조건에 맞는 상품이 없어요</div>`;
+
+// 다음 페이지는 스크롤할 때만 불러오는데, 결과가 화면보다 짧으면 스크롤 자체가 안 돼서 거기서 멈춘다.
+// 화면이 찰 때까지는 알아서 더 불러온다. (다른 탭에 있어 높이가 0이면 하지 않는다)
+function fillSearchGrid() {
+  const grid = document.getElementById("sResults");
+  if (grid.clientHeight > 0 && grid.scrollHeight <= grid.clientHeight + 400) loadMore();
 }
 
 // 메루카리가 주는 전체 개수는 추정치라(실제로 넘겨 보면 더 나온다) 불러온 개수와 더 있는지만 보여준다
@@ -672,13 +694,21 @@ async function loadMore() {
   const seq = search.seq;
   const r = await window.api.mercariSearch(searchConditions(search.nextPageToken));
   search.loading = false;
-  if (seq !== search.seq || !r.ok) return;
+  if (seq !== search.seq) return;
+  if (!r.ok) {
+    // 토큰은 그대로 두니 다시 스크롤하면 같은 페이지부터 이어서 불러온다
+    document.getElementById("sMeta").textContent = `판매중 ${search.shown.size.toLocaleString()}개 불러옴 · 더 불러오지 못했어요 (${r.error}) · 다시 스크롤해 보세요`;
+    return;
+  }
   search.nextPageToken = r.nextPageToken;
   // 넘기는 사이 새 상품이 올라오면 앞 페이지 상품이 다음 페이지에 또 나온다 - 이미 보인 건 뺀다
   const fresh = r.items.filter((i) => !search.shown.has(i.id));
   fresh.forEach((i) => search.shown.add(i.id));
-  document.getElementById("sResults").insertAdjacentHTML("beforeend", fresh.map(searchTile).join(""));
+  const grid = document.getElementById("sResults");
+  grid.insertAdjacentHTML("beforeend", fresh.map(searchTile).join(""));
+  if (!grid.children.length && !search.nextPageToken) grid.innerHTML = SEARCH_EMPTY;
   updateSearchMeta();
+  fillSearchGrid();
 }
 
 pageRenderers["page-search"] = async () => {

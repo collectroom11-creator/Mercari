@@ -38,13 +38,18 @@ function isQuietHours() {
 }
 const WINDOW_WIDTH = 400;
 const WINDOW_HEIGHT = 560;
+const CALC_WINDOW_WIDTH = 300;
+const CALC_WINDOW_HEIGHT = 400;
 // 트레이 아이콘을 다시 클릭해서 닫으려 할 때, 포커스를 잃어서 자동으로 닫히는
 // blur 이벤트와 그 클릭 자체의 click 이벤트가 겹쳐서 "닫혔다가 바로 다시 열리는"
 // 문제가 있다. blur로 닫힌 직후 짧은 시간 안에 들어온 클릭은 무시해서 막는다.
 const REOPEN_GUARD_MS = 250;
 // 상품 링크를 클릭하면 외부 브라우저가 열리면서 패널이 포커스를 잃어 blur가
-// 뜨는데, 이때는 닫지 않아야 한다. 링크 클릭 직후 들어오는 blur 한 번만
-// 무시하고, blur가 안 오는 경우를 대비해 일정 시간 뒤 플래그를 초기화한다.
+// 뜨는데, 이때는 닫지 않고 포커스를 즉시 되찾아온다(아래 blur 핸들러) - 그래야
+// 그 다음에 진짜로 배경(패널 바깥)을 클릭했을 때만 정상적으로 닫힌다. 그냥
+// blur를 무시하기만 하면 패널이 포커스 없는 상태로 남아서, 이후 배경을
+// 클릭해도 "포커스를 잃는" 이벤트 자체가 다시 안 떠 안 닫히는 문제가 있었다.
+// blur가 안 오는 경우를 대비해 일정 시간 뒤 플래그를 초기화한다.
 const LINK_CLICK_BLUR_GUARD_MS = 3000;
 
 let tray = null;
@@ -55,6 +60,11 @@ let alerts = [];
 let shownUnreadIds = [];
 let lastHiddenAt = 0;
 let suppressNextBlur = false;
+
+// 마진 계산기용 - 알림창과 완전히 독립된 트레이 아이콘/창. 서로 상태를 공유하지 않는다.
+let calcTray = null;
+let calcWin = null;
+let calcLastHiddenAt = 0;
 
 function fetchJson(url, options = {}) {
   return new Promise((resolve, reject) => {
@@ -169,6 +179,7 @@ function createWindow() {
   win.on("blur", () => {
     if (suppressNextBlur) {
       suppressNextBlur = false;
+      win.focus(); // 링크 클릭으로 뺏긴 포커스를 바로 되찾아온다
       return;
     }
     hideWindow();
@@ -182,9 +193,9 @@ ipcMain.on("link-opened", () => {
   }, LINK_CLICK_BLUR_GUARD_MS);
 });
 
-function positionWindow() {
-  const trayBounds = tray.getBounds();
-  const windowBounds = win.getBounds();
+function positionWindowNear(trayRef, winRef) {
+  const trayBounds = trayRef.getBounds();
+  const windowBounds = winRef.getBounds();
   // 아이콘 중앙에 맞추면(가운데 정렬) 아이콘이 화면 오른쪽 끝에 가까울 때
   // 창의 오른쪽 절반이 화면 밖으로 잘린다. 대신 창의 오른쪽 끝을 아이콘의
   // 오른쪽 끝에 맞춰서, 창이 아이콘으로부터 왼쪽으로 펼쳐지게 한다.
@@ -196,11 +207,11 @@ function positionWindow() {
   const maxX = display.workArea.x + display.workArea.width - windowBounds.width - 8;
   x = Math.min(Math.max(x, minX), maxX);
 
-  win.setPosition(x, y, false);
+  winRef.setPosition(x, y, false);
 }
 
 function showWindow() {
-  positionWindow();
+  positionWindowNear(tray, win);
   shownUnreadIds = unreadAlerts().map((a) => a.messageId);
   win.webContents.send("alerts", unreadAlerts());
   win.show();
@@ -228,6 +239,39 @@ function toggleWindow() {
   }
 }
 
+function createCalcWindow() {
+  calcWin = new BrowserWindow({
+    width: CALC_WINDOW_WIDTH,
+    height: CALC_WINDOW_HEIGHT,
+    show: false,
+    frame: false,
+    resizable: false,
+    alwaysOnTop: true,
+  });
+  calcWin.loadFile("calc.html");
+
+  calcWin.on("blur", () => {
+    hideCalcWindow();
+  });
+}
+
+function hideCalcWindow() {
+  if (!calcWin.isVisible()) return;
+  calcWin.hide();
+  calcLastHiddenAt = Date.now();
+}
+
+function toggleCalcWindow() {
+  if (Date.now() - calcLastHiddenAt < REOPEN_GUARD_MS) return;
+  if (calcWin.isVisible()) {
+    hideCalcWindow();
+  } else {
+    positionWindowNear(calcTray, calcWin);
+    calcWin.show();
+    calcWin.focus();
+  }
+}
+
 app.whenReady().then(() => {
   if (process.platform === "darwin") app.dock.hide();
 
@@ -235,8 +279,13 @@ app.whenReady().then(() => {
   tray.setToolTip("알림");
   tray.on("click", toggleWindow);
 
+  calcTray = new Tray(path.join(__dirname, "calcIconTemplate.png"));
+  calcTray.setToolTip("마진 계산기");
+  calcTray.on("click", toggleCalcWindow);
+
   createBadgeRenderer();
   createWindow();
+  createCalcWindow();
   pollAlerts();
   setInterval(() => {
     if (!isQuietHours()) pollAlerts();

@@ -20,9 +20,10 @@ function writeJson(file, data) {
 }
 
 // 일반 상품은 /item/m123..., 메루카리 Shops 상품은 /shops/product/영문숫자 - 둘 다 id만 저장한다.
+// Shops 상품이 /item/영문숫자 모양으로 오는 링크도 있다. id로 구분되니 같은 상품으로 받는다.
 function parseWishlistLink(url) {
-  const m = String(url).match(/jp\.mercari\.com\/(?:item\/(m\d+)|shops\/product\/([A-Za-z0-9]+))/);
-  return m ? m[1] || m[2] : null;
+  const m = String(url).match(/jp\.mercari\.com\/(?:item|shops\/product)\/([A-Za-z0-9]+)/);
+  return m ? m[1] : null;
 }
 
 function mercariItemUrl(id) {

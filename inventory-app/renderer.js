@@ -237,8 +237,10 @@ async function advanceStatus(item) {
     });
   } else if (item.status === "판매중" || item.status === "재고") {
     // 지금 판매가 칸의 값을 그대로 실제판매가로 기록한다.
+    // 판매가 0원은 폐기: 원가가 그대로 손실로 잡히고 마진율 평균에서는 빠진다(stats.js).
     const actual = effectiveListPrice(item);
-    if (!actual) return;
+    if (actual == null) return;
+    if (actual === 0 && !confirm(`"${item.title}" 을(를) 0원(폐기)으로 처리할까요? 원가 ${item.costKrw.toLocaleString()}원이 손실로 잡혀요.`)) return;
     await window.api.updateItem(item.id, { status: "판매완료", actualPrice: actual, soldAt: now, statusChangedAt: now });
   }
   renderList();
@@ -291,7 +293,7 @@ function buildCard(item) {
   const body = document.createElement("div");
   body.className = "kbody";
   const price = sold ? item.actualPrice : effectiveListPrice(item);
-  const marginOf = (p) => (p && item.costKrw ? `${Math.round(((p - item.costKrw) / p) * 100)}%` : "-");
+  const marginOf = (p) => (p === 0 ? "폐기" : p && item.costKrw ? `${Math.round(((p - item.costKrw) / p) * 100)}%` : "-");
   const setMargin = (p) => {
     margin.textContent = marginOf(p);
   };
@@ -305,10 +307,10 @@ function buildCard(item) {
   if (sold) {
     const p = document.createElement("span");
     p.className = "kprice-text";
-    p.textContent = price ? price.toLocaleString() : "-";
+    p.textContent = price != null ? price.toLocaleString() : "-";
     const unit = document.createElement("span");
     unit.className = "kprice-unit";
-    unit.textContent = price ? "원" : "";
+    unit.textContent = price != null ? "원" : "";
     const wrap = document.createElement("span");
     wrap.className = "kprice-wrap";
     wrap.append(p, unit);
@@ -325,12 +327,13 @@ function buildCard(item) {
     // 값을 지워도 추천가가 플레이스홀더로 남는다.
     input.placeholder = fmtNum(item.targetPrice);
     input.title = "판매가 (눌러서 수정)";
-    input.addEventListener("input", () => setMargin(parseNum(input.value) || item.targetPrice));
+    // 0은 폐기 처리용이라 그대로 받는다. 칸을 비웠을 때만 추천가로 본다.
+    input.addEventListener("input", () => setMargin(input.value.trim() ? parseNum(input.value) : item.targetPrice));
     input.addEventListener("focus", () => input.select());
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
     input.addEventListener("change", async () => {
+      if (!input.value.trim()) return;
       const value = parseNum(input.value);
-      if (!value) return;
       await window.api.updateItem(item.id, { listPrice: value, listPriceEdited: true });
       // 판매가만 바뀐 거라 보드를 다시 그리지 않는다(다시 그리면 스크롤이 맨 위로 가고,
       // 이어서 누른 다른 판매가 칸의 포커스도 사라진다). 숫자 모양만 정리하고 대시보드만 갱신.
