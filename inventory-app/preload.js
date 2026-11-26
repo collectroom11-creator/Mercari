@@ -36,6 +36,8 @@ contextBridge.exposeInMainWorld("api", {
   menCategories: () => ipcRenderer.invoke("men-categories"),
   ledgerImport: () => ipcRenderer.invoke("ledger-import"),
   ledgerExport: () => ipcRenderer.invoke("ledger-export"),
+  openFilesWindow: () => ipcRenderer.invoke("open-files-window"),
+  onItemsChanged: (callback) => ipcRenderer.on("items-changed", () => callback()),
 });
 
 // 가계부(iframe) 저장소 - Claude.ai의 window.storage와 같은 모양: get은 {value}를

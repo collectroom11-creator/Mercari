@@ -22,6 +22,7 @@ function render(alerts) {
     item.addEventListener("click", () => window.api.notifyLinkOpened());
 
     const img = document.createElement("img");
+    img.className = "thumb";
     img.src = a.image || "";
     item.appendChild(img);
 
@@ -41,15 +42,22 @@ function render(alerts) {
     }
     info.appendChild(platformEl);
 
-    const brandEl = document.createElement("div");
+    // 이미지 밑에 "브랜드 · 가격" 한 줄(길면 2줄까지). 가격 앞 💴 이모지는 뺀다.
+    const lineEl = document.createElement("div");
+    lineEl.className = "line";
+    const brandEl = document.createElement("span");
     brandEl.className = "brand";
     brandEl.textContent = a.brand || "";
-    info.appendChild(brandEl);
-
-    const priceEl = document.createElement("div");
-    priceEl.className = "price";
-    priceEl.textContent = a.priceText || "";
-    info.appendChild(priceEl);
+    lineEl.appendChild(brandEl);
+    const price = (a.priceText || "").replace(/💴\s*/g, "").trim();
+    if (price) {
+      lineEl.appendChild(document.createTextNode(" · "));
+      const priceEl = document.createElement("span");
+      priceEl.className = "price";
+      priceEl.textContent = price;
+      lineEl.appendChild(priceEl);
+    }
+    info.appendChild(lineEl);
 
     item.appendChild(info);
 

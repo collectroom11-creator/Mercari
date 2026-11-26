@@ -505,3 +505,9 @@ monthlyModal.addEventListener("click", (e) => {
 
 loadCurrentSettings();
 renderList();
+
+// 사이드바 "파일 관리" - 페이지가 아니라 별도 창을 연다.
+document.getElementById("filesWindowBtn").addEventListener("click", () => window.api.openFilesWindow());
+
+// 파일 관리 창에서 후루츠 업로드가 끝나 상태가 판매중으로 바뀌면 보드를 다시 그린다.
+window.api.onItemsChanged(() => renderList());
