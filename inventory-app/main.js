@@ -29,6 +29,7 @@ const { readRemoteFilters, saveFilters } = require("./filters-git");
 const uploadFiles = require("./upload-files");
 const photoSort = require("./photo-sort");
 const photoshop = require("./photoshop");
+const cutoutMeasure = require("./cutout-measure");
 const listingUpload = require("./listing-upload");
 const { runClaude } = require("./claude-runner");
 const { execFile } = require("node:child_process");
@@ -519,20 +520,6 @@ ipcMain.handle("ledger-export", async () => {
   }
 });
 
-app.whenReady().then(() => {
-  // 패키징 없이 "electron ."으로 그냥 실행하면 macOS가 Info.plist의 아이콘을 못 읽어서
-  // 기본 Electron 아이콘이 Dock에 뜬다 - 개발 중에도 우리 아이콘이 보이게 직접 지정한다.
-  if (process.platform === "darwin") {
-    app.dock.setIcon(nativeImage.createFromPath(APP_ICON_PATH));
-  }
-  createMainWindow();
-});
-app.on("window-all-closed", () => app.quit());
-
-// 로그인 이후 서버가 쿠키를 세션 쿠키로 다시 내려보내는 경우에 대비해서,
-// 완전히 꺼지기 직전에도 한 번 더 만료일을 붙여둔다(최종 안전망).
-app.on("before-quit", (event) => {
-  event.preventDefault();
 // ───────── 파일 관리 창 ─────────
 // 업로드전 상품마다 탭 하나. 탭 = ~/Desktop/업로드 파일/<제품명>/ 폴더(item.uploadFolder).
 // 넘기기(item.uploadFinishedAt)를 하면 폴더는 업로드 완료로 가고 탭이 사라진다.
@@ -1127,8 +1114,8 @@ ipcMain.handle("files-ps-fit", () => {
     const info = await photoshop.runJsx(photoshop.docsInfoJsx());
     const docs = info
       ? info.split("\n").map((l) => {
-          const [index, p, mask, name] = l.split("\t");
-          return { index: Number(index), path: (p || "").normalize("NFC"), masked: mask === "1", name };
+          const [index, p, mask, name, w, h] = l.split("\t");
+          return { index: Number(index), path: (p || "").normalize("NFC"), masked: mask === "1", name, W: Number(w), H: Number(h) };
         })
       : [];
     if (!docs.length) return "포토샵에 열린 사진이 없어요.";
@@ -1164,8 +1151,30 @@ ipcMain.handle("files-ps-fit", () => {
         fs.rmSync(runDir, { recursive: true, force: true });
       }
     }
-    setJob({ message: `사진 ${masked.length}장 크기 맞추는 중…` });
-    const [ok, errs] = (await photoshop.runJsx(photoshop.fitOpenJsx(masked.map((d) => ({ index: d.index, fit: photoshop.FIT[d.kind] }))))).split("|");
+    // 누끼를 투명 PNG로 뽑아 실제 픽셀로 재고(끈 빼기, 후드는 어깨선부터), 그 범위로 맞춘다.
+    setJob({ message: `사진 ${masked.length}장 크기 재는 중…` });
+    const alphaDir = path.join(app.getPath("userData"), "fit-runs", `a${Date.now()}`);
+    fs.mkdirSync(alphaDir, { recursive: true });
+    let ok, errs;
+    try {
+      await photoshop.runJsx(photoshop.alphaExportJsx(masked.map((d, k) => ({ index: d.index, out: path.join(alphaDir, `a${k}.png`) }))));
+      const jobs = [];
+      for (const [k, d] of masked.entries()) {
+        const img = nativeImage.createFromPath(path.join(alphaDir, `a${k}.png`));
+        const { width, height } = img.getSize();
+        const bgra = img.toBitmap();
+        const alpha = new Uint8Array(width * height);
+        for (let p = 0; p < width * height; p++) alpha[p] = bgra[p * 4 + 3];
+        const r = cutoutMeasure.analyzeAlpha(alpha, width, height);
+        if (!r) continue;
+        const scale = cutoutMeasure.areaScale(d.kind, r);
+        jobs.push({ index: d.index, region: [r.x0, r.y0, r.x1, r.y1], scale });
+      }
+      setJob({ message: `사진 ${jobs.length}장 크기 맞추는 중…` });
+      [ok, errs] = (await photoshop.runJsx(photoshop.fitRegionJsx(jobs))).split("|");
+    } finally {
+      fs.rmSync(alphaDir, { recursive: true, force: true });
+    }
     const kinds = masked.map((d) => `${d.name.replace(/\.[^.]+$/, "")}=${photoshop.FIT_LABEL[d.kind]}`).join(", ");
     return `${ok}장 맞췄어요 (${kinds}). 확인하고 '일괄 저장'을 눌러주세요.${errs ? ` 오류: ${errs}` : ""}`;
   });
@@ -1414,5 +1423,19 @@ async function runSortJob({ namesOnly }) {
   return parts.join(" · ") || "바뀐 게 없어요.";
 }
 
+app.whenReady().then(() => {
+  // 패키징 없이 "electron ."으로 그냥 실행하면 macOS가 Info.plist의 아이콘을 못 읽어서
+  // 기본 Electron 아이콘이 Dock에 뜬다 - 개발 중에도 우리 아이콘이 보이게 직접 지정한다.
+  if (process.platform === "darwin") {
+    app.dock.setIcon(nativeImage.createFromPath(APP_ICON_PATH));
+  }
+  createMainWindow();
+});
+app.on("window-all-closed", () => app.quit());
+
+// 로그인 이후 서버가 쿠키를 세션 쿠키로 다시 내려보내는 경우에 대비해서,
+// 완전히 꺼지기 직전에도 한 번 더 만료일을 붙여둔다(최종 안전망).
+app.on("before-quit", (event) => {
+  event.preventDefault();
   persistKenzCookies().finally(() => app.exit(0));
 });

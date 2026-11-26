@@ -168,7 +168,7 @@ for (var i=0;i<app.documents.length;i++){
   var d=app.documents[i]; app.activeDocument=d; var p="";
   try { p=d.fullName.fsName; } catch(e) {}
   var m=0; try { d.activeLayer=d.layers[0]; maskBounds(d); m=1; } catch(e) {}
-  r.push(i+"\\t"+p+"\\t"+m+"\\t"+d.name);
+  r.push(i+"\\t"+p+"\\t"+m+"\\t"+d.name+"\\t"+d.width.as('px')+"\\t"+d.height.as('px'));
 }
 r.join("\\n");
 `;
@@ -188,6 +188,48 @@ for (var i=0;i<jobs.length;i++){
     photo.resize(s, s, AnchorPosition.MIDDLECENTER);
     b = maskBounds(d);
     photo.translate(W/2 - (b[0]+b[2])/2, H/2 - (b[1]+b[3])/2);
+    ok.push(d.name);
+  } catch(e) { errs.push(d.name + ": " + e.message); }
+}
+ok.length + "|" + errs.join(" ; ");
+`;
+}
+
+// 누끼를 실제 픽셀로 재려고, 배경을 숨긴 투명 PNG(높이 600)로 뽑는다. items: [{index, out}]
+function alphaExportJsx(items) {
+  return `
+var items = ${JSON.stringify(items)};
+var o = new PNGSaveOptions();
+for (var i=0;i<items.length;i++){
+  var d = app.documents[items[i].index]; app.activeDocument = d;
+  var t = d.duplicate("alpha", false);
+  for (var j=1;j<t.layers.length;j++) t.layers[j].visible = false;
+  t.layers[0].visible = true;
+  t.resizeImage(null, UnitValue(600,'px'), 72, ResampleMethod.BILINEAR);
+  t.saveAs(new File(items[i].out), o, true); t.close(SaveOptions.DONOTSAVECHANGES);
+}
+"ok";
+`;
+}
+
+// jobs: [{index, region:[x0,y0,x1,y1](캔버스 대비 비율, 끈 뺀 옷 범위), scale(배)}]
+// 마스크 전체 범위 안에서 옷 범위가 어디인지 비율로 기억해 두고, 키운 뒤 그 범위의 가운데를
+// 캔버스 가운데로 옮긴다(끈은 크기·위치 계산에서 빠진다).
+function fitRegionJsx(jobs) {
+  return `${JSX_COMMON}${JSX_MASK}
+var jobs = ${JSON.stringify(jobs)};
+var ok=[], errs=[];
+for (var i=0;i<jobs.length;i++){
+  var d = app.documents[jobs[i].index];
+  try {
+    app.activeDocument = d; var photo = d.layers[0]; d.activeLayer = photo;
+    var W = d.width.as('px'), H = d.height.as('px'), g = jobs[i].region;
+    var b = maskBounds(d), mw = b[2]-b[0], mh = b[3]-b[1];
+    var rel = [(g[0]*W-b[0])/mw, (g[1]*H-b[1])/mh, (g[2]*W-b[0])/mw, (g[3]*H-b[1])/mh];
+    photo.resize(jobs[i].scale*100, jobs[i].scale*100, AnchorPosition.MIDDLECENTER);
+    b = maskBounds(d); mw = b[2]-b[0]; mh = b[3]-b[1];
+    var cx = b[0] + (rel[0]+rel[2])/2*mw, cy = b[1] + (rel[1]+rel[3])/2*mh;
+    photo.translate(W/2 - cx, H/2 - cy);
     ok.push(d.name);
   } catch(e) { errs.push(d.name + ": " + e.message); }
 }
@@ -216,4 +258,4 @@ async function openDocPaths() {
   return r ? r.split("\n").map((p) => p.normalize("NFC")) : [];
 }
 
-module.exports = { FIT, FIT_LABEL, fitKind, asciiJs, runJsx, addBackgroundJsx, fitAndSaveJsx, openDocPaths, backgroundOpenJsx, docsInfoJsx, fitOpenJsx, previewJsx };
+module.exports = { FIT, FIT_LABEL, fitKind, asciiJs, runJsx, addBackgroundJsx, fitAndSaveJsx, openDocPaths, backgroundOpenJsx, docsInfoJsx, fitOpenJsx, previewJsx, alphaExportJsx, fitRegionJsx };
