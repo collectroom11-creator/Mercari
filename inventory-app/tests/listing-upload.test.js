@@ -25,3 +25,11 @@ test("batchPrompt numbers tasks, includes only needed platform rules and the one
   assert.doesNotMatch(p, /인스타 작업 규칙/);
   assert.match(p, /tabs_close_mcp/);
 });
+
+test("withPrice swaps the Price line only when it differs", () => {
+  const t = "x\n- Price : 80,000원\n- Size : S";
+  assert.strictEqual(lu.withPrice(t, 100000), "x\n- Price : 100,000원\n- Size : S");
+  assert.strictEqual(lu.withPrice(t, 80000), t);
+  assert.strictEqual(lu.withPrice("no price", 100000), "no price");
+  assert.strictEqual(lu.withPrice(t, null), t);
+});

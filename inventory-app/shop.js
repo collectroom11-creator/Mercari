@@ -355,7 +355,7 @@ async function renderWishlist() {
     .map((w) => `
       <div class="wtile ${w.soldOut ? "dimmed" : ""}" title="${escapeHtml(w.title)}" data-open="${w.id}">
         <div class="wphoto" style="background-image:url('${w.imageUrl || mercariPhoto(w.id)}')">
-          ${w.soldOut ? '<span class="wtag">품절</span>' : w.manual ? '<span class="wtag">직접 추가</span>' : ""}
+          ${w.deleted ? '<span class="wtag">삭제됨</span>' : w.soldOut ? '<span class="wtag">품절</span>' : w.manual ? '<span class="wtag">직접 추가</span>' : ""}
           <button class="wremove" data-remove="${w.id}" title="찜 목록에서 삭제">✕</button>
         </div>
         <div class="wprice">${w.lastPrice != null ? yen(w.lastPrice) : "-"}</div>

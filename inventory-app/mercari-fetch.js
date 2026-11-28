@@ -16,13 +16,18 @@ async function fetchMercariItem(mercariUrl) {
           || document.querySelector('[data-testid="converted-currency-section"]');
         const main = document.querySelector('main');
         return {
+          // 판매자가 지운 상품은 "削除されています" 또는 "ページが見つかりませんでした" 화면이 뜬다(실제 페이지 확인함).
+          deleted: /該当する商品は削除されています|ページが見つかりませんでした/.test(document.body?.innerText || ''),
           title: document.querySelector('h1')?.innerText?.trim() || null,
           priceText: priceEl?.innerText || main?.innerText || '',
           imageUrl: document.querySelector('meta[property="og:image"]')?.content || null,
+          // Shops 상품은 売り切れ 라벨 대신 out-of-stock 표시가 붙는다(실제 페이지 확인함).
           soldOut: !!document.querySelector('[data-testid="image-0"][aria-label="売り切れ"]')
+            || !!document.querySelector('[data-testid="out-of-stock"], [data-testid="out-of-stock-sticker-0"]')
             || /売り切れ|在庫なし/.test(document.querySelector('[data-testid="product-title-section"]')?.parentElement?.innerText || ''),
         };
       })()`);
+      if (info.deleted) return { deleted: true };
       const jpyPrice = parseMercariPriceText(info.priceText);
       if (info.title && jpyPrice != null) {
         // 팔린 상품은 첫 번째 상품 사진에 aria-label="売り切れ" 스티커가 붙는다(실제 페이지 확인함).

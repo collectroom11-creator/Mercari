@@ -123,6 +123,12 @@ async function run() {
       log(`확인 실패(제목/가격을 못 읽음): ${id}`);
       continue;
     }
+    if (mercari.deleted) {
+      item.soldOut = true;
+      item.deleted = true;
+      log(`삭제된 상품: ${id} ${item.title || ""}`);
+      continue;
+    }
     item.title = mercari.title;
     // 찜 화면 사진용(Shops 상품은 사진 주소를 id로 만들 수 없어서 읽어 온 걸 저장한다)
     if (mercari.imageUrl) item.imageUrl = mercari.imageUrl;

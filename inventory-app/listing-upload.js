@@ -9,6 +9,13 @@ function parsePrice(text) {
   return m ? Number(m[1].replace(/,/g, "")) : null;
 }
 
+// 재고앱에서 가격을 직접 고쳤으면(listPriceEdited) 그 가격으로 txt의 Price 줄을 바꾼다.
+// Price 줄이 없거나 이미 같으면 그대로 돌려준다.
+function withPrice(text, price) {
+  if (!price || parsePrice(text) === null || parsePrice(text) === price) return text;
+  return text.replace(/^- Price : [\d,]+원?/m, `- Price : ${price.toLocaleString("en-US")}원`);
+}
+
 // 올릴 사진 순서. 후루츠: 후루츠 썸네일 → 1,2,3… / 인스타: 인스타 썸네일 → 1,2,3…
 // 실측·착용 등 번호 없는 사진은 넣지 않는다. 썸네일이 없으면 1번부터.
 function photoOrder(photos, platform) {
@@ -53,7 +60,11 @@ function instaRules() {
     "### 인스타 작업 규칙",
     "- https://www.instagram.com 에서 collectroom_ 계정으로 로그인돼 있는지 확인해. 다른 계정이면 그 작업은 멈춰.",
     "- 새 게시물 하나에 사진을 적힌 순서대로 전부 넣어.",
-    "- 자르기는 '원본'(3:4). 음악은 넣지 마. 필터·편집은 그대로 넘겨.",
+    "- 비율은 반드시 '원본'(3:4). 인스타 기본값은 1:1이라 그냥 넘기면 사진이 잘려서 올라가고, 올린 뒤엔 비율을 못 바꿔.",
+    "  · 사진을 넣은 뒤 '자르기' 화면 왼쪽 아래 자르기 아이콘(ㄱ 모양 두 개)을 눌러 메뉴를 열고 '원본'을 눌러.",
+    "  · '다음'을 누르기 전에 스크린샷으로 미리보기가 세로로 긴 3:4(위아래 안 잘림)인지 확인해. 정사각형이면 다시 '원본'을 눌러. 첫 사진 비율이 전체에 적용돼.",
+    "  · 공유한 뒤 게시물을 열어 사진이 세로 3:4인지 다시 확인해. 1:1로 올라갔으면 그 게시물을 ⋯ → 삭제하고 원본 비율로 다시 올려.",
+    "- 음악은 넣지 마. 필터·편집은 그대로 넘겨.",
     "- 캡션 = 설명 글 전체를 그대로(줄바꿈 포함).",
     "- 절대 Escape 키를 누르지 마(게시물 삭제 창이 떠).",
     "- 공유한 뒤 게시물 주소를 찾을 수 있으면 url로, 못 찾으면 null.",
@@ -106,4 +117,4 @@ const BATCH_SCHEMA = {
   required: ["results"],
 };
 
-module.exports = { BATCH_SCHEMA, parsePrice, photoOrder, batchPrompt };
+module.exports = { BATCH_SCHEMA, parsePrice, withPrice, photoOrder, batchPrompt };

@@ -246,7 +246,7 @@ ipcMain.handle("fetch-item", async (event, url) => {
   if (jpyPrice == null) {
     const mercariUrl = extractMercariItemUrl(url);
     const mercari = mercariUrl ? await fetchMercariItem(mercariUrl).catch(() => null) : null;
-    if (!mercari) {
+    if (!mercari || mercari.deleted) {
       return { title, jpyPrice: null, costKrw: null, minPrice: null, imageUrl, needsLogin };
     }
     ({ title, jpyPrice, imageUrl } = mercari);
@@ -1216,7 +1216,11 @@ ipcMain.handle("files-upload", (event, ids, platforms) => {
       for (const it of items) {
         const item = tabItem(it.id);
         const dir = folderDir(item);
-        const text = fs.readFileSync(path.join(dir, `${item.uploadFolder}.txt`), "utf-8");
+        const txtPath = path.join(dir, `${item.uploadFolder}.txt`);
+        const original = fs.readFileSync(txtPath, "utf-8");
+        // 앱에서 가격을 고쳤으면 그 가격으로 올리고, txt도 같이 고쳐둔다.
+        const text = item.listPriceEdited ? listingUpload.withPrice(original, item.listPrice) : original;
+        if (text !== original) fs.writeFileSync(txtPath, text);
         for (const platform of platforms) {
           const label = `${PLATFORM_LABEL[platform]} · ${item.uploadFolder}`;
           if ((platform === "fruits" && item.fruitsUploadedAt) || (platform === "insta" && item.instaUploadedAt)) {
